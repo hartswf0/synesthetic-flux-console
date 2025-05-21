@@ -32,35 +32,94 @@
       width: 100vw; /* Ensure full viewport width */
     }
     
-    header {
-      padding: 1rem;
-      text-align: center;
-      background-color: rgba(10, 31, 28, 0.8);
-      border-bottom: 2px solid var(--accent-2);
-      position: relative; /* For mobile menu button */
-      z-index: 10; /* Ensure header is above controls */
+    .top-left-fixed-ui {
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      z-index: 1010; /* High z-index */
+      display: flex;
+      align-items: center;
+      gap: 15px; /* Gap between branding/controls group and mobile toggle */
     }
-    
-    h1 {
-      font-weight: 300;
-      letter-spacing: 4px;
-      margin: 0;
+
+    .branding-group { /* For mark and text */
+      display: flex;
+      align-items: center;
+      gap: 8px; /* Gap between mark and BOTANICA text */
+    }
+
+    /* SVG Logo Placeholder in top-left */
+    .svg-logo-placeholder {
+      width: 40px; /* Increased size */
+      height: 40px; /* Increased size */
+      border: 2px solid var(--accent-1); /* Bolder border */
+      display: flex;
+      flex-direction: column; /* For hamburger lines */
+      align-items: center;
+      justify-content: space-around; /* Distribute hamburger lines */
+      background-color: rgba(var(--accent-1-rgb), 0.05); /* Subtle tint for clarity */
+      padding: 8px; /* Padding for hamburger lines */
+      box-sizing: border-box;
+      cursor: default; /* Default cursor on desktop */
+    }
+
+    .hamburger-line {
+      display: none; /* Hidden by default, shown on mobile */
+      width: 100%;
+      height: 3px; /* Slightly thicker lines */
+      background-color: var(--accent-1);
+      transition: all 0.3s ease-in-out;
+      transform-origin: center;
+    }
+
+    /* Active state for hamburger to X */
+    #logo-menu-toggle.active .hamburger-line:nth-child(1) {
+      transform: translateY(8px) rotate(45deg); /* Adjust translate based on line height/padding */
+    }
+    #logo-menu-toggle.active .hamburger-line:nth-child(2) {
+      opacity: 0;
+    }
+    #logo-menu-toggle.active .hamburger-line:nth-child(3) {
+      transform: translateY(-8px) rotate(-45deg); /* Adjust translate */
+    }
+
+    .brand-name {
+      font-size: 1.3rem;
+      font-weight: 500;
+      color: var(--text-color);
+      letter-spacing: 0.5px;
+    }
+
+    .header-garden-controls {
+      display: flex;
+      gap: 10px; /* Gap between buttons */
+      align-items: center; /* Align to center */
+    }
+
+    .header-garden-controls button {
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 1.6rem; /* Slightly larger for prominence */
+      padding: 0.2rem 0.4rem; /* Adjust padding for size */
+      cursor: pointer;
+      transition: color 0.2s ease;
+      line-height: 1; /* Ensure consistent line height */
+    }
+
+    .header-garden-controls button:hover {
       color: var(--accent-1);
     }
-    
-    .subtitle {
-      font-style: italic;
-      opacity: 0.8;
-      margin-top: 0.5rem;
-    }
-    
+
     main {
       display: flex;
-      flex: 1;
-      position: relative; /* For mobile controls positioning */
-      overflow: hidden; /* For mobile controls slide effect */
+      flex-grow: 1;
+      padding: 1rem;
+      margin-top: 80px; /* Adjust to clear fixed top-left UI, including brand name */
+      margin-right: 280px; /* Adjust to match fixed #controls width on desktop */
+      transition: margin-right 0.3s ease-in-out;
     }
-    
+
     #garden-container {
       flex: 1;
       position: relative;
@@ -78,18 +137,25 @@
     }
     
     #controls {
-      width: 280px; /* Desktop width */
-      background-color: rgba(10, 31, 28, 0.95); /* Slightly less transparent */
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 280px; /* Or your preferred width */
+      height: 100vh;
+      background-color: var(--bg-color);
       border-left: 2px solid var(--accent-2);
-      overflow-y: auto;
-      flex-shrink: 0; /* Prevent shrinking on desktop */
-      z-index: 5; /* Below header */
+      box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+      padding: 1rem;
+      overflow-y: auto; /* Allow scrolling if content exceeds height */
+      z-index: 1000;
+      transform: translateX(0); /* Always visible on desktop */
+      transition: transform 0.3s ease-in-out; /* For mobile slide */
     }
-    
+
+    #controls.open {
+      transform: translateY(0); /* Slide into view */
+    }
+
     .control-section {
       background-color: rgba(29, 115, 115, 0.2);
       padding: 1rem;
@@ -274,89 +340,176 @@
       background-color: #d81159; /* Brighter red on hover */
     }
     
-    .info-text {
-      font-size: 0.8rem;
-      opacity: 0.8;
-      margin-top: 0.5rem;
-      font-style: italic;
+    /* Help Section Styling */
+    .help-section details {
+      margin-bottom: 0.5rem;
+      background-color: rgba(29, 115, 115, 0.1);
+      border: 1px solid var(--accent-2);
+      border-radius: 4px;
+    }
+    .help-section summary {
+      padding: 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+      color: var(--accent-1);
+      outline: none; /* Remove focus outline for browsers that add it */
+    }
+    .help-section summary:hover {
+      background-color: rgba(29, 115, 115, 0.2);
+    }
+    .help-section details[open] summary {
+      border-bottom: 1px solid var(--accent-2);
+    }
+    .help-section .help-content {
+      padding: 0.5rem 1rem 1rem 1rem;
+      font-size: 0.75rem; /* Slightly larger than .info-text for readability */
+      line-height: 1.6;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000; /* Below header/controls z-index if they need to be above */
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+    }
+    .modal-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.3s ease;
+    }
+    .modal-content {
+      background-color: var(--bg-color);
+      padding: 2rem;
+      border-radius: 8px;
+      border: 2px solid var(--accent-1);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+      width: 90%;
+      max-width: 500px;
+      text-align: left;
+    }
+    .modal-content h2 {
+      color: var(--accent-1);
+      margin-top: 0;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+    .modal-content ul {
+      list-style-type: disc;
+      padding-left: 20px;
+      margin-bottom: 1.5rem;
+    }
+    .modal-content li {
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .modal-content button {
+      display: block;
+      margin: 1rem auto 0 auto;
+      padding: 0.6rem 1.2rem;
+      background-color: var(--accent-1);
+      color: var(--bg-color);
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .modal-content button:hover {
+      background-color: var(--accent-3);
+      color: var(--text-color);
     }
 
     /* Mobile specific styles */
-    .mobile-menu-toggle {
-        display: none; /* Hidden on desktop */
-        position: absolute;
-        top: 1rem;
-        left: 1rem;
-        background: var(--accent-2);
-        color: var(--text-color);
-        border: none;
-        padding: 0.5rem 0.8rem;
-        font-size: 1.2rem;
-        border-radius: 4px;
-        cursor: pointer;
-        z-index: 11; /* Above header */
-    }
-
     @media (max-width: 768px) {
-        body {
-            flex-direction: column;
-            overflow-y: auto; /* Allow body scroll on mobile if controls are open */
-        }
-
         main {
-            flex-direction: column; /* Stack garden and controls vertically */
-            position: static; /* Remove relative positioning from main */
+            margin-right: 0; /* On mobile, main content takes full width */
+            margin-top: 70px; /* Increased top margin for top-left controls and potential wrapping */
         }
-        
-        #garden-container {
-            height: 60vh; /* Give garden more space, but allow controls */
-            flex: none; /* Don't let it stretch */
-        }
-
         #controls {
-            position: fixed; /* Overlay on mobile */
-            top: 0;
-            right: 0;
-            width: var(--mobile-controls-width);
-            height: 100vh;
-            border-left: none; /* No border on left */
-            border-bottom: 2px solid var(--accent-2); /* Border at bottom if sliding from top */
-            transform: translateX(100%); /* Start off-screen */
-            transition: transform 0.3s ease-out;
-            box-shadow: -5px 0 15px rgba(0,0,0,0.5); /* Shadow for sliding effect */
-            z-index: 10; /* Above garden, below menu toggle */
+            width: 100%; /* Full width on mobile */
+            height: auto; /* Adjust height or make it a portion of screen */
+            max-height: 60vh; /* Increased max height for mobile controls */
+            position: fixed; /* Still fixed */
+            top: auto; /* Unset top */
+            bottom: 0; /* Stick to bottom on mobile */
+            border-left: none;
+            border-top: 2px solid var(--accent-2);
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+            z-index: 1000; /* Ensure it's above main content */
         }
 
-        #controls.open {
-            transform: translateX(0); /* Slide into view */
+        .top-left-fixed-ui {
+          flex-wrap: nowrap; /* Try to keep top-left items on one line for mobile */
+          width: calc(100% - 1rem); /* Adjusted for new padding */
+          box-sizing: border-box;
+          justify-content: space-between; /* Distribute space */
+          align-items: center; /* Ensure vertical centering of items */
+          top: 0.5rem;
+          left: 0.5rem;
+          right: 0.5rem; /* Ensure it uses available width */
+          padding: 0.6rem 0.8rem; /* Increased padding for the bar */
+          background-color: rgba(10, 31, 28, 0.8); /* Slightly darker/more opaque */
+          border-radius: 8px; /* Slightly more rounded */
+          min-height: 50px; /* Ensure decent height for the bar */
         }
 
-        .mobile-menu-toggle {
-            display: block; /* Show on mobile */
+        .branding-group {
+          gap: 10px; /* Increased gap between logo and text */
         }
 
-        /* Adjust header padding if menu toggle is inside it */
-        header {
-            padding-left: 5rem; /* Make space for menu toggle */
-            text-align: center;
+        .svg-logo-placeholder {
+          width: 38px; height: 38px; /* Fine-tuned mobile size */
+          cursor: pointer; /* Clickable on mobile */
+          padding: 7px; /* Adjusted padding for hamburger lines */
+          border-width: 2px; /* Consistent border */
         }
 
-        .status {
-            bottom: 0.5rem; /* Closer to bottom on mobile */
-            left: 0.5rem;
-            right: 0.5rem;
-            font-size: 0.75rem;
-            padding: 0.4rem 0.8rem;
+        .hamburger-line {
+            display: block; /* Show hamburger lines on mobile */
+        }
+
+        .brand-name {
+          font-size: 1.05rem; /* Slightly adjusted size */
+        }
+        .header-garden-controls {
+            margin-left: 10px; /* Ensure some space from branding */
+            margin-right: 0; /* Remove right margin if toggle is branding */
+            gap: 8px; /* Adjust gap between play/pause/clear */
+        }
+        .header-garden-controls button {
+          font-size: 1.3rem; /* Smaller play/pause/clear on mobile */
+          padding: 0.2rem 0.4rem; /* Slightly more padding */
         }
     }
   </style>
 </head>
 <body>
-  <header>
-    <button class="mobile-menu-toggle" id="mobile-menu-toggle">☰</button>
-    <h1>BOTANICA</h1>
-    <div class="subtitle">A Brian Eno-inspired Digital Sound Garden</div>
-  </header>
+  <div class="top-left-fixed-ui">
+    <div class="branding-group">
+      <div class="svg-logo-placeholder" id="logo-menu-toggle">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </div>
+      <span class="brand-name">BOTANICA</span>
+    </div>
+    <div class="header-garden-controls">
+        <button id="start-garden-header" title="Start Garden">▶</button>
+        <button id="pause-garden-header" title="Pause Garden">❚❚</button>
+        <button id="clear-garden-header" title="Clear Garden">✖</button>
+    </div>
+  </div>
   
   <main>
     <div id="garden-container">
@@ -381,7 +534,7 @@
         <div class="control-group">
           <div class="environment-controls">
             <button id="rain-btn" class="environment-btn">Rain (Reverb) <span>Off</span></button>
-            <button id="sunshine-btn" class="environment-btn">Sunshine (Brightness) <span>Off</span></button>
+            <button id="sunshine-btn" class="environment-btn active">Sunshine (Brightness) <span>On</span></button>
             <button id="wind-btn" class="environment-btn">Wind (Modulation) <span>Off</span></button>
           </div>
         </div>
@@ -415,14 +568,67 @@
         </div>
       </div>
       
-      <div class="control-section">
-        <h2 class="section-title">Garden Controls</h2>
-        <button id="play-btn">Start Garden</button>
-        <button id="pause-btn">Pause Garden</button>
-        <button id="clear-btn">Clear Garden</button>
+      <div class="control-section help-section">
+        <h3 class="section-title">Help & Info</h3>
+        <details>
+          <summary>Understanding Seed Types</summary>
+          <div class="help-content">
+            <p>Each seed type generates unique sonic and visual elements. Experiment to discover their character!</p>
+            <ul>
+              <li><strong>Rhythm:</strong> Focuses on percussive, foundational patterns.</li>
+              <li><strong>Melody:</strong> Creates more pitched, flowing musical lines.</li>
+              <li><strong>Bass:</strong> Generates deep, resonant foundational tones.</li>
+              <li><strong>Ambient:</strong> Produces atmospheric textures and evolving soundscapes.</li>
+            </ul>
+          </div>
+        </details>
+        <details>
+          <summary>Environmental Effects</summary>
+          <div class="help-content">
+            <p>These controls alter the garden's atmosphere:</p>
+            <ul>
+              <li><strong>Rain (Reverb):</strong> Adds spaciousness and echo, like sound reflecting in a large hall.</li>
+              <li><strong>Sunshine (Brightness):</strong> Makes the sound brighter and clearer by adjusting an audio filter. Visually, it may illuminate the garden.</li>
+              <li><strong>Wind (Modulation):</strong> Introduces subtle movement and detuning to the sound, like a gentle breeze rustling leaves.</li>
+            </ul>
+          </div>
+        </details>
+        <details>
+          <summary>How Seasons Change the Garden</summary>
+          <div class="help-content">
+            <p>Changing the season alters the underlying musical scales and color palettes used by the plants, influencing the overall mood and harmony of the garden.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Growth, Density & Tempo</summary>
+          <div class="help-content">
+            <p><strong>Growth Speed:</strong> Controls how quickly plants develop and reach maturity.</p>
+            <p><strong>Growth Density:</strong> Influences how many plants can thrive in a given area. Higher density might lead to more complex interactions.</p>
+            <p><strong>Garden Tempo (BPM):</strong> Sets the overall speed or 'heartbeat' of the garden's musical events. Measured in Beats Per Minute.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Interacting with the Canvas</summary>
+          <div class="help-content">
+            <p>Click or tap on the main garden area to plant the currently selected seed type. Observe how your actions influence the evolving ecosystem.</p>
+          </div>
+        </details>
       </div>
     </div>
   </main>
+
+  <div id="quick-start-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h2>🚀 Quick Start Guide</h2>
+      <ul>
+        <li><strong>Select a Seed:</strong> Choose a seed type (Rhythm, Melody, etc.) from the panel on the left.</li>
+        <li><strong>Plant Your Seed:</strong> Click or tap anywhere on the main Garden canvas to plant.</li>
+        <li><strong>Control the Garden:</strong> Use the 'Start', 'Pause', and 'Clear' buttons in the header.</li>
+        <li><strong>Experiment:</strong> Adjust Environment (Rain, Sun, Wind) and Growth settings to shape your soundscape!</li>
+      </ul>
+      <button id="close-quick-start">Got it! Start Exploring</button>
+    </div>
+  </div>
 
   <script>
     // --- Constants and Global State ---
@@ -430,7 +636,7 @@
     const CTX = CANVAS.getContext('2d');
     const STATUS_TEXT = document.getElementById('status-text');
     const CONTROLS = document.getElementById('controls');
-    const MOBILE_MENU_TOGGLE = document.getElementById('mobile-menu-toggle');
+    const LOGO_MENU_TOGGLE = document.getElementById('logo-menu-toggle'); // New toggle
 
     let audioInitialized = false;
     let isPlaying = false;
@@ -439,7 +645,7 @@
     let lastFrameTime = 0;
     let growthSpeed = parseFloat(document.getElementById('growth-speed').value); // Initialize from slider
     let isRaining = false;
-    let isSunny = false;
+    let isSunny = true; // Default sunshine to ON
     let isWindy = false;
 
     // --- Tone.js Audio Setup ---
@@ -788,9 +994,16 @@
     sunshineBtn.addEventListener('click', toggleSunshine);
     windBtn.addEventListener('click', toggleWind);
     
+    // Initialize sunshine button state to reflect default
+    (() => {
+      sunshineBtn.classList.toggle('active', isSunny);
+      sunshineBtn.querySelector('span').textContent = isSunny ? 'On' : 'Off';
+      filter.frequency.value = isSunny ? 18000 : 10000; // Apply initial filter setting
+    })();
+
     function toggleRain() {
       isRaining = !isRaining;
-      rainBtn.classList.toggle('active', isRraining);
+      rainBtn.classList.toggle('active', isRaining);
       rainBtn.querySelector('span').textContent = isRaining ? 'On' : 'Off';
       reverb.wet.value = isRaining ? 0.6 : 0;
     }
@@ -837,9 +1050,13 @@
     });
 
     // Garden Controls
-    playBtn.addEventListener('click', startGarden);
-    pauseBtn.addEventListener('click', pauseGarden);
-    clearBtn.addEventListener('click', clearGarden);
+    const startGardenHeader = document.getElementById('start-garden-header');
+    const pauseGardenHeader = document.getElementById('pause-garden-header');
+    const clearGardenHeader = document.getElementById('clear-garden-header');
+
+    startGardenHeader.addEventListener('click', startGarden);
+    pauseGardenHeader.addEventListener('click', pauseGarden);
+    clearGardenHeader.addEventListener('click', clearGarden);
     
     function startGarden() {
       if (!audioInitialized) {
@@ -935,20 +1152,44 @@
       }
     });
 
-    // Mobile menu toggle
-    MOBILE_MENU_TOGGLE.addEventListener('click', () => {
-        CONTROLS.classList.toggle('open');
-        // If controls are open, prevent garden interaction temporarily on touch devices
-        // (optional, but can improve UX by preventing accidental planting)
-        if (CONTROLS.classList.contains('open')) {
-            CANVAS.style.pointerEvents = 'none';
-        } else {
-            CANVAS.style.pointerEvents = 'auto';
-        }
-    });
+    // Quick Start Modal Logic
+    const quickStartModal = document.getElementById('quick-start-modal');
+    const closeQuickStartBtn = document.getElementById('close-quick-start');
 
-    // Close controls if clicked outside on mobile (for larger screens, or if a modal backdrop is used)
-    // For this simple slide-out, user will likely just hit toggle again or interact with garden.
+    if (quickStartModal && closeQuickStartBtn) {
+      window.addEventListener('load', () => {
+          quickStartModal.style.display = 'flex';
+      });
+
+      closeQuickStartBtn.addEventListener('click', () => {
+          quickStartModal.style.display = 'none';
+      });
+    }
+
+    // Mobile controls toggle logic (now using logo)
+    if (LOGO_MENU_TOGGLE && CONTROLS) {
+        LOGO_MENU_TOGGLE.addEventListener('click', () => {
+            // Only toggle if on mobile (where hamburger is visible and it acts as a button)
+            if (window.innerWidth <= 768) {
+                CONTROLS.classList.toggle('open'); // Ensure this line is active for menu visibility
+                LOGO_MENU_TOGGLE.classList.toggle('active'); // Toggle active class for X animation
+
+                if (CONTROLS.classList.contains('open')) {
+                    CANVAS.style.pointerEvents = 'none';
+                } else {
+                    CANVAS.style.pointerEvents = 'auto';
+                }
+            }
+        });
+
+        CANVAS.addEventListener('click', () => {
+            if (window.innerWidth <= 768 && CONTROLS.classList.contains('open')) {
+                CONTROLS.classList.remove('open'); // Ensure this line is active for closing menu
+                LOGO_MENU_TOGGLE.classList.remove('active'); // Remove active class for X animation
+                CANVAS.style.pointerEvents = 'auto'; 
+            }
+        });
+    }
 
     // --- Visual Effects Drawing Functions ---
     let rainDrops = [];

@@ -102,20 +102,18 @@
             min-width: 40px;
         }
 
-        .loom-container {
-            position: relative;
-            background-color: #f0e8d8;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-            overflow: hidden;
+        .loom-container,
+        .shuttle-palette-container {
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 20px;
         }
 
         .loom-frame {
             position: relative;
-            height: 480px;
-            border: 12px solid var(--walnut-brown);
-            border-radius: 6px;
-            margin-bottom: 20px;
+            background-color: #f0e8d8;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
             overflow: hidden;
         }
 
@@ -561,6 +559,86 @@
         .weft-thread.playing-sound {
             animation: threadTension 0.15s ease-out;
         }
+
+        .shuttle-container {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #e8e0d0;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .shuttle-heading {
+            font-size: 1em;
+            font-weight: 600;
+            color: var(--indigo);
+            margin-bottom: 8px;
+            display: flex; /* For toggle button alignment */
+            justify-content: space-between; /* For toggle button alignment */
+            align-items: center; /* For toggle button alignment */
+            cursor: pointer; /* Make heading clickable for toggle */
+        }
+
+        .collapse-toggle {
+            background: none;
+            border: 1px solid var(--indigo);
+            color: var(--indigo);
+            padding: 3px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-left: 10px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .collapse-toggle:hover {
+            background-color: var(--indigo);
+            color: white;
+        }
+
+        .collapsible-content {
+            /* Desktop: visible by default */
+            display: block; 
+        }
+
+        .shuttle-options {
+            display: flex;
+        }
+
+        /* Mobile specific styles for collapsibles */
+        @media (max-width: 768px) {
+            .collapsible-content {
+                display: none; /* Hidden by default on mobile */
+            }
+            .collapsible-content.open {
+                display: block; /* Shown when 'open' class is added */
+            }
+
+            .loom-frame {
+                height: 350px; /* Reduce loom height on mobile */
+            }
+
+            .controls, .transport-controls {
+                flex-wrap: wrap; /* Allow controls to wrap on mobile */
+                gap: 5px;
+            }
+            .controls button, .transport-controls button {
+                padding: 6px 10px;
+                font-size: 0.9em;
+            }
+            .tempo-control {
+                margin-left: 0;
+                margin-top: 10px;
+                width: 100%;
+                justify-content: center;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+
+        }
+
     </style>
 </head>
 <body>
@@ -595,14 +673,20 @@
             </div>
         </div>
 
-        <div class="two-column">
-            <div class="loom-container">
-                <div class="loom-frame" id="loomFrame">
-                    <div class="warp-threads" id="warpThreads"></div>
-                    <div class="weft-rows" id="weftRows"></div>
-                    <div class="playhead" id="playhead"></div>
-                </div>
+        <div class="loom-container">
+            <div class="loom-frame" id="loomFrame">
+                <div class="warp-threads" id="warpThreads"></div>
+                <div class="weft-rows" id="weftRows"></div>
+                <div class="playhead" id="playhead"></div>
+            </div>
+        </div>
 
+        <div class="shuttle-palette-container collapsible-section" id="shuttlePaletteSection">
+            <div class="shuttle-heading" data-target="shuttleContent">
+                <span>Shuttle Palette & Techniques</span>
+                <button class="collapse-toggle" aria-expanded="false" aria-controls="shuttleContent">Show</button>
+            </div>
+            <div class="collapsible-content" id="shuttleContent">
                 <div class="shuttle-container">
                     <div class="shuttle" data-shuttle="1" title="Select Shuttle 1 (Velocity: ppp)">1</div>
                     <div class="shuttle" data-shuttle="2" title="Select Shuttle 2 (Velocity: mp)">2</div>
@@ -610,77 +694,82 @@
                     <div class="shuttle active" data-shuttle="4" title="Select Shuttle 4 (Accent / Velocity: ff)">4</div>
                 </div>
             </div>
+        </div>
 
-            <div class="side-panel">
-                <div class="panel-section">
-                    <div class="panel-title">Weaving Technique</div>
-                    <div class="panel-buttons">
-                        <button class="weaving-technique active" data-technique="plain" title="Plain weave: standard note trigger">Plain</button>
-                        <button class="weaving-technique" data-technique="twill" title="Twill weave: creates a slightly delayed or flam effect">Twill</button>
-                        <button class="weaving-technique" data-technique="satin" title="Satin weave: sustains notes longer or adds release">Satin</button>
+        <div class="side-panel">
+            <div class="panel-section">
+                <div class="panel-title">Weaving Technique</div>
+                <div class="panel-buttons">
+                    <button class="weaving-technique active" data-technique="plain" title="Plain weave: standard note trigger">Plain</button>
+                    <button class="weaving-technique" data-technique="twill" title="Twill weave: creates a slightly delayed or flam effect">Twill</button>
+                    <button class="weaving-technique" data-technique="satin" title="Satin weave: sustains notes longer or adds release">Satin</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-title">Sound Palette</div>
+                <div class="sound-palettes">
+                    <button class="palette-button active" data-palette="indigo" title="Deep, resonant tones">Indigo</button>
+                    <button class="palette-button" data-palette="silk" title="Smooth, flowing sounds">Silk Road</button>
+                    <button class="palette-button" data-palette="ikat" title="Textured, percussive elements">Ikat</button>
+                    <button class="palette-button" data-palette="tartan" title="Rich, layered harmonies">Tartan</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-title">Thread Tension (Effects)</div>
+                <div class="controls-panel">
+                    <div class="panel-row">
+                        <span class="panel-label">Filter:</span>
+                        <input type="range" id="globalTension" min="0" max="100" value="50" title="Global Filter Cutoff">
+                        <span class="value-display" id="globalTensionValue">50%</span>
+                    </div>
+                     <div class="panel-row">
+                        <span class="panel-label">Delay:</span>
+                        <input type="range" id="delayAmount" min="0" max="100" value="10" title="Delay Wet/Dry Mix">
+                        <span class="value-display" id="delayValue">10%</span>
+                    </div>
+                    <div class="panel-row">
+                        <span class="panel-label">Reverb:</span>
+                        <input type="range" id="reverbAmount" min="0" max="100" value="20" title="Reverb Wet/Dry Mix">
+                        <span class="value-display" id="reverbValue">20%</span>
                     </div>
                 </div>
+            </div>
 
-                <div class="panel-section">
-                    <div class="panel-title">Sound Palette</div>
-                    <div class="sound-palettes">
-                        <button class="palette-button active" data-palette="indigo" title="Deep, resonant tones">Indigo</button>
-                        <button class="palette-button" data-palette="silk" title="Smooth, flowing sounds">Silk Road</button>
-                        <button class="palette-button" data-palette="ikat" title="Textured, percussive elements">Ikat</button>
-                        <button class="palette-button" data-palette="tartan" title="Rich, layered harmonies">Tartan</button>
+             <div class="panel-section">
+                <div class="panel-title">Texture Controls (Swing/Groove)</div>
+                <div class="controls-panel">
+                    <div class="panel-row">
+                        <span class="panel-label">Swing:</span>
+                        <input type="range" id="textureDensity" min="0" max="100" value="0" title="Swing Amount">
+                        <span class="value-display" id="densityValue">0%</span>
                     </div>
+
                 </div>
-
-                <div class="panel-section">
-                    <div class="panel-title">Thread Tension (Effects)</div>
-                    <div class="controls-panel">
-                        <div class="panel-row">
-                            <span class="panel-label">Filter:</span>
-                            <input type="range" id="globalTension" min="0" max="100" value="50" title="Global Filter Cutoff">
-                            <span class="value-display" id="globalTensionValue">50%</span>
-                        </div>
-                         <div class="panel-row">
-                            <span class="panel-label">Delay:</span>
-                            <input type="range" id="delayAmount" min="0" max="100" value="10" title="Delay Wet/Dry Mix">
-                            <span class="value-display" id="delayValue">10%</span>
-                        </div>
-                        <div class="panel-row">
-                            <span class="panel-label">Reverb:</span>
-                            <input type="range" id="reverbAmount" min="0" max="100" value="20" title="Reverb Wet/Dry Mix">
-                            <span class="value-display" id="reverbValue">20%</span>
-                        </div>
-                    </div>
-                </div>
-
-                 <div class="panel-section">
-                    <div class="panel-title">Texture Controls (Swing/Groove)</div>
-                    <div class="controls-panel">
-                        <div class="panel-row">
-                            <span class="panel-label">Swing:</span>
-                            <input type="range" id="textureDensity" min="0" max="100" value="0" title="Swing Amount">
-                            <span class="value-display" id="densityValue">0%</span>
-                        </div>
-
-                    </div>
-                </div>
+            </div>
 
 
-                <div class="panel-section">
-                    <div class="panel-buttons">
-                        <button id="unravelButton" title="Randomly remove some active cells">Unravel Pattern</button>
-                        <button id="knotButton" title="Randomly add active cells (knots)">Add Knots</button>
-                    </div>
+            <div class="panel-section">
+                <div class="panel-buttons">
+                    <button id="unravelButton" title="Randomly remove some active cells">Unravel Pattern</button>
+                    <button id="knotButton" title="Randomly add active cells (knots)">Add Knots</button>
                 </div>
             </div>
         </div>
 
-        <div class="pattern-library">
-            <div class="pattern-heading">
+        <div class="pattern-library collapsible-section" id="patternLibrarySection">
+            <div class="pattern-heading" data-target="patternContent">
                 <h2>Pattern Library</h2>
-                <button id="savePattern" title="Save the current loom pattern to the library">Save Current Pattern</button>
+                <div> <!-- Wrapper for button alignment -->
+                    <button id="savePattern" title="Save the current loom pattern to the library">Save Current Pattern</button>
+                    <button class="collapse-toggle" aria-expanded="false" aria-controls="patternContent">Show</button>
+                </div>
             </div>
-            <div class="pattern-grid" id="patternGrid">
-                <!-- Pattern cards will be dynamically generated here -->
+            <div class="collapsible-content" id="patternContent">
+                <div class="pattern-grid" id="patternGrid">
+                    <!-- Pattern cards will be dynamically generated here -->
+                </div>
             </div>
         </div>
     </div>
@@ -989,6 +1078,33 @@
                     el.addEventListener('mouseenter', (e) => showTooltip(el.title, el));
                     el.addEventListener('mouseleave', hideTooltip);
                     el.addEventListener('mousemove', (e) => updateTooltipPosition(e.clientX, e.clientY));
+                });
+
+                // Collapsible section toggles
+                const collapsibleSections = document.querySelectorAll('.collapsible-section');
+
+                collapsibleSections.forEach(section => {
+                    const toggleButton = section.querySelector('.collapse-toggle');
+                    const content = section.querySelector('.collapsible-content');
+                    const heading = section.querySelector('.shuttle-heading, .pattern-heading'); // Allow clicking heading too
+
+                    const toggleAction = () => {
+                        const isOpen = content.classList.toggle('open');
+                        toggleButton.setAttribute('aria-expanded', isOpen);
+                        toggleButton.textContent = isOpen ? 'Hide' : 'Show';
+                    };
+
+                    if (toggleButton && content) {
+                        toggleButton.addEventListener('click', toggleAction);
+                        if (heading && heading !== toggleButton.parentElement) { // If heading is separate from button's direct parent
+                            heading.addEventListener('click', (e) => {
+                                // Prevent double toggle if click originated from button inside heading
+                                if (e.target !== toggleButton && !toggleButton.contains(e.target)) {
+                                    toggleAction();
+                                }
+                            });
+                        }
+                    }
                 });
             }
 

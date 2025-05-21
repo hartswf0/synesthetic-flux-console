@@ -5,53 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Synesthetic Flux Console</title>
     
-    <!-- Google Fonts: Inter for clear, friendly typography,
-         and a more abstract, "etched" font for the title if desired.
-         For this, I'll stick to Inter for consistency but use different weights. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-        /* CSS Starts Here */
-
-        /* Variables for a "Soft-neon gradients blurring into infra-pastels" palette */
         :root {
-            /* Infra-pastels / Soft-neons */
-            --color-flux-1: hsla(280, 50%, 85%, 0.9); /* Pale Lavender */
-            --color-flux-2: hsla(180, 50%, 80%, 0.9); /* Misty Aqua */
-            --color-flux-3: hsla(40, 50%, 80%, 0.9);  /* Soft Peach */
-            --color-flux-4: hsla(120, 30%, 75%, 0.9); /* Ghostly Green */
-            --color-flux-5: hsla(330, 50%, 85%, 0.9); /* Blush Pink */
-
-            /* Core UI colors */
-            --color-background-base: #F0F2F5; /* Very light cool grey for overall canvas */
-            --color-text-primary: #3B4045; /* Soft charcoal */
-            --color-text-secondary: #5A6168; /* Slightly lighter for descriptions */
-            --color-glass-base: rgba(255, 255, 255, 0.08); /* Slightly less transparent for calmness */
-            --color-glass-active: rgba(255, 255, 255, 0.12); /* For interactive elements */
-            --color-etch-shadow: rgba(0, 0, 0, 0.02);
-
-            /* Accents & Haptic feedback visual metaphor */
-            --color-accent-haptic: hsla(200, 70%, 70%, 0.7);
-            --color-accent-haptic-dark: hsla(200, 70%, 60%, 0.8);
+            --color-flux-1: hsla(280, 50%, 85%, 0.9);
+            --color-flux-2: hsla(180, 50%, 80%, 0.9);
+            --color-flux-3: hsla(40, 50%, 80%, 0.9);  
+            --color-flux-4: hsla(120, 30%, 75%, 0.9);
+            --color-flux-5: hsla(330, 50%, 85%, 0.9);
+            --color-background-base: #F0F2F5; 
+            --color-text-primary: #3B4045; 
+            --color-text-secondary: #6c757d; 
+            --color-glass-base: rgba(255, 255, 255, 0.08); 
+            --color-glass-active: rgba(255, 255, 255, 0.12); 
+            --color-etch-shadow: rgba(0, 0, 0, 0.1);
+            --color-accent-haptic: #8effff; 
+            --color-accent-haptic-rgb: 142, 255, 255; 
+            --color-accent-haptic-dark: #50c0c0;
+            --color-link-hover: #4a545e; 
+            --color-background-item-hover: rgba(0, 0, 0, 0.03);
+            --color-nav-button-bg: rgba(0, 0, 0, 0.05);
+            --color-nav-button-hover-bg: rgba(0, 0, 0, 0.1);
+            --color-modal-bg: #ffffff;
+            --color-modal-shadow: rgba(0, 0, 0, 0.15);
+            --color-category-border: rgba(0, 0, 0, 0.1);
+            --color-symbol-prefix: #777;
+            --color-chip-bg: rgba(0, 0, 0, 0.04);
+            --color-chip-hover-bg: rgba(0, 0, 0, 0.08);
 
             --font-family-body: 'Inter', sans-serif;
             --container-border-radius: 25px;
         }
 
-        /* Basic Reset & Box-sizing */
-        *, *::before, *::after {
+        body.dark-mode {
+            --color-flux-1: hsla(280, 60%, 20%, 0.7);
+            --color-flux-2: hsla(180, 60%, 15%, 0.7);
+            --color-flux-3: hsla(40, 60%, 18%, 0.7);  
+            --color-flux-4: hsla(120, 40%, 12%, 0.7);
+            --color-flux-5: hsla(330, 60%, 20%, 0.7);
+            --color-background-base: #1a1d21; 
+            --color-text-primary: #e0e0e0;   
+            --color-text-secondary: #a0a0a0; 
+            --color-glass-base: rgba(30, 33, 37, 0.6); 
+            --color-glass-active: rgba(40, 43, 47, 0.7);
+            --color-etch-shadow: rgba(255, 255, 255, 0.05);
+            --color-accent-haptic: #36c5f0;
+            --color-accent-haptic-rgb: 54, 197, 240;
+            --color-accent-haptic-dark: #278ea9;
+            --color-link-hover: #f0f8ff; 
+            --color-background-item-hover: rgba(255, 255, 255, 0.05);
+            --color-nav-button-bg: rgba(255, 255, 255, 0.08);
+            --color-nav-button-hover-bg: rgba(255, 255, 255, 0.12);
+            --color-modal-bg: #2c3035;
+            --color-modal-shadow: rgba(0, 0, 0, 0.3);
+            --color-category-border: rgba(255, 255, 255, 0.1);
+            --color-symbol-prefix: #aaa;
+            --color-chip-bg: rgba(255, 255, 255, 0.06);
+            --color-chip-hover-bg: rgba(255, 255, 255, 0.1);
+        }
+
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
 
-        html, body {
-            height: 100%; /* Ensure full height for background effects */
+        html,
+        body {
+            height: 100%;
         }
 
-        /* Body & Base Typography */
         body {
             font-family: var(--font-family-body);
             line-height: 1.6;
@@ -59,14 +87,13 @@
             background-color: var(--color-background-base);
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
             padding: 20px;
-            overflow: hidden; /* Prevent scrollbars from dynamic backgrounds/jitter */
+            overflow-y: auto;
             position: relative;
         }
 
-        /* Chromaticity: Soft-neon gradients that blur into infra-pastels. */
         body::before {
             content: '';
             position: fixed;
@@ -74,48 +101,57 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: conic-gradient(
-                from 0deg,
-                var(--color-flux-1) 0%,
-                var(--color-flux-2) 20%,
-                var(--color-flux-3) 40%,
-                var(--color-flux-4) 60%,
-                var(--color-flux-5) 80%,
-                var(--color-flux-1) 100%
-            );
-            filter: blur(150px); /* Increased blur for softer, calmer background */
-            opacity: 0.6; /* Slightly reduced opacity for calmness */
+            background: conic-gradient(from 0deg,
+                    var(--color-flux-1) 0%,
+                    var(--color-flux-2) 20%,
+                    var(--color-flux-3) 40%,
+                    var(--color-flux-4) 60%,
+                    var(--color-flux-5) 80%,
+                    var(--color-flux-1) 100%);
+            filter: blur(150px);
+            opacity: 0.6;
             animation: colorFlux 80s linear infinite, subtleBreathing 25s ease-in-out infinite alternate;
             z-index: -2;
             pointer-events: none;
         }
 
         @keyframes colorFlux {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(0, 0) rotate(360deg); }
+            0% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            100% {
+                transform: translate(0, 0) rotate(360deg);
+            }
         }
 
-        /* Motion: Slow-breathing expansions */
         @keyframes subtleBreathing {
-            0% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.015); opacity: 0.7; } /* Reduced scale for subtlety */
-            100% { transform: scale(1); opacity: 0.5; }
+            0% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.015);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
         }
 
-        /* Main Content Container - Materiality: Liquid glass + vapor-etched typography */
         .container {
             width: 100%;
-            max-width: 700px; /* Slightly wider for more content */
+            max-width: 700px;
             background-color: var(--color-glass-base);
             padding: 40px 35px;
             border-radius: var(--container-border-radius);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.05),
-                        inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(30px); /* Slightly increased blur */
+            box-shadow: 0 15px 40px var(--color-etch-shadow),
+                inset 0 0 0 1px var(--color-glass-active);
+            backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
             animation: fadeIn 1.5s ease-out;
             position: relative;
-            margin: 20px auto; /* Centering and some margin for viewport */
+            margin: 20px auto;
         }
 
         @keyframes fadeIn {
@@ -123,10 +159,10 @@
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* Header Styling */
         header {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 20px; /* Reduced margin to pull sub-controls closer */
+            position: relative;
         }
 
         header h1 {
@@ -136,6 +172,19 @@
             margin-bottom: 10px;
             letter-spacing: -0.03em;
             text-shadow: 0 1px 2px var(--color-etch-shadow);
+            min-height: 1.5em;
+        }
+
+        header h1 .title-word {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: slideUpFadeIn 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+            animation-delay: var(--delay);
+        }
+
+        @keyframes slideUpFadeIn {
+            to { opacity: 1; transform: translateY(0); }
         }
 
         header p.greeting {
@@ -144,11 +193,44 @@
             color: var(--color-text-secondary);
             opacity: 0.9;
             text-shadow: 0 1px 1px var(--color-etch-shadow);
+            margin-top: 5px;
         }
 
-        /* Navigation & Categories */
+        .header-sub-controls {
+            text-align: center;
+            margin-top: 15px;
+            margin-bottom: 35px;
+        }
+
+        .header-sub-controls button {
+            background: none;
+            border: none;
+            color: var(--color-text-secondary);
+            font-size: 1.2em; /* Adjusted for chip style */
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: color 0.2s ease, background-color 0.2s ease;
+            line-height: 1;
+            border-radius: 12px; /* Rounded corners for chip */
+            background-color: var(--color-chip-bg);
+            margin: 0 5px;
+        }
+
+        .header-sub-controls button:hover {
+            color: var(--color-text-primary);
+            background-color: var(--color-chip-hover-bg);
+        }
+
+        .header-sub-controls button:focus-visible {
+            outline: 2px solid var(--color-accent-haptic);
+            outline-offset: 1px;
+        }
+
         nav {
-            margin-top: 20px;
+            margin-top: 30px;
+            animation: fadeIn 1s ease-out 0.8s forwards;
+            opacity: 0;
+            width: 100%;
         }
 
         .category {
@@ -160,14 +242,25 @@
         }
 
         .category h2 {
-            font-size: 1.6em;
-            font-weight: 300; /* Lighter for mystic feel */
-            color: var(--color-text-primary);
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.15); /* Softer, glassier separator */
+            font-size: 0.85em;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            background-color: var(--color-nav-button-bg);
+            padding: 6px 12px;
+            border-radius: 14px;
+            display: inline-block;
+            margin-bottom: 25px;
+            border-bottom: none;
             text-align: left;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .category h2 .category-icon {
+            margin-right: 0.4em;
+            font-size: 0.9em; /* Slightly smaller or same as text */
+            opacity: 0.8;
         }
 
         nav ul {
@@ -179,298 +272,483 @@
         }
 
         nav li {
-            background-color: var(--color-glass-active);
-            border-radius: 18px;
-            padding: 20px 25px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.03);
-            position: relative;
-            overflow: hidden;
-        }
-
-        nav li:hover {
-            transform: translateY(-5px) scale(1.02); /* Added subtle scale */
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07); /* Enhanced hover shadow */
-        }
-
-        nav a {
-            display: block;
-            text-decoration: none;
-            color: var(--color-text-primary);
-            font-weight: 500; /* Clear and readable */
-            font-size: 1.2em; /* Slightly larger for emphasis */
-            letter-spacing: 0.01em;
-            margin-bottom: 8px; /* Space between title and description */
-            transition: color 0.3s ease;
-            filter: none; /* Removed initial blur for clarity */
-        }
-
-        nav a:hover {
-            color: var(--color-accent-haptic-dark);
-        }
-
-        .description {
-            font-size: 0.9em;
-            font-weight: 300;
-            color: var(--color-text-secondary);
-            opacity: 0.85;
-            line-height: 1.5;
-        }
-
-        /* Haptic Ghosting / Procedural Calligraphy (subtle underline effect) */
-        nav a::after {
-            content: '';
-            position: absolute;
-            left: 25px; /* Align with padding */
-            bottom: 15px; /* Adjust based on li padding */
-            width: 0;
-            height: 1px;
-            background-color: var(--color-accent-haptic);
-            transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); 
+            background-color: transparent; /* Ensure no direct bg for li if items have their own */
+            border-radius: 15px;
+            transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            position: relative; /* For pseudo-elements or status badges if needed */
         }
         
-        nav li:hover a::after {
-            width: calc(100% - 50px); /* Span across, considering padding */
+        .item-link {
+            display: block;
+            padding: 18px 20px;
+            text-decoration: none;
+            border-radius: 15px;
+            background-color: var(--color-glass-base);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.03);
+            transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.3s ease;
         }
 
-        /* Media Queries for Mobile Friendliness */
+        .item-link:hover {
+            background-color: var(--color-background-item-hover);
+            transform: translateY(-3px) scale(1.01);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+        }
+
+        .item-link a {
+            color: var(--color-text-primary);
+            font-size: 1.1em;
+            font-weight: 500;
+            display: block; /* To make whole area clickable */
+            margin-bottom: 6px; /* Space between title and description */
+            text-decoration: none;
+        }
+
+        .item-link a .symbol-prefix {
+            color: var(--color-symbol-prefix);
+            margin-right: 0.6em;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+
+        .item-link .description {
+            font-size: 0.88em;
+            color: var(--color-text-secondary);
+            line-height: 1.5;
+            opacity: 0.9;
+        }
+
+        /* Status indicators */
+        .status-needs-polish .item-link a,
+        .status-under-construction .item-link a {
+            opacity: 0.8;
+        }
+        .status-needs-polish .description,
+        .status-under-construction .description {
+            opacity: 0.7;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.visible {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--color-modal-bg);
+            color: var(--color-text-primary);
+            margin: auto;
+            padding: 30px 35px;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px var(--color-modal-shadow);
+            width: 90%;
+            max-width: 550px;
+            position: relative;
+            animation: slideInModal 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        @keyframes slideInModal {
+            from { opacity: 0; transform: translateY(50px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 400;
+            font-size: 1.8em;
+        }
+
+        .modal-content p {
+            margin-bottom: 15px;
+            line-height: 1.7;
+            font-size: 0.95em;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            color: var(--color-text-secondary);
+            font-size: 28px;
+            font-weight: bold;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: var(--color-text-primary);
+            text-decoration: none;
+        }
+
+        /* Footer Styling */
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid var(--color-category-border); /* Subtle separator */
+            font-size: 0.8em;
+            color: var(--color-text-secondary);
+            opacity: 0.7;
+        }
+
+        footer p {
+            margin-bottom: 5px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 30px 20px;
-                max-width: 95%;
-                border-radius: 20px;
+                margin: 10px;
+                max-width: calc(100% - 20px);
             }
             header h1 {
-                font-size: 2.3em;
+                font-size: 2.2em;
             }
             header p.greeting {
                 font-size: 1em;
             }
             .category h2 {
-                font-size: 1.4em;
-                margin-bottom: 15px;
+                font-size: 0.8em;
+                padding: 5px 10px;
             }
             nav ul {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr; /* Stack items on mobile */
                 gap: 15px;
             }
-            nav li {
-                padding: 18px 20px;
-                border-radius: 15px;
+            .item-link {
+                padding: 15px;
             }
-            nav a {
-                font-size: 1.1em;
+            .item-link a {
+                font-size: 1em;
             }
-            .description {
+            .item-link .description {
                 font-size: 0.85em;
             }
-            nav a::after {
-                left: 20px;
-                bottom: 12px;
-            }
-            nav li:hover a::after {
-                width: calc(100% - 40px);
-            }
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 10px;
-            }
-            .container {
-                padding: 25px 15px;
-                border-radius: 15px;
-            }
-            header h1 {
-                font-size: 2em;
-            }
-            .category h2 {
-                font-size: 1.25em;
-            }
-            nav li {
-                padding: 15px;
-                border-radius: 12px;
-            }
-            nav a {
-                font-size: 1.05em;
-                font-weight: 500; /* Ensure readability */
-            }
-            .description {
-                font-size: 0.8em;
-            }
-             nav a::after {
-                left: 15px;
-                bottom: 10px;
-            }
-            nav li:hover a::after {
+            .modal-content {
+                padding: 25px 20px;
                 width: calc(100% - 30px);
             }
         }
-
     </style>
 </head>
 <body>
     <div class="container" id="main-container">
         <header>
-            <h1>Synesthetic Flux Console</h1>
-            <p class="greeting" id="greeting">Connecting to the ether...</p>
+            <h1>
+                <span class="title-word" style="--delay: 0s;">Synesthetic</span>
+                <span class="title-word" style="--delay: 0.2s;">Flux</span>
+                <span class="title-word" style="--delay: 0.4s;">Console</span>
+            </h1>
+            <p class="greeting" id="greeting">Where senses merge and patterns emerge.</p>
+            <div class="header-sub-controls"> 
+                <button id="about-button" title="About this project">ⓘ</button> 
+                <button id="dark-mode-toggle" title="Toggle Dark Mode">◑</button> 
+            </div>
         </header>
 
         <nav>
-            <section class="category">
-                <h2>Core Transmissions</h2>
+            <section class="category featured-category">
+                <h2><span class="category-icon">★</span>Featured</h2>
                 <ul>
-                    <li>
-                        <a href="superflux.html">Superflux Continuum</a>
-                        <p class="description">Navigate the ever-shifting currents of sensory data and emergent patterns. A voyage into the abstract heart of the flux.</p>
+                    <li class="status-best">
+                        <span class="item-link">
+                            <a href="botanica-03.html"><span class="symbol-prefix">✶</span>Botanica III: Symbiotic Soundscapes</a>
+                            <p class="description">Cultivate a garden of sound where digital flora respond to your presence and each other, creating emergent audiovisual ecosystems.</p>
+                        </span>
                     </li>
-                    <li>
-                        <a href="field.html">Resonant Field</a>
-                        <p class="description">Tune into the subtle vibrations that connect all things. Explore an interactive landscape of interconnected energy nodes.</p>
-                    </li>
-                    <li>
-                        <a href="constellation.html">Stellar Cartographies</a>
-                        <p class="description">Chart unknown cosmic territories and map the architectures of light. A journey through generative celestial formations.</p>
+                    <li class="status-best">
+                        <span class="item-link">
+                            <a href="weft.html"><span class="symbol-prefix">∿</span>Weft: Entangled Rhythms</a>
+                            <p class="description">Experience the underlying rhythms of computational processes made manifest in audiovisual form.</p>
+                        </span>
                     </li>
                 </ul>
             </section>
-
-            <section class="category">
-                <h2>Botanical Explorations</h2>
-                <ul>
-                    <li>
-                        <a href="botanica.html">Botanica Prime: The Generative Root</a>
-                        <p class="description">Explore the foundational algorithms from which digital ecologies emerge. The origin point of botanical simulations.</p>
+            
+            <section class="category" id="interactive-phenomena-category">
+                <h2><span class="category-icon">❖</span>Explorations</h2>
+                <ul id="interactive-phenomena-list">
+                    <li class="status-best">
+                        <span class="item-link">
+                            <a href="superflux.html"><span class="symbol-prefix">⇌</span>Superflux Continuum</a>
+                            <p class="description">Navigate the ever-shifting currents of sensory data and emergent patterns. A voyage into the abstract heart of the flux.</p>
+                        </span>
                     </li>
-                    <li>
-                        <a href="botanica-01.html">Botanica I: Seedlings of Code</a>
-                        <p class="description">Observe the initial fragile sprouts of generative plant life. Early experiments in algorithmic botany.</p>
+                    <li class="status-best">
+                        <span class="item-link">
+                            <a href="resonant-field.html"><span class="symbol-prefix">♨</span>Field Harmonics: Extended Resonant Explorations</a>
+                            <p class="description">Further investigations into sonic geographies and the visualization of resonant energy patterns.</p>
+                        </span>
                     </li>
-                    <li>
-                        <a href="botanica-02.html">Botanica II: Emergent Flora</a>
-                        <p class="description">Witness the digital genesis of unique plant-like forms. Cultivate and observe algorithmic life in a serene audiovisual terrarium.</p>
+                    <li class="status-best">
+                        <span class="item-link">
+                            <a href="dialogue.html"><span class="symbol-prefix">⇔</span>Echo Chambers: Conversations with the System</a>
+                            <p class="description">Engage in a textual dialogue with an evolving digital entity. Explore the nature of communication and response.</p>
+                        </span>
                     </li>
-                    <li>
-                        <a href="botanica-03.html">Botanica III: Algorithmic Arboretum</a>
-                        <p class="description">Wander through a diverse collection of mature generative trees and complex plant structures. An ecosystem of code.</p>
+                    <li class="status-best">
+                        <span class="item-link">
+                            <a href="edifice.html"><span class="symbol-prefix">⛶</span>Edifice: Algorithmic Architectures</a>
+                            <p class="description">Explore dynamically generated architectural forms and soundscapes that shift and reconfigure over time.</p>
+                        </span>
                     </li>
-                    <li>
-                        <a href="botanica-04.html">Botanica IV: Symbiotic Soundscapes</a>
-                        <p class="description">Delve deeper into the symbiosis of generative flora and evolving sound. An immersive experience in ecological algorithms.</p>
+                    <li class="status-best">
+                        <span class="item-link">
+                            <a href="touch.html"><span class="symbol-prefix">∴</span>Touch: Resonant Surfaces</a>
+                            <p class="description">Interactive surfaces that respond to touch with evolving light and sound patterns. A tactile exploration of digital textures.</p>
+                        </span>
+                    </li>
+                    <li class="status-best">
+                        <span class="item-link">
+                            <a href="breath.html"><span class="symbol-prefix">〰</span>Breath: Ephemeral Oscillations</a>
+                            <p class="description">Visualize and interact with breath patterns, transforming vital rhythms into flowing digital art.</p>
+                        </span>
+                    </li>
+                    <li class="status-under-construction">
+                        <span class="item-link">
+                            <a href="woven-rhtythms.html"><span class="symbol-prefix">§</span>Rhythmic Tapestry (WIP)</a>
+                            <p class="description">Experience the underlying rhythms of computational processes made manifest in audiovisual form.</p>
+                        </span>
+                    </li>
+                    <li class="status-under-construction">
+                        <span class="item-link">
+                            <a href="constellation.html"><span class="symbol-prefix">٭</span>Constellation (WIP)</a>
+                            <p class="description">Chart unknown cosmic territories and map the architectures of light. A journey through generative celestial formations.</p>
+                        </span>
+                    </li>
+                    <li class="status-under-construction">
+                        <span class="item-link">
+                            <a href="field.html"><span class="symbol-prefix">◌</span>Field (WIP)</a>
+                            <p class="description">Initial concepts for resonant field interactions. A work in progress.</p>
+                        </span>
+                    </li>
+                    <li class="status-under-construction">
+                        <span class="item-link">
+                            <a href="sonic-mandala.html"><span class="symbol-prefix">☸</span>Sonic Mandala (WIP)</a>
+                            <p class="description">Generating intricate, evolving sound mandalas. A work in progress.</p>
+                        </span>
                     </li>
                 </ul>
             </section>
-
-            <section class="category">
-                <h2>Interactive Phenomena</h2>
-                <ul>
-                    <li>
-                        <a href="breath.html">Vital Rhythms: An Interface for Breath</a>
-                        <p class="description">Connect your breath to a responsive visual and auditory environment. Explore the poetics of biological input.</p>
+            
+            <section class="category" id="generative-gardens-category">
+                <h2><span class="category-icon">⚘</span>Gardens</h2>
+                <ul id="generative-gardens-list">
+                    <li class="status-needs-polish">
+                        <span class="item-link">
+                            <a href="botanica-02.html"><span class="symbol-prefix">⸙</span>Botanica II (Needs Polish)</a>
+                            <p class="description">Early explorations into generative flora and their sonic counterparts. Interactive botanical art.</p>
+                        </span>
                     </li>
-                    <li>
-                        <a href="dialogue.html">Echo Chambers: Conversations with the System</a>
-                        <p class="description">Engage in a textual dialogue with an evolving digital entity. Explore the nature of communication and response.</p>
+                    <li class="status-under-construction">
+                        <span class="item-link">
+                            <a href="botanica.html"><span class="symbol-prefix">ꕤ</span>Botanica Prime (WIP)</a>
+                            <p class="description">The foundational generative garden, an ongoing experiment in digital ecology.</p>
+                        </span>
                     </li>
-                    <li>
-                        <a href="edifice.html">Constructs: Building Worlds with Light</a>
-                        <p class="description">Shape and sculpt ephemeral structures from light and sound. An architectural exploration in a digital void.</p>
+                    <li class="status-under-construction">
+                        <span class="item-link">
+                            <a href="botanica-04.html"><span class="symbol-prefix">⚘</span>Botanica IV (WIP)</a>
+                            <p class="description">Exploring new species and interactions within the digital menagerie.</p>
+                        </span>
                     </li>
-                    <li>
-                        <a href="resonant-field.html">Field Harmonics: Extended Resonant Explorations</a>
-                        <p class="description">Further investigations into sonic geographies and the visualization of resonant energy patterns.</p>
-                    </li>
-                    <li>
-                        <a href="sonic-mandala.html">Mandala Sonorus: Circular Harmonies</a>
-                        <p class="description">Generate and interact with intricate, evolving sound mandalas. A meditative journey into cyclic sound.</p>
-                    </li>
-                    <li>
-                        <a href="touch.html">Haptic Echoes: Interacting with Immateriality</a>
-                        <p class="description">Explore sensory feedback from interactions with intangible digital objects and fields.</p>
-                    </li>
-                    <li>
-                        <a href="weft.html">Data Weft: Weaving Digital Threads</a>
-                        <p class="description">Visualize and manipulate interconnected data streams as intricate, flowing tapestries.</p>
-                    </li>
-                    <li>
-                        <a href="woven-rhtythms.html">Rhythmic Tapestry: The Pulse of Code</a>
-                        <p class="description">Experience the underlying rhythms of computational processes made manifest in audiovisual form.</p>
+                    <li class="status-under-construction">
+                        <span class="item-link">
+                            <a href="botanica-01.html"><span class="symbol-prefix">⊹</span>Botanica 01 (WIP)</a>
+                            <p class="description">The earliest explorations in generative flora. A work in progress.</p>
+                        </span>
                     </li>
                 </ul>
             </section>
         </nav>
 
+        <footer>
+            <p>&copy; 2025 Synesthetic Flux. Crafted with cosmic rays &amp; curious code.</p>
+            <p>Handle with care. Results may vary with atmospheric conditions.</p>
+        </footer>
+
+    </div>
+
+    <div id="about-modal" class="modal">
+        <div class="modal-content">
+            <span id="close-about-modal" class="close-button">&times;</span>
+            <h2>Synesthetic Flux Console: An Invitation to Sensory Alchemy</h2>
+            <p>Welcome to the Synesthetic Flux Console. This is not merely a collection of software, but a digital atelier, a space for exploring the liminal zones where sound, sight, and interaction dissolve into one another. It's an ongoing inquiry into how we perceive, create, and connect within the ever-shifting landscapes of the digital realm.</p>
+            <p>This console is a living project, and its doors are open. We invite you to explore these digital territories, engage with their dynamics, and perhaps find new ways of hearing, seeing, and being within the flux. Gardeners of sound, weavers of light, architects of interaction—your insights and collaborations are welcome. What new metaphors for perception will you discover and help cultivate here?</p>
+        </div>
     </div>
 
     <script>
-        // JavaScript Starts Here
+        document.addEventListener('DOMContentLoaded', function() {
+            const featuredUl = document.querySelector('.featured-category ul');
+            const allLists = document.querySelectorAll('nav .category ul');
+            const botanicaIIISelector = 'a[href="botanica-03.html"]';
+            const weftSelector = 'a[href="weft.html"]';
+            let botanicaIII_LI = null;
+            let weft_LI = null;
+            const polishedItems = [];
+            const constructionItems = [];
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const greetingElement = document.getElementById('greeting');
-            const mainContainer = document.getElementById('main-container');
+            const allItems = [];
+            allLists.forEach(list => {
+                Array.from(list.children).forEach(item => {
+                    allItems.push(item);
+                });
+            });
 
-            // Dynamic Greeting based on time
-            const updateGreeting = () => {
-                const now = new Date();
-                const hour = now.getHours();
-                let greeting;
-                if (hour >= 5 && hour < 12) {
-                    greeting = "Aetheric dawn.";
-                } else if (hour >= 12 && hour < 18) {
-                    greeting = "Resonance at midday.";
-                } else if (hour >= 18 && hour < 22) {
-                    greeting = "Nocturnal harmonics.";
-                } else {
-                    greeting = "Deep cycle calibration.";
+            allLists.forEach(list => {
+                if (!list.parentElement.classList.contains('featured-category')) {
+                    list.innerHTML = '';
                 }
-                greetingElement.textContent = greeting;
-            };
+            });
 
-            // Initial greeting update with a subtle fade-in
-            greetingElement.style.opacity = 0; // Start invisible
-            setTimeout(() => {
-                updateGreeting();
-                greetingElement.style.transition = 'opacity 0.8s ease-out';
-                greetingElement.style.opacity = 1; // Fade in
-            }, 800); // Delay for a more gentle appearance after the main page fade-in
+            allItems.forEach(item => {
+                const link = item.querySelector('a');
+                const description = item.querySelector('.description');
+                const textContent = (link ? link.textContent : '') + ' ' + (description ? description.textContent : '');
+                const href = link ? link.getAttribute('href') : '';
 
-            // Motion: Sub-pixel jitter is driven by browser-reported network jitter
-            // (Simulated with a subtle random translation)
+                if (href === 'botanica-03.html') {
+                    botanicaIII_LI = item;
+                } else if (href === 'weft.html') {
+                    weft_LI = item;
+                } else if (!textContent.toLowerCase().includes('(needs polish)') && 
+                           !textContent.toLowerCase().includes('(wip)')) {
+                    polishedItems.push(item);
+                } else {
+                    constructionItems.push(item);
+                }
+            });
+
+            if (featuredUl) {
+                featuredUl.innerHTML = ''; 
+                if (botanicaIII_LI) featuredUl.appendChild(botanicaIII_LI);
+                if (weft_LI) featuredUl.appendChild(weft_LI);
+                
+                polishedItems.forEach(item => {
+                    if (item !== botanicaIII_LI && item !== weft_LI) {
+                        const href = item.querySelector('a') ? item.querySelector('a').getAttribute('href') : '';
+                        if (href.includes('botanica') && document.querySelector('#generative-gardens-category ul')) {
+                            document.querySelector('#generative-gardens-category ul').appendChild(item);
+                        } else if (document.querySelector('#interactive-phenomena-category ul')) {
+                            document.querySelector('#interactive-phenomena-category ul').appendChild(item);
+                        }
+                    }
+                });
+            }
+
+            const gardensList = document.querySelector('#generative-gardens-category ul');
+            const explorationsList = document.querySelector('#interactive-phenomena-category ul');
+
+            constructionItems.forEach(item => {
+                const href = item.querySelector('a') ? item.querySelector('a').getAttribute('href') : '';
+                if (href.includes('botanica') && gardensList) {
+                    gardensList.appendChild(item);
+                } else if (explorationsList) {
+                    explorationsList.appendChild(item);
+                }
+            });
+
+            const aboutButton = document.getElementById('about-button');
+            const aboutModal = document.getElementById('about-modal');
+            const closeModalButton = document.getElementById('close-about-modal');
+
+            if (aboutButton && aboutModal && closeModalButton) {
+                aboutButton.addEventListener('click', () => {
+                    aboutModal.classList.add('visible');
+                });
+                closeModalButton.addEventListener('click', () => {
+                    aboutModal.classList.remove('visible');
+                });
+                aboutModal.addEventListener('click', (event) => {
+                    if (event.target === aboutModal) {
+                        aboutModal.classList.remove('visible');
+                    }
+                });
+            }
+
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            const body = document.body;
+
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    body.classList.add('dark-mode');
+                    darkModeToggle.textContent = '☀'; 
+                    darkModeToggle.title = 'Switch to Light Mode';
+                } else {
+                    body.classList.remove('dark-mode');
+                    darkModeToggle.textContent = '◑'; 
+                    darkModeToggle.title = 'Switch to Dark Mode';
+                }
+            }
+
+            let currentTheme = localStorage.getItem('theme');
+            if (!currentTheme) {
+                currentTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            applyTheme(currentTheme);
+
+            if (darkModeToggle) {
+                darkModeToggle.addEventListener('click', () => {
+                    body.classList.toggle('dark-mode');
+                    let newTheme = body.classList.contains('dark-mode') ? 'dark' : 'light';
+                    localStorage.setItem('theme', newTheme);
+                    applyTheme(newTheme); 
+                });
+            }
+
+            const greetingElement = document.querySelector('header p.greeting');
+            if (greetingElement) {
+                greetingElement.style.opacity = 0;
+                setTimeout(() => {
+                    greetingElement.style.transition = 'opacity 0.8s ease-out';
+                    greetingElement.style.opacity = 1;
+                }, 300);
+            }
+
+            const mainContainer = document.getElementById('main-container');
             let lastTimestamp = 0;
-            const jitterAmount = 0.15; // Reduced jitter amount significantly
-            const maxOffset = 1; // Maximum pixel offset
+            const jitterIntensity = 0.15;
+            const jitterFrequency = 150;
 
             function applyJitter(timestamp) {
-                if (!lastTimestamp) lastTimestamp = timestamp;
-                const deltaTime = timestamp - lastTimestamp;
-
-                // Apply jitter less frequently for a calmer effect
-                if (deltaTime > 100) { // Apply roughly every 100ms
-                    const offsetX = (Math.random() - 0.5) * 2 * jitterAmount;
-                    const offsetY = (Math.random() - 0.5) * 2 * jitterAmount;
-                    
-                    // Clamp the offset to avoid large jumps
-                    const clampedX = Math.max(-maxOffset, Math.min(maxOffset, offsetX));
-                    const clampedY = Math.max(-maxOffset, Math.min(maxOffset, offsetY));
-
-                    mainContainer.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
+                if (!lastTimestamp || (timestamp - lastTimestamp > jitterFrequency)) {
                     lastTimestamp = timestamp;
+                    if (mainContainer) {
+                        const xJitter = (Math.random() - 0.5) * 2 * jitterIntensity;
+                        const yJitter = (Math.random() - 0.5) * 2 * jitterIntensity;
+                        mainContainer.style.transform = `translate(${xJitter}px, ${yJitter}px)`;
+                    }
                 }
                 requestAnimationFrame(applyJitter);
             }
-            requestAnimationFrame(applyJitter);
-
-            // Additional subtle touch: if the window is resized, subtly re-center jitter
+            if (mainContainer && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                 requestAnimationFrame(applyJitter);
+            }
+            
             window.addEventListener('resize', () => {
-                // Reset jitter to ensure it's not off-screen or stuck
-                mainContainer.style.transform = `translate(0, 0)`;
-                lastTimestamp = 0; // Force immediate jitter update
+                if (mainContainer) mainContainer.style.transform = 'translate(0, 0)';
             });
 
-            // No further complex JS interactions needed to maintain the "subtle interactions" brief.
         });
-
-        // End of JavaScript
     </script>
 </body>
 </html>
