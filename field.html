@@ -99,6 +99,24 @@
     #bluetooth-indicator { bottom: 14px; }
     #magnetic-indicator { bottom: 18px; }
     #orientation-indicator { bottom: 22px; }
+
+    /* Styles for Indicator Labels */
+    .indicator-label {
+      position: absolute;
+      left: 10px; /* Align with a small left padding */
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0; /* Initially hidden */
+      transition: opacity 1s ease;
+      pointer-events: none; /* Don't interfere with interactions */
+    }
+
+    #wifi-label { bottom: 8px; } /* Position slightly above the indicator */
+    #bluetooth-label { bottom: 12px; }
+    #magnetic-label { bottom: 16px; }
+    #orientation-label { bottom: 20px; }
   </style>
 </head>
 <body>
@@ -108,6 +126,12 @@
   <div class="field-indicator" id="bluetooth-indicator"></div>
   <div class="field-indicator" id="magnetic-indicator"></div>
   <div class="field-indicator" id="orientation-indicator"></div>
+
+  <!-- Labels for Indicators -->
+  <div class="indicator-label" id="wifi-label">WiFi</div>
+  <div class="indicator-label" id="bluetooth-label">Bluetooth</div>
+  <div class="indicator-label" id="magnetic-label">Magnetic</div>
+  <div class="indicator-label" id="orientation-label">Orientation</div>
   
   <div id="status">listening to electromagnetic fields...</div>
   
@@ -151,7 +175,11 @@
         wifiIndicator: document.getElementById('wifi-indicator'),
         bluetoothIndicator: document.getElementById('bluetooth-indicator'),
         magneticIndicator: document.getElementById('magnetic-indicator'),
-        orientationIndicator: document.getElementById('orientation-indicator')
+        orientationIndicator: document.getElementById('orientation-indicator'),
+        wifiLabel: document.getElementById('wifi-label'),
+        bluetoothLabel: document.getElementById('bluetooth-label'),
+        magneticLabel: document.getElementById('magnetic-label'),
+        orientationLabel: document.getElementById('orientation-label')
       };
       
       // Initialize event listeners
@@ -167,6 +195,12 @@
           elements.intro.classList.add('hidden');
           elements.status.style.opacity = 1;
           
+          // Make labels visible
+          elements.wifiLabel.style.opacity = 1;
+          elements.bluetoothLabel.style.opacity = 1;
+          elements.magneticLabel.style.opacity = 1;
+          elements.orientationLabel.style.opacity = 1;
+
           initializeAudio();
           initializeSensors();
           startSensorPolling();

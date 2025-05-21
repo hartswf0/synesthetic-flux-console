@@ -476,6 +476,89 @@
       opacity: 1;
       transform: translateX(-50%) translateY(0); /* Animate in */
     }
+
+    /* Mobile Responsiveness for Controls */
+    @media (max-width: 768px) {
+      .interface {
+        gap: 10px; /* Reduce gap on smaller screens */
+        padding: 10px 15px; /* Reduce padding */
+        bottom: 10px; /* Bring it a bit closer to the bottom */
+      }
+
+      .module {
+        gap: 5px; /* Reduce gap within modules */
+      }
+
+      .entropy-dial, .harmony-dial, .resonance-dial {
+        width: 50px; /* Smaller dials */
+        height: 50px;
+      }
+
+      .dial-indicator {
+        top: 3px; /* Adjust indicator position for smaller dial */
+        height: 22px; /* Adjust indicator length */
+        transform-origin: 50% 22px; /* Adjust rotation origin */
+      }
+      
+      .dial-value {
+        font-size: 10px; /* Smaller text */
+      }
+
+      .tempo-totem {
+        width: 30px;
+        height: 100px; /* Shorter totem */
+      }
+
+      .memory-slots {
+        width: 100px; /* Smaller memory slots area */
+        gap: 4px;
+      }
+
+      .memory-slot {
+        width: 22px; /* Smaller individual slots */
+        height: 22px;
+        font-size: 8px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .interface {
+        gap: 5px;
+        padding: 8px 10px;
+        max-width: 95vw; /* Allow a bit more width on very small screens if needed */
+      }
+
+      .entropy-dial, .harmony-dial, .resonance-dial {
+        width: 40px;
+        height: 40px;
+      }
+
+      .dial-indicator {
+        top: 2px;
+        height: 18px;
+        transform-origin: 50% 18px;
+      }
+      
+      .dial-value {
+        font-size: 9px;
+      }
+
+      .tempo-totem {
+        width: 25px;
+        height: 80px;
+      }
+
+      .memory-slots {
+        width: 80px; /* Further reduce memory slots area */
+        grid-template-columns: repeat(4, 1fr); /* Ensure they still try to fit 4 across */
+        gap: 3px;
+      }
+
+      .memory-slot {
+        width: 18px; /* Even smaller individual slots */
+        height: 18px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -2096,16 +2179,27 @@
     }
 
     // Start
-    startButton.addEventListener('click', async () => {
+    let initialized = false;
+    function initialize() {
+      if (initialized) return;
       introScreen.style.opacity = 0;
       setTimeout(() => introScreen.classList.add('hidden'), 500); // Hide after fade
-      await initAudio();
+      initAudio();
       initVisuals();
+      document.querySelector('.interface').style.display = 'flex';
+      document.getElementById('status').style.display = 'block';
+      showNotification('Flux Initialized. Move mouse to begin.', 3000);
+      animate(0); // Start the animation loop
+      initialized = true;
+    }
+
+    startButton.addEventListener('click', initialize);
+    startButton.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      initialize();
     });
 
-    updateStatusDisplay(); // Initial status
-    updateMemorySlotVisuals(); // Initial memory slot appearance
-
+    console.log("SynestheticFlux Console initialized. Ready to enter the flux.");
   </script>
 </body>
 </html>
