@@ -216,6 +216,10 @@
         background: rgb(255, 0, 150);
         color: white;
     }
+    .memory-slot.saving {
+      background-color: #00ff80; /* Green flash for save */
+      transition: background-color 0.1s ease-out;
+    }
 
     .module-label {
       font-size: 10px;
@@ -1731,27 +1735,58 @@
 
 
     // Memory Slots
-    memorySlotEls.forEach(slot => {
-      slot.addEventListener('click', () => {
-        const slotIndex = slot.dataset.slot;
-        if (state.activeMemorySlot === slotIndex) { // If already active, clear it or save
-            if (state.memoryStates[slotIndex]) { // If has data, prompt to overwrite
-                if (confirm(`Overwrite memory slot ${parseInt(slotIndex)+1}?`)) {
-                    saveStateToMemory(slotIndex);
-                }
-            } else {
-                 saveStateToMemory(slotIndex);
-            }
-        } else { // Activate or load
-            if (state.memoryStates[slotIndex]) {
-                loadStateFromMemory(slotIndex);
-            } else {
-                // If empty, make it active for potential save (or just select it)
-                state.activeMemorySlot = slotIndex;
-                 showNotification(`Memory Slot ${parseInt(slotIndex)+1} selected. Click again to save current state.`, 2000);
-            }
+    const memorySlotElements = document.querySelectorAll('.memory-slots .memory-slot');
+    const LONG_PRESS_THRESHOLD = 750; // milliseconds
+    let memorySlotPressTimer = null;
+    let touchStartCoords = { x: 0, y: 0 };
+    let longPressActionTaken = false;
+
+    memorySlotElements.forEach((slot, index) => {
+      slot.addEventListener('click', (e) => {
+        // This primarily handles desktop clicks
+        if (e.shiftKey) { // Save with Shift + Click
+          saveStateToMemory(index);
+        } else { // Load with Click
+          loadStateFromMemory(index);
         }
-        updateMemorySlotVisuals();
+      });
+
+      slot.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Prevent click, zoom, etc.
+        longPressActionTaken = false;
+        touchStartCoords = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        
+        clearTimeout(memorySlotPressTimer);
+        memorySlotPressTimer = setTimeout(() => {
+          saveStateToMemory(index);
+          // Optionally, provide haptic feedback if available and desired
+          // if (navigator.vibrate) navigator.vibrate(50);
+          longPressActionTaken = true; 
+          // Add a visual cue for save, e.g., quick flash
+          slot.classList.add('saving');
+          setTimeout(() => slot.classList.remove('saving'), 300);
+        }, LONG_PRESS_THRESHOLD);
+      }, { passive: false });
+
+      slot.addEventListener('touchmove', (e) => {
+        // If finger moves too much, cancel the long press timer
+        const touch = e.touches[0];
+        const deltaX = Math.abs(touch.clientX - touchStartCoords.x);
+        const deltaY = Math.abs(touch.clientY - touchStartCoords.y);
+        if (deltaX > 10 || deltaY > 10) { // Threshold for movement
+          clearTimeout(memorySlotPressTimer);
+        }
+      });
+
+      slot.addEventListener('touchend', (e) => {
+        e.preventDefault(); // Prevent click event if touch was handled
+        clearTimeout(memorySlotPressTimer);
+        if (!longPressActionTaken) {
+          // If long press didn't happen, it's a tap (load)
+          loadStateFromMemory(index);
+        }
+        // Reset flag for next interaction
+        longPressActionTaken = false; 
       });
     });
 
@@ -1797,7 +1832,7 @@
         }
     }
     function updateMemorySlotVisuals() {
-        memorySlotEls.forEach(slot => {
+        memorySlotElements.forEach(slot => {
             const idx = slot.dataset.slot;
             slot.classList.remove('active', 'has-data');
             if (state.memoryStates[idx]) {
