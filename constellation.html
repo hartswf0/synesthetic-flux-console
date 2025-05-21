@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constellation Music Sequencer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #03050F; /* Deep space black */
+            color: #E2E8F0; /* Off-white for text */
+            font-family: 'Inter', sans-serif;
+        }
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            cursor: default; /* Default cursor for general area */
+        }
+        #starfield {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair; /* Default for drawing */
+        }
+        #ui-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            background: rgba(3, 5, 15, 0.7); /* Semi-transparent dark background */
+            backdrop-filter: blur(10px); /* Frosted glass effect */
+            z-index: 10;
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .btn {
+            background: rgba(255, 255, 255, 0.1); /* Light transparent background */
+            border: 1px solid rgba(255, 255, 255, 0.2); /* Light border */
+            color: #E2E8F0;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .btn.active {
+            background: rgba(88, 130, 193, 0.4); /* Active blue */
+            border-color: rgba(88, 130, 193, 0.6);
+        }
+        .btn svg {
+            width: 16px;
+            height: 16px;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .slider-container label {
+            font-size: 12px;
+            color: #A0AEC0; /* Grey text */
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            width: 100px;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #E2E8F0;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .synth-selector {
+            display: flex;
+            gap: 8px;
+        }
+        .synth-option {
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        .synth-option:hover {
+            opacity: 0.8;
+            transform: scale(1.1);
+        }
+        .synth-option.active {
+            border-color: #E2E8F0;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        /* Specific synth colors */
+        #pulsar { background: linear-gradient(135deg, #FF6B6B, #FF8E53); } /* Red-Orange */
+        #nebula { background: linear-gradient(135deg, #4776E6, #8E54E9); } /* Blue-Purple */
+        #quasar { background: linear-gradient(135deg, #00F260, #0575E6); } /* Green-Blue */
+        #neutron { background: linear-gradient(135deg, #FF5ACD, #FBDA61); } /* Pink-Yellow */
+        #magnetar { background: linear-gradient(135deg, #C21500, #FFC500); } /* Deep Red-Gold */
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(3, 5, 15, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: #070B1A;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #A0AEC0;
+            font-size: 20px;
+        }
+        .templates {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .template {
+            border-radius: 6px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        .template:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .template img {
+            width: 100%;
+            height: auto;
+            margin-bottom: 8px;
+            opacity: 0.8;
+        }
+        .template-name {
+            font-size: 12px;
+            color: #E2E8F0;
+        }
+        .toolbar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 11; /* Above UI container */
+        }
+        .tool {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tool:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .tool.active {
+            background: rgba(88, 130, 193, 0.4);
+            border-color: rgba(88, 130, 193, 0.6);
+        }
+        #status {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 12px;
+            color: #A0AEC0;
+            z-index: 11;
+        }
+        #help-modal .controls-explanation {
+            margin-top: 16px;
+        }
+        #help-modal h3 {
+            margin-bottom: 8px;
+            color: #E2E8F0;
+            font-weight: 500;
+        }
+        #help-modal ul {
+            padding-left: 16px;
+            margin-bottom: 16px;
+        }
+        #help-modal li {
+            margin-bottom: 4px;
+            color: #A0AEC0;
+            font-size: 14px;
+        }
+        #start-audio-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #03050F; /* Match body background */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Highest z-index */
+            color: #E2E8F0;
+            font-size: 1.2em;
+            text-align: center;
+            padding: 20px;
+        }
+        #start-audio-overlay button {
+            background: #4776E6; /* Nebula blue */
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+        #start-audio-overlay button:hover {
+            background: #5A87FF;
+            transform: translateY(-2px);
+        }
+        #start-audio-overlay p {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #A0AEC0;
+        }
+
+        /* Tool specific cursors */
+        #starfield.draw-mode { cursor: crosshair; }
+        #starfield.connect-mode { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.54-7.54l-3 3a5 5 0 0 0-1.07 1.91"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.54 7.54l3-3a5 5 0 0 0 1.07-1.91"></path></svg>') 12 12, pointer; }
+        #starfield.rotate-mode { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-refresh-cw"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.5 9a8 8 0 0 1 15.5 2h-4.3"></path><path d="M20.5 15a8 8 0 0 1-15.5-2h4.3"></path></svg>') 12 12, grab; }
+        #starfield.telescope-mode { cursor: zoom-in; }
+
+
+    </style>
+</head>
+<body>
+    <div id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-message">Loading Cosmic Harmonies...</div>
+        <p style="font-size: 0.8em; color: #A0AEC0; margin-top: 10px;">Page assets loaded. Click 'Activate Audio' to begin.</p>
+    </div>
+
+    <div id="start-audio-overlay">
+        <h2>Welcome to the Cosmic Symphony</h2>
+        <p>Click 'Activate Audio' to begin your journey among the stars.</p>
+        <button id="activate-audio-btn">Activate Audio</button>
+        <p style="font-size: 0.8em; color: #A0AEC0;">(This starts the audio engine required for sound generation)</p>
+    </div>
+
+    <div id="container">
+        <canvas id="starfield"></canvas>
+        <div id="status">Draw mode: Creating stars</div>
+        
+        <div class="toolbar">
+            <div class="tool active" id="draw-tool" data-tool="draw" title="Draw stars and constellations">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20z"></path>
+                    <path d="M12 8v8"></path>
+                    <path d="M8 12h8"></path>
+                </svg>
+            </div>
+            <div class="tool" id="connect-tool" data-tool="connect" title="Connect stars to form constellations">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8L6 16"></path>
+                    <circle cx="6" cy="16" r="3"></circle>
+                    <circle cx="18" cy="8" r="3"></circle>
+                </svg>
+            </div>
+            <div class="tool" id="rotate-tool" data-tool="rotate" title="Rotate constellations">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+                    <path d="M16 16h5v5"></path>
+                </svg>
+            </div>
+            <div class="tool" id="telescope-tool" data-tool="telescope" title="Telescope mode (focus on a constellation)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.3-4.3"></path>
+                </svg>
+            </div>
+            <div class="tool" id="template-tool" data-tool="template" title="Constellation templates">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 17.8 5.8 21 7 14.1 2 9.3l7-1L12 2l3 6.3 7 1-5 4.8 1.2 6.9z"></path>
+                </svg>
+            </div>
+            <div class="tool" id="help-tool" data-tool="help" title="Help">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <path d="M12 17h.01"></path>
+                </svg>
+            </div>
+        </div>
+
+        <div id="ui-container">
+            <div class="controls">
+                <div class="control-group">
+                    <button id="play-btn" class="btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        Play
+                    </button>
+                    <div class="slider-container">
+                        <label>BPM</label>
+                        <input type="range" id="tempo-slider" min="60" max="180" value="120">
+                        <span id="tempo-value">120</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="synth-selector">
+                        <div class="synth-option active" id="pulsar" data-synth="pulsar" title="Pulsar (Sine wave)"></div>
+                        <div class="synth-option" id="nebula" data-synth="nebula" title="Nebula (FM Synth)"></div>
+                        <div class="synth-option" id="quasar" data-synth="quasar" title="Quasar (AM Synth)"></div>
+                        <div class="synth-option" id="neutron" data-synth="neutron" title="Neutron (MonoSynth)"></div>
+                        <div class="synth-option" id="magnetar" data-synth="magnetar" title="Magnetar (Noise Synth)"></div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="slider-container">
+                        <label>Ambient</label>
+                        <input type="range" id="ambient-slider" min="0" max="100" value="30">
+                        <span id="ambient-value">30</span>
+                    </div>
+                    <button id="export-btn" class="btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Export
+                    </button>
+                    <button id="clear-btn" class="btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Template Modal -->
+        <div id="template-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Constellation Templates</h2>
+                    <button class="close-modal" data-modal-id="template-modal">×</button>
+                </div>
+                <p>Select a constellation template to get started:</p>
+                <div class="templates">
+                    <div class="template" data-template="orion">
+                        <img src="https://via.placeholder.com/100x100.png?text=Orion" alt="Orion">
+                        <div class="template-name">Orion</div>
+                    </div>
+                    <div class="template" data-template="ursa-major">
+                        <img src="https://via.placeholder.com/100x100.png?text=Ursa" alt="Ursa Major">
+                        <div class="template-name">Ursa Major</div>
+                    </div>
+                    <div class="template" data-template="cassiopeia">
+                        <img src="https://via.placeholder.com/100x100.png?text=Cass" alt="Cassiopeia">
+                        <div class="template-name">Cassiopeia</div>
+                    </div>
+                    <div class="template" data-template="lyra">
+                        <img src="https://via.placeholder.com/100x100.png?text=Lyra" alt="Lyra">
+                        <div class="template-name">Lyra</div>
+                    </div>
+                    <div class="template" data-template="cygnus">
+                        <img src="https://via.placeholder.com/100x100.png?text=Cygnus" alt="Cygnus">
+                        <div class="template-name">Cygnus</div>
+                    </div>
+                    <div class="template" data-template="spiral">
+                        <img src="https://via.placeholder.com/100x100.png?text=Spiral" alt="Spiral">
+                        <div class="template-name">Spiral</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Help Modal -->
+        <div id="help-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Constellation Music Sequencer</h2>
+                    <button class="close-modal" data-modal-id="help-modal">×</button>
+                </div>
+                <p>Create music by drawing constellations in the night sky. Stars represent musical notes, and connections between them create melodies.</p>
+                
+                <div class="controls-explanation">
+                    <h3>Tools</h3>
+                    <ul>
+                        <li><strong>Draw Tool (Click):</strong> Click to create stars in the sky. Stars closer to the top are higher pitch.</li>
+                        <li><strong>Connect Tool (Click stars):</strong> Click two stars to connect them, forming part of a constellation. Click again to disconnect.</li>
+                        <li><strong>Rotate Tool (Click & Drag):</strong> Click and drag on an existing constellation to rotate it. This changes its melodic pattern.</li>
+                        <li><strong>Telescope Tool (Click):</strong> Click a constellation to enter 'telescope mode'. The view will zoom to and focus on it, enhancing its sounds. Click again to exit.</li>
+                        <li><strong>Templates:</strong> Choose from preset constellation patterns to load into your sky.</li>
+                        <li><strong>Help:</strong> Access this help guide.</li>
+                    </ul>
+                    
+                    <h3>Features</h3>
+                    <ul>
+                        <li><strong>Gravitational Lensing:</strong> Constellations subtly interact when they pass near each other, bending melodies.</li>
+                        <li><strong>Synth Voices:</strong> Choose from 5 different celestial-inspired synthesizer sounds at the bottom.</li>
+                        <li><strong>Spatial Audio:</strong> Sound position is based on constellation geometry and movement.</li>
+                        <li><strong>Cosmic Background:</strong> Subtle ambient noise provides an immersive texture.</li>
+                        <li><strong>Export:</strong> Save both audio and visual patterns of your cosmic compositions (Planned).</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script>
+        // --- Canvas Setup ---
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- Global State ---
+        let audioInitialized = false;
+        let stars = [];
+        let constellations = []; // Array of Constellation objects
+        let currentConstellationBeingDrawn = null; // Used by connect tool for first star selection
+        let selectedStar = null; // For connecting or rotating
+        let selectedConstellation = null; // For rotate or telescope mode
+        let isPlaying = false;
+        let currentTool = 'draw'; // 'draw', 'connect', 'rotate', 'telescope', 'template', 'help'
+        let currentSynthType = 'pulsar';
+        let tempo = 120;
+        let ambientVolume = 0.3; // 0-1 range
+        let telescopeMode = false;
+        let telescopeFocus = null; // The constellation being focused on
+        let lastPlayedTime = 0; // For star debounce
+        let clickStartPos = { x: 0, y: 0 }; // For drag detection in rotate mode
+        let mouse = { x: 0, y: 0 }; // Global mouse position, updated by mousemove
+
+        // --- Tone.js Synthesizer Setup ---
+        let masterLimiter, masterSpatialPanner;
+        let ambientNoise, ambientFilter, ambientGain;
+        const synths = {}; // Populated by createAudioEngine()
+
+        const createAudioEngine = () => {
+            if (audioInitialized) return; // Prevent re-initialization
+
+            masterLimiter = new Tone.Limiter(-1).toDestination();
+            masterSpatialPanner = new Tone.Panner(0).connect(masterLimiter); // For spatial audio
+
+            // Initialize synths
+            synths.pulsar = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 1 }
+            }).connect(masterSpatialPanner);
+
+            synths.nebula = new Tone.PolySynth(Tone.FMSynth, {
+                harmonicity: 1.5, modulationIndex: 10, oscillator: { type: 'triangle' },
+                envelope: { attack: 0.1, decay: 0.2, sustain: 0.5, release: 1.5 },
+                modulation: { type: 'sine' }
+            }).connect(masterSpatialPanner);
+
+            synths.quasar = new Tone.PolySynth(Tone.AMSynth, {
+                harmonicity: 3, detune: 0, oscillator: { type: 'square' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.5 },
+                modulation: { type: 'sawtooth' }
+            }).connect(masterSpatialPanner);
+
+            synths.neutron = new Tone.MonoSynth({
+                oscillator: { type: 'sawtooth' },
+                envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 1.5 },
+                filterEnvelope: { attack: 0.05, decay: 0.2, sustain: 0.5, release: 2, baseFrequency: 200, octaves: 3 }
+            }).connect(masterSpatialPanner);
+
+            // Temporarily commented out due to 'Voice must extend Monophonic class' error with PolySynth
+            // synths.magnetar = new Tone.PolySynth(Tone.NoiseSynth, {
+            //     noise: { type: 'pink' },
+            //     envelope: { attack: 0.005, decay: 0.8, sustain: 0, release: 0.5 }
+            // }).connect(masterSpatialPanner); // Noise-based synth
+
+            // Set initial volumes
+            Object.values(synths).forEach(synth => {
+                synth.volume.value = -10;
+            });
+
+            // Set up ambient background cosmic radiation (pink noise with low-pass filter)
+            ambientNoise = new Tone.Noise('pink').start();
+            ambientFilter = new Tone.Filter({ type: 'lowpass', frequency: 800 }).connect(masterLimiter);
+            ambientGain = new Tone.Gain(ambientVolume).connect(ambientFilter);
+            ambientNoise.connect(ambientGain);
+
+            audioInitialized = true;
+            console.log("Tone.js audio engine created.");
+        };
+
+        // --- Star Class ---
+        class Star {
+            constructor(id, x, y, options = {}) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.radius = options.radius || (Math.random() * 2 + 1);
+                this.color = options.color || `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.5})`;
+                this.twinkleSpeed = options.twinkleSpeed || (Math.random() * 0.02 + 0.01);
+                this.twinkleAmount = options.twinkleAmount || (Math.random() * 0.3 + 0.7);
+                this.twinklePhase = Math.random() * Math.PI * 2;
+                this.note = this.calculateNote(); // Musical note based on position
+                this.lastPlayedTime = 0; // For debounce
+                this.oscillation = { x: 0, y: 0 }; // For gravitational lensing effect
+            }
+
+            calculateNote() {
+                // Map Y position to octave, X position to note in a chromatic scale
+                const scale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                const minOctave = 3; // C3
+                const maxOctave = 6; // C6
+                const octaveRange = maxOctave - minOctave;
+
+                const normalizedY = 1 - (this.y / height); // 0 (bottom) to 1 (top)
+                const octave = minOctave + Math.floor(normalizedY * octaveRange);
+
+                const normalizedX = this.x / width; // 0 (left) to 1 (right)
+                const noteIndex = Math.floor(normalizedX * scale.length);
+
+                return `${scale[noteIndex]}${octave}`;
+            }
+
+            draw(time) {
+                const twinkle = this.twinkleAmount + Math.sin(time * this.twinkleSpeed + this.twinklePhase) * 0.3;
+                ctx.beginPath();
+                ctx.arc(this.x + this.oscillation.x, this.y + this.oscillation.y, this.radius * twinkle, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+
+            isPointInside(x, y) {
+                const distance = Math.sqrt((x - this.x) ** 2 + (y - this.y) ** 2);
+                return distance <= this.radius * 2; // Increased hit area
+            }
+
+            playSound(delay = 0) {
+                if (!audioInitialized || !synths[currentSynthType]) {
+                    console.warn("Audio not initialized or synth not found.");
+                    return;
+                }
+                const now = Tone.now();
+                // Basic debounce to prevent rapid re-triggering on accidental double-clicks or fast loop
+                if (now - this.lastPlayedTime < 0.1) return;
+
+                this.lastPlayedTime = now;
+                const synth = synths[currentSynthType];
+                synth.triggerAttackRelease(this.note, '8n', now + delay);
+
+                // Spatial audio: pan based on star's X position
+                const pan = (this.x / width) * 2 - 1; // -1 (left) to 1 (right)
+                masterSpatialPanner.pan.linearRampToValueAtTime(pan, now + 0.1);
+            }
+        }
+
+        // --- Constellation Class ---
+        class Constellation {
+            constructor(id, type = 'user-defined', color = null) {
+                this.id = id;
+                this.type = type;
+                this.stars = [];
+                this.connections = [];
+                this.color = color || this.generateColor(); // Unique color for each constellation
+                this.orbital = {
+                    rotating: false, // Activated by rotate tool
+                    speed: 0, // Controlled by drag or default template
+                    center: { x: 0, y: 0 } // Calculated dynamically
+                };
+                this.isPlaying = false; // Whether this constellation is currently playing
+                this.currentStarIndex = 0; // Index of star currently playing in sequence
+                this.lastBeatTime = 0; // For accurate internal timing
+                this.playSequenceInterval = null; // Stores setTimeout ID for playback
+                this.isFocused = false; // For telescope mode
+            }
+
+            generateColor() {
+                const hue = Math.floor(Math.random() * 360);
+                return `hsla(${hue}, 70%, 70%, 0.7)`;
+            }
+
+            addStar(star) {
+                if (!this.stars.some(s => s.id === star.id)) {
+                    this.stars.push(star);
+                }
+            }
+
+            addConnection(star1, star2) {
+                if (!this.stars.some(s => s.id === star1.id)) this.addStar(star1);
+                if (!this.stars.some(s => s.id === star2.id)) this.addStar(star2);
+
+                const exists = this.connections.some(conn =>
+                    (conn.star1.id === star1.id && conn.star2.id === star2.id) ||
+                    (conn.star1.id === star2.id && conn.star2.id === star1.id)
+                );
+                if (!exists) {
+                    this.connections.push({ star1, star2 });
+                }
+            }
+
+            draw(time) {
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 1;
+                this.connections.forEach(conn => {
+                    ctx.beginPath();
+                    ctx.moveTo(conn.star1.x + conn.star1.oscillation.x, conn.star1.y + conn.star1.oscillation.y);
+                    ctx.lineTo(conn.star2.x + conn.star2.oscillation.x, conn.star2.y + conn.star2.oscillation.y);
+                    
+                    // Pulsating effect on connection lines if playing
+                    if (this.isPlaying && this.stars.length > 0) {
+                        const nextStarIndex = (this.currentStarIndex + 1) % this.stars.length;
+                        // Check if connection involves the current or next star in sequence
+                        if ((conn.star1 === this.stars[this.currentStarIndex] && conn.star2 === this.stars[nextStarIndex]) ||
+                            (conn.star2 === this.stars[this.currentStarIndex] && conn.star1 === this.stars[nextStarIndex])) {
+                            const pulseFactor = 0.7 + 0.3 * Math.sin(time * 10); // Faster pulse
+                            ctx.globalAlpha = pulseFactor;
+                        } else {
+                            ctx.globalAlpha = 0.5; // Dim other connections
+                        }
+                    } else {
+                        ctx.globalAlpha = 0.7; // Default alpha when not playing or not active connection
+                    }
+                    ctx.stroke();
+                    ctx.globalAlpha = 1; // Reset alpha
+                });
+
+                // Draw connecting line to first star for currentConstellationBeingDrawn
+                if (currentTool === 'connect' && selectedStar && selectedConstellation === this && this.stars.includes(selectedStar)) {
+                    const mousePos = getMousePos(event); // Need to get current mouse position correctly on render
+                    ctx.beginPath();
+                    ctx.moveTo(selectedStar.x, selectedStar.y);
+                    ctx.lineTo(mousePos.x, mousePos.y); // Draw to current mouse position
+                    ctx.strokeStyle = `rgba(255, 255, 255, 0.5)`;
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]); // Dashed line
+                    ctx.stroke();
+                    ctx.setLineDash([]); // Reset line dash
+                }
+            }
+
+            // Call this periodically or on start/stop to trigger sequence
+            startPlayback() {
+                if (this.stars.length === 0 || this.isPlaying) return;
+                this.isPlaying = true;
+                this.currentStarIndex = 0;
+                this.playStarSequence();
+                this.orbital.rotating = true; // Constellations rotate when playing
+                this.orbital.speed = (60 / tempo) * 0.001; // Slower rotation, tied to tempo
+            }
+
+            stopPlayback() {
+                this.isPlaying = false;
+                this.orbital.rotating = false;
+                if (this.playSequenceInterval) clearTimeout(this.playSequenceInterval);
+            }
+
+            playStarSequence() {
+                if (!this.isPlaying || this.stars.length === 0) {
+                    if (this.playSequenceInterval) clearTimeout(this.playSequenceInterval);
+                    return;
+                }
+
+                const star = this.stars[this.currentStarIndex];
+                star.playSound();
+
+                // Advance to next star
+                this.currentStarIndex = (this.currentStarIndex + 1) % this.stars.length;
+
+                // Schedule next call based on tempo
+                const msPerBeat = 60000 / tempo;
+                const interval = msPerBeat / 4; // Each step is a 16th note (for example)
+                this.playSequenceInterval = setTimeout(() => this.playStarSequence(), interval);
+            }
+
+
+            calculateCenter() {
+                if (this.stars.length === 0) return { x: 0, y: 0 };
+
+                let sumX = 0;
+                let sumY = 0;
+
+                this.stars.forEach(star => {
+                    sumX += star.x;
+                    sumY += star.y;
+                });
+
+                return {
+                    x: sumX / this.stars.length,
+                    y: sumY / this.stars.length
+                };
+            }
+
+            // Rotates constellation around its center
+            rotate(angle) {
+                const center = this.calculateCenter();
+                this.stars.forEach(star => {
+                    const x = star.x - center.x;
+                    const y = star.y - center.y;
+
+                    const newX = x * Math.cos(angle) - y * Math.sin(angle);
+                    const newY = x * Math.sin(angle) + y * Math.cos(angle);
+
+                    star.x = newX + center.x;
+                    star.y = newY + center.y;
+                });
+            }
+
+            isPointInside(x, y) {
+                // Check if point is inside any star in this constellation
+                return this.stars.some(star => star.isPointInside(x, y));
+            }
+
+            containsStar(star) {
+                return this.stars.some(s => s.id === star.id);
+            }
+
+            // Removes a star and any associated connections
+            removeStar(starToRemove) {
+                this.stars = this.stars.filter(s => s.id !== starToRemove.id);
+                this.connections = this.connections.filter(conn =>
+                    conn.star1.id !== starToRemove.id && conn.star2.id !== starToRemove.id
+                );
+                if (this.stars.length === 0) {
+                    // Remove constellation if no stars left
+                    constellations = constellations.filter(c => c.id !== this.id);
+                }
+                if (this.isPlaying && this.currentStarIndex >= this.stars.length && this.stars.length > 0) {
+                    this.currentStarIndex = 0; // Reset index if current star was removed and it was the last one
+                } else if (this.isPlaying && this.stars.length === 0) {
+                    this.stopPlayback(); // If last star removed, stop playing
+                }
+            }
+
+            // Remove a specific connection between two stars
+            removeConnection(star1, star2) {
+                this.connections = this.connections.filter(conn =>
+                    !( (conn.star1.id === star1.id && conn.star2.id === star2.id) ||
+                       (conn.star1.id === star2.id && conn.star2.id === star1.id) )
+                );
+            }
+        }
+
+        // --- Templates for constellations ---
+        const templates = {
+            'orion': {
+                stars: [
+                    { x: 0.2, y: 0.2 }, { x: 0.25, y: 0.3 }, { x: 0.3, y: 0.4 },
+                    { x: 0.2, y: 0.5 }, { x: 0.4, y: 0.5 }, { x: 0.15, y: 0.7 }, { x: 0.45, y: 0.7 }
+                ],
+                connections: [ [0, 1], [1, 2], [2, 3], [2, 4], [3, 5], [4, 6] ]
+            },
+            'ursa-major': {
+                stars: [
+                    { x: 0.6, y: 0.2 }, { x: 0.7, y: 0.25 }, { x: 0.75, y: 0.35 }, { x: 0.8, y: 0.4 },
+                    { x: 0.85, y: 0.45 }, { x: 0.7, y: 0.55 }, { x: 0.6, y: 0.6 }
+                ],
+                connections: [ [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6] ]
+            },
+            'cassiopeia': {
+                stars: [
+                    { x: 0.1, y: 0.6 }, { x: 0.2, y: 0.5 }, { x: 0.3, y: 0.6 }, { x: 0.4, y: 0.5 }, { x: 0.5, y: 0.6 }
+                ],
+                connections: [ [0, 1], [1, 2], [2, 3], [3, 4] ]
+            },
+            'lyra': {
+                stars: [
+                    { x: 0.7, y: 0.7 }, { x: 0.75, y: 0.6 }, { x: 0.8, y: 0.7 }, { x: 0.75, y: 0.8 }
+                ],
+                connections: [ [0, 1], [1, 2], [2, 3], [3, 0] ]
+            },
+            'cygnus': {
+                stars: [
+                    { x: 0.4, y: 0.1 }, { x: 0.5, y: 0.3 }, { x: 0.6, y: 0.5 }, { x: 0.7, y: 0.7 }, { x: 0.5, y: 0.5 }
+                ],
+                connections: [ [0, 1], [1, 4], [4, 2], [2, 3] ]
+            },
+            'spiral': {
+                stars: [
+                    { x: 0.5, y: 0.5 }, { x: 0.55, y: 0.45 }, { x: 0.65, y: 0.48 }, { x: 0.7, y: 0.58 },
+                    { x: 0.68, y: 0.68 }, { x: 0.58, y: 0.7 }, { x: 0.48, y: 0.65 }, { x: 0.45, y: 0.55 }
+                ],
+                connections: [ [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 0] ]
+            }
+        };
+
+        // --- Core Animation Loop ---
+        let lastFrameTime = 0;
+        let starIdCounter = 0;
+        let constellationIdCounter = 0;
+
+        function animate(time) {
+            requestAnimationFrame(animate);
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw all stars
+            stars.forEach(star => star.draw(time));
+
+            // Draw all constellations
+            constellations.forEach(constellation => {
+                constellation.draw(time);
+            });
+
+            // Gravitational lensing effect (simplified: nearby constellations attract/distort stars)
+            // This is computationally intensive if many stars/constellations.
+            // For a production app, would optimize with spatial hashing.
+            if (constellations.length > 0 && stars.length > 0) {
+                stars.forEach(star => {
+                    star.oscillation.x = 0; star.oscillation.y = 0; // Reset oscillation
+
+                    constellations.forEach(constellation => {
+                        if (constellation.containsStar(star)) return; // Don't lens self
+
+                        const constellationCenter = constellation.calculateCenter();
+                        const dx = star.x - constellationCenter.x;
+                        const dy = star.y - constellationCenter.y;
+                        const distSq = dx * dx + dy * dy;
+                        const influenceRadiusSq = (width / 5) ** 2; // Influence up to 1/5 of canvas width
+
+                        if (distSq < influenceRadiusSq && distSq > 100) { // Avoid division by zero/self-attraction
+                            const force = (1 / distSq) * (width / 200) * (constellation.stars.length / 5); // Scale force by constellation size
+                            star.oscillation.x += dx * force;
+                            star.oscillation.y += dy * force;
+                        }
+                    });
+                });
+            }
+
+            // Telescope mode visual
+            if (telescopeMode && telescopeFocus) {
+                ctx.beginPath();
+                ctx.arc(telescopeFocus.calculateCenter().x, telescopeFocus.calculateCenter().y, telescopeFocus.stars.length * 10 + 50, 0, Math.PI * 2); // Radius scales with constellation size
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+
+            lastFrameTime = time;
+        }
+
+        animate(0); // Start animation loop
+
+        // --- Event Handlers ---
+        // UI Elements
+        const statusElement = document.getElementById('status');
+        const playBtn = document.getElementById('play-btn');
+        const tempoSlider = document.getElementById('tempo-slider');
+        const tempoValueSpan = document.getElementById('tempo-value');
+        const ambientSlider = document.getElementById('ambient-slider');
+        const ambientValueSpan = document.getElementById('ambient-value');
+        const synthOptions = document.querySelectorAll('.synth-option');
+        const toolbarTools = document.querySelectorAll('.tool');
+        const clearBtn = document.getElementById('clear-btn');
+        const exportBtn = document.getElementById('export-btn');
+        const activateAudioBtn = document.getElementById('activate-audio-btn'); // New button
+
+        // Modals
+        const templateModal = document.getElementById('template-modal');
+        const helpModal = document.getElementById('help-modal');
+        const closeModals = document.querySelectorAll('.close-modal');
+        const templateButtons = document.querySelectorAll('.template');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const startAudioOverlay = document.getElementById('start-audio-overlay');
+
+
+        // Event Listeners
+        activateAudioBtn.addEventListener('click', async () => {
+            await ensureAudioReady();
+            // If ensureAudioReady is successful, the overlay will be hidden by the function itself.
+            // Additional logic after successful audio activation can go here if needed, e.g., auto-play.
+            // For now, successful activation just enables the main play button.
+        });
+
+
+        playBtn.addEventListener('click', togglePlayback);
+        tempoSlider.addEventListener('input', updateTempo);
+        ambientSlider.addEventListener('input', updateAmbientVolume);
+        clearBtn.addEventListener('click', clearCanvas);
+        exportBtn.addEventListener('click', exportPattern);
+
+        synthOptions.forEach(option => {
+            option.addEventListener('click', selectSynth);
+        });
+
+        toolbarTools.forEach(tool => {
+            tool.addEventListener('click', selectTool);
+        });
+
+        canvas.addEventListener('mousedown', handleCanvasMouseDown);
+        canvas.addEventListener('mouseup', handleCanvasMouseUp);
+        canvas.addEventListener('mousemove', handleCanvasMouseMove);
+        canvas.addEventListener('contextmenu', handleCanvasRightClick); // For deleting stars/connections
+
+        // Modals
+        document.getElementById('template-tool').addEventListener('click', () => openModal(templateModal));
+        document.getElementById('help-tool').addEventListener('click', () => openModal(helpModal));
+        closeModals.forEach(btn => btn.addEventListener('click', (e) => {
+            // Find parent modal to close
+            const modalToClose = e.target.closest('.modal');
+            if (modalToClose) {
+                closeModal(modalToClose);
+            }
+        }));
+        templateButtons.forEach(btn => btn.addEventListener('click', loadTemplate));
+
+        // --- Core Functionality ---
+
+        function updateStatus(message) {
+            statusElement.textContent = `Mode: ${message}`;
+            // Update canvas cursor based on tool
+            canvas.className = ''; // Clear previous classes
+            canvas.classList.add(`${currentTool}-mode`);
+        }
+
+        async function togglePlayback() {
+            const audioReady = await ensureAudioReady();
+            if (!audioReady) {
+                console.log("togglePlayback: Audio not ready. Aborting.");
+                // Optionally, show a message to the user via an existing notification system or alert.
+                // alert("Please activate audio first using the 'Activate Audio' button.");
+                return;
+            }
+
+            isPlaying = !isPlaying;
+            playBtn.classList.toggle('active', isPlaying);
+            playBtn.innerHTML = isPlaying ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="4" height="18"></rect><rect x="14" y="3" width="4" height="18"></rect></svg> Pause` : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Play`;
+
+            if (isPlaying) {
+                constellations.forEach(c => c.startPlayback());
+            } else {
+                constellations.forEach(c => c.stopPlayback());
+            }
+        }
+
+
+        function updateTempo(event) {
+            tempo = parseInt(event.target.value);
+            tempoValueSpan.textContent = tempo;
+            // Update constellation playback intervals immediately
+            if (isPlaying) {
+                 constellations.forEach(c => {
+                    // Re-calculate interval for currently playing sequences
+                    // This is handled by each constellation's playStarSequence using setTimeout,
+                    // which relies on `tempo`'s global value. Restarting might re-sync them.
+                    c.stopPlayback();
+                    c.startPlayback();
+                 });
+            }
+        }
+
+        function updateAmbientVolume(event) {
+            ambientVolume = parseFloat(event.target.value) / 100; // 0-1
+            if (audioInitialized) { // Ensure gain node exists
+                ambientGain.gain.value = ambientVolume;
+            }
+            ambientValueSpan.textContent = event.target.value;
+        }
+
+        function selectSynth(event) {
+            const synthOption = event.target.closest('.synth-option');
+            if (!synthOption) return;
+
+            document.querySelectorAll('.synth-option.active').forEach(option => option.classList.remove('active'));
+            synthOption.classList.add('active');
+            currentSynthType = synthOption.dataset.synth;
+            console.log("Selected synth:", currentSynthType);
+        }
+
+        function selectTool(event) {
+            const toolBtn = event.target.closest('.tool');
+            if (!toolBtn) return;
+
+            // Deselect previous tool
+            document.querySelectorAll('.tool.active').forEach(btn => btn.classList.remove('active'));
+            // Select current tool
+            toolBtn.classList.add('active');
+            currentTool = toolBtn.dataset.tool;
+            updateStatus(`Mode: ${currentTool}`);
+
+            // Reset any active selections when changing tools
+            selectedStar = null;
+            selectedConstellation = null;
+            currentConstellationBeingDrawn = null;
+
+            // Reset telescope mode if not entering it
+            if (currentTool !== 'telescope' && telescopeMode) {
+                exitTelescopeMode();
+            }
+        }
+
+        function clearCanvas() {
+            if (isPlaying) togglePlayback(); // Stop playback first
+            stars = [];
+            constellations.forEach(c => c.stopPlayback()); // Ensure all sequences are stopped
+            constellations = [];
+            starIdCounter = 0;
+            constellationIdCounter = 0;
+            selectedStar = null;
+            selectedConstellation = null;
+            isPlaying = false; // Reset playback state
+            playBtn.classList.remove('active');
+            playBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Play`;
+            console.log("Canvas cleared.");
+        }
+
+        function exportPattern() {
+            const data = {
+                stars: stars.map(s => ({ id: s.id, x: s.x, y: s.y, radius: s.radius, color: s.color })),
+                constellations: constellations.map(c => ({
+                    id: c.id,
+                    type: c.type,
+                    color: c.color,
+                    starIds: c.stars.map(s => s.id), // Store star IDs instead of objects
+                    connections: c.connections.map(conn => [conn.star1.id, conn.star2.id])
+                })),
+                settings: {
+                    tempo: tempo,
+                    synth: currentSynthType,
+                    ambientVolume: ambientVolume
+                }
+            };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'constellation_pattern.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert("Pattern exported as JSON!");
+            console.log("Pattern Data:", data);
+        }
+
+        // --- Canvas Interaction Logic ---
+        function getMousePos(event) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top
+            };
+        }
+
+        function findStarAtPoint(x, y) {
+            for (let i = stars.length - 1; i >= 0; i--) { // Iterate backwards to pick top star
+                if (stars[i].isPointInside(x, y)) {
+                    return stars[i];
+                }
+            }
+            return null;
+        }
+
+        function findConstellationAtPoint(x, y) {
+            for (let i = constellations.length - 1; i >= 0; i--) {
+                if (constellations[i].isPointInside(x, y)) {
+                    return constellations[i];
+                }
+            }
+            return null;
+        }
+
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+
+        function handleCanvasMouseDown(event) {
+            isDragging = true;
+            dragStartX = event.clientX;
+            dragStartY = event.clientY;
+
+            const mousePos = getMousePos(event);
+            const clickedStar = findStarAtPoint(mousePos.x, mousePos.y);
+            const clickedConstellation = findConstellationAtPoint(mousePos.x, mousePos.y);
+
+            if (currentTool === 'draw') {
+                if (clickedStar) {
+                    clickedStar.playSound(); // Play existing star
+                } else {
+                    const newStar = new Star(starIdCounter++, mousePos.x, mousePos.y);
+                    stars.push(newStar);
+                    newStar.playSound(); // Play new star
+                    updateStatus(`Drawing: Created star ${newStar.id}`);
+                }
+            } else if (currentTool === 'connect') {
+                if (clickedStar) {
+                    if (selectedStar === null) {
+                        selectedStar = clickedStar;
+                        currentConstellationBeingDrawn = findConstellationAtPoint(selectedStar.x, selectedStar.y);
+                        updateStatus(`Connect: Selected star ${selectedStar.id}.`);
+                    } else if (selectedStar.id === clickedStar.id) {
+                        // Deselect if clicking same star
+                        selectedStar = null;
+                        currentConstellationBeingDrawn = null;
+                        updateStatus(`Connect: Deselected star.`);
+                    } else {
+                        // Connect the two stars
+                        let targetConstellation = currentConstellationBeingDrawn;
+
+                        if (!targetConstellation || !targetConstellation.containsStar(selectedStar)) {
+                            // If first star not part of a constellation, or selected different one, create new or use one with clickedStar
+                            targetConstellation = findConstellationAtPoint(clickedStar.x, clickedStar.y);
+                            if (!targetConstellation) {
+                                // If no constellation found, create a new one
+                                targetConstellation = new Constellation(constellationIdCounter++);
+                                constellations.push(targetConstellation);
+                                console.log(`Created new constellation ${targetConstellation.id}`);
+                            }
+                        }
+
+                        targetConstellation.addConnection(selectedStar, clickedStar);
+                        console.log(`Connected star ${selectedStar.id} to ${clickedStar.id} in constellation ${targetConstellation.id}`);
+                        selectedStar = null; // Reset for next connection
+                        currentConstellationBeingDrawn = null;
+                        updateStatus(`Connect: Stars connected. Select next star.`);
+                    }
+                } else {
+                    selectedStar = null; // Clicked empty space, deselect
+                    currentConstellationBeingDrawn = null;
+                    updateStatus(`Connect: Clicked empty space. Deselected.`);
+                }
+            } else if (currentTool === 'rotate') {
+                if (clickedConstellation) {
+                    selectedConstellation = clickedConstellation;
+                    canvas.style.cursor = 'grabbing'; // Indicate dragging
+                    updateStatus(`Rotate: Dragging Constellation ${selectedConstellation.id}`);
+                }
+            } else if (currentTool === 'telescope') {
+                if (clickedConstellation) {
+                    if (telescopeMode && telescopeFocus && telescopeFocus.id === clickedConstellation.id) {
+                        // Already focused on this one, exit telescope mode
+                        exitTelescopeMode();
+                    } else {
+                        enterTelescopeMode(clickedConstellation);
+                    }
+                } else {
+                    exitTelescopeMode(); // Clicked empty space, exit telescope mode
+                }
+            }
+
+            // Prevent text selection during drag operations
+            event.preventDefault();
+        }
+
+        function handleCanvasMouseUp(event) {
+            isDragging = false;
+            canvas.style.cursor = currentTool === 'rotate' ? 'grab' : 'crosshair'; // Reset cursor
+
+            if (currentTool === 'rotate' && selectedConstellation) {
+                selectedConstellation = null; // Release selection after drag
+            }
+        }
+
+        function handleCanvasMouseMove(event) {
+            const localMousePos = getMousePos(event);
+            mouse.x = localMousePos.x; // Update global mouse position
+            mouse.y = localMousePos.y;
+
+            if (isDragging && currentTool === 'rotate' && selectedConstellation) {
+                // For rotation, use the direct event clientX/Y for delta calculation
+                // as it's relative to the drag start, not the canvas-local mouse position.
+                const deltaX = event.clientX - dragStartX;
+                const deltaY = event.clientY - dragStartY;
+
+                // Calculate angle from drag distance (can be refined)
+                const angle = (deltaX + deltaY) * 0.005; // Adjust sensitivity
+                selectedConstellation.rotate(angle);
+
+                dragStartX = event.clientX;
+                dragStartY = event.clientY;
+            }
+            // If other tools need to react to mouse move (e.g., drawing a line to the cursor)
+            // they would typically do so in the 'animate' function, using the global 'mouse.x, mouse.y'.
+        }
+
+        function handleCanvasRightClick(event) {
+            event.preventDefault(); // Prevent default context menu
+
+            const mousePos = getMousePos(event);
+            const clickedStar = findStarAtPoint(mousePos.x, mousePos.y);
+            const clickedConstellation = findConstellationAtPoint(mousePos.x, mousePos.y);
+
+            if (clickedStar) {
+                // Find all constellations containing this star
+                const constellationsContainingStar = constellations.filter(c => c.containsStar(clickedStar));
+
+                if (constellationsContainingStar.length > 0) {
+                    // For now, always remove star from *all* constellations it belongs to
+                    constellationsContainingStar.forEach(c => c.removeStar(clickedStar));
+                    // Remove the star itself from the global list
+                    stars = stars.filter(s => s.id !== clickedStar.id);
+                    updateStatus(`Removed star ${clickedStar.id} and its connections.`);
+                } else {
+                    // If star is not part of any constellation, just remove it globally
+                    stars = stars.filter(s => s.id !== clickedStar.id);
+                    updateStatus(`Removed isolated star ${clickedStar.id}.`);
+                }
+            } else if (clickedConstellation && currentTool === 'rotate') {
+                // If right-clicking a constellation with rotate tool, stop its rotation
+                clickedConstellation.orbital.rotating = false;
+                clickedConstellation.orbital.speed = 0;
+                updateStatus(`Rotate: Stopped rotation of Constellation ${clickedConstellation.id}.`);
+            }
+        }
+
+
+        // --- Telescope Mode ---
+        let originalCanvasTransform = null; // Store original transform string
+        let originalCanvasTransformOrigin = null;
+
+        function enterTelescopeMode(constellation) {
+            if (telescopeMode && telescopeFocus && telescopeFocus.id === constellation.id) return; // Already focusing on this
+
+            exitTelescopeMode(); // Exit any existing focus
+
+            telescopeMode = true;
+            telescopeFocus = constellation;
+
+            // Store original canvas transform
+            originalCanvasTransform = canvas.style.transform;
+            originalCanvasTransformOrigin = canvas.style.transformOrigin;
+
+            // Calculate new view parameters (zoom and center)
+            const center = constellation.calculateCenter();
+            const boundingRadius = Math.max(
+                ...constellation.stars.map(s => Math.sqrt((s.x - center.x)**2 + (s.y - center.y)**2)),
+                50 // Minimum bounding radius
+            );
+            const padding = 1.5; // Padding around the constellation
+            const zoomFactor = Math.min(width, height) / (boundingRadius * 2 * padding); // Zoom to fill view
+
+            // Apply zoom and pan to canvas via CSS transform
+            canvas.style.transition = 'transform 1s ease-out';
+            canvas.style.transformOrigin = `${center.x}px ${center.y}px`;
+            canvas.style.transform = `scale(${zoomFactor})`;
+
+            // Make focused constellation play faster/more prominently
+            constellation.stopPlayback(); // Stop any current playback
+            constellation.playSequenceInterval = setInterval(() => constellation.playStarSequence(), (60000 / tempo) / 8); // Faster sequence
+
+            updateStatus(`Telescope: Focusing on Constellation ${constellation.id}`);
+        }
+
+        function exitTelescopeMode() {
+            if (!telescopeMode) return;
+
+            telescopeMode = false;
+            if (telescopeFocus) {
+                clearInterval(telescopeFocus.playSequenceInterval); // Stop accelerated playback
+                telescopeFocus.isPlaying = false; // Ensure it's marked as stopped
+                telescopeFocus = null;
+            }
+
+            // Reset canvas transform
+            canvas.style.transition = 'transform 0.5s ease-out';
+            canvas.style.transformOrigin = originalCanvasTransformOrigin || `50% 50%`;
+            canvas.style.transform = originalCanvasTransform || `scale(1)`;
+
+            updateStatus(`Draw mode: Creating stars`); // Reset status
+        }
+
+
+        // --- Modals ---
+        function openModal(modalElement) {
+            modalElement.classList.add('active');
+        }
+
+        function closeModal(modalElement) {
+            modalElement.classList.remove('active');
+        }
+
+        // --- Template Loading ---
+        function loadTemplate(event) {
+            const templateButton = event.target.closest('.template');
+            if (!templateButton) return;
+
+            const templateName = templateButton.dataset.template;
+            const templateData = templates[templateName];
+
+            if (templateData) {
+                // Clear existing content (optional, or merge)
+                clearCanvas();
+
+                const newConstellation = new Constellation(constellationIdCounter++, templateName);
+                constellations.push(newConstellation);
+
+                // Calculate offset to center template or place randomly
+                // Scale template to fit approximately 1/3 of the smaller canvas dimension
+                const templateMaxExtent = Math.max(
+                    ...templateData.stars.map(s => Math.max(Math.abs(s.x), Math.abs(s.y)))
+                ) || 1; // Prevent division by zero
+
+                const scaleFactor = Math.min(width, height) / (templateMaxExtent * 3); // Fit to 1/3 of screen
+                
+                const offsetX = Math.random() * (width * 0.4) + width * 0.3; // Random center around middle third
+                const offsetY = Math.random() * (height * 0.4) + height * 0.3;
+
+
+                const templateStars = [];
+                templateData.stars.forEach((sPos) => {
+                    const star = new Star(starIdCounter++, offsetX + sPos.x * scaleFactor, offsetY + sPos.y * scaleFactor);
+                    stars.push(star);
+                    templateStars.push(star); // Keep reference to stars in this template
+                    newConstellation.addStar(star); // Add to constellation
+                });
+
+                templateData.connections.forEach(connIndices => {
+                    newConstellation.addConnection(templateStars[connIndices[0]], templateStars[connIndices[1]]);
+                });
+
+                console.log(`Loaded template: ${templateName}`);
+                closeModal(templateModal);
+                updateStatus(`Template: Loaded '${templateName}'`);
+            }
+        }
+        // Initial setup to hide loading overlay (for page assets)
+        window.addEventListener('load', () => {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        });
+        // Initial tool status
+        updateStatus('Creating stars');
+
+        // +++ Consolidated Audio Initialization Logic +++
+        async function ensureAudioReady() {
+            if (audioInitialized) {
+                return true; // Already initialized
+            }
+
+            startAudioOverlay.style.opacity = 0;
+            startAudioOverlay.style.pointerEvents = 'none';
+            // Consider startAudioOverlay.style.display = 'none'; if opacity isn't enough
+
+            try {
+                console.log("Attempting Tone.start() for constellation.html...");
+                await Tone.start();
+                console.log("Tone.start() successful. Creating audio engine for constellation.html...");
+                createAudioEngine(); // Setup synths, effects, etc.
+                // audioInitialized is set to true inside createAudioEngine now
+                console.log("Audio engine created and audio fully initialized for constellation.html.");
+                // alert("Audio Activated!"); // Optional: user feedback
+                return true;
+            } catch (e) {
+                console.error("Error during audio initialization (ensureAudioReady) in constellation.html:", e);
+                alert("Audio activation failed. Please check browser console and try clicking 'Activate Audio' again.");
+                // Re-show activation overlay on failure
+                startAudioOverlay.style.opacity = 1;
+                startAudioOverlay.style.pointerEvents = 'all';
+                return false;
+            }
+        }
+        // --- END Consolidated Audio Initialization Logic ---
+    </script>
+</body>
+</html>

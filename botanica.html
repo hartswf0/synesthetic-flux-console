@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Botanica: A Botanical Music Sequencer</title>
+    <style>
+        :root {
+            --bg-color: #f8f7f2;
+            --primary: #386641; /* Dark Green */
+            --secondary: #6a994e; /* Medium Green */
+            --accent: #a7c957; /* Light Green */
+            --dark: #333333;
+            --light: #f8f9fa;
+            --highlight: #bc4749; /* Red/Berry */
+            --bass-color: #073b4c; /* Dark Teal */
+            --melody-color: #e07a5f; /* Coral */
+            --harmony-color: #81b29a; /* Sage */
+            --rhythm-color: #3d405b; /* Dark Purple-Blue */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--dark);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            padding: 1rem;
+            background-color: var(--light);
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            border: none;
+            background-color: var(--primary);
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        main {
+            display: flex;
+            height: calc(100vh - 60px); /* Adjust for header height */
+        }
+
+        .garden {
+            flex: 1;
+            background-color: var(--bg-color);
+            position: relative;
+            overflow: hidden;
+            cursor: crosshair; /* Default tool cursor */
+        }
+
+        .garden.tool-water { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%236a994e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-droplet"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>') 12 12, auto; }
+        .garden.tool-prune { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%236a994e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-scissors"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>') 12 12, auto; }
+        .garden.tool-pollinate { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%236a994e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-feather"><path d="M20.24 12.24l-1.42-1.42a2 2 0 0 0-2.83 0L14 12l-5-5 5-5a2 2 0 0 0 0-2.83l-1.42-1.42A2 2 0 0 0 10 0l-5 5-5-5a2 2 0 0 0-2.83 0L-.01 1.42A2 2 0 0 0 0 5l5 5-5 5a2 2 0 0 0 0 2.83l1.42 1.42a2 2 0 0 0 2.83 0l5-5 5 5a2 2 0 0 0 2.83 0l1.42-1.42A2 2 0 0 0 24 10l-5-5 5-5a2 2 0 0 0 0-2.83z"></path></svg>') 12 12, auto; }
+        .garden.tool-plant { cursor: crosshair; }
+
+
+        .sidebar {
+            width: 260px;
+            background-color: white;
+            border-left: 1px solid #ddd;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .control-section h3 {
+            font-size: 1rem;
+            color: var(--primary);
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .seed-library {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .seed {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid var(--secondary);
+            transition: all 0.2s;
+            background-color: white;
+            font-size: 1.5rem;
+        }
+
+        .seed:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .seed.active {
+            box-shadow: 0 0 0 3px var(--highlight);
+            transform: scale(1.1);
+        }
+
+        .seed.melody { border-color: var(--melody-color); }
+        .seed.harmony { border-color: var(--harmony-color); }
+        .seed.rhythm { border-color: var(--rhythm-color); }
+        .seed.bass { border-color: var(--bass-color); }
+        .seed.melody.active { background-color: rgba(224,122,95,0.2); }
+        .seed.harmony.active { background-color: rgba(129,178,154,0.2); }
+        .seed.rhythm.active { background-color: rgba(61,64,91,0.2); }
+        .seed.bass.active { background-color: rgba(7,59,76,0.2); }
+
+
+        .tool-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .tool-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background-color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 1.5rem;
+        }
+
+        .tool-btn:hover, .tool-btn.active {
+            background-color: var(--secondary);
+            color: white;
+            border-color: var(--secondary);
+        }
+
+        .slider-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--secondary);
+            cursor: pointer;
+        }
+
+        .environment-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .env-btn {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .env-btn:hover {
+            background-color: #f0f0f0;
+        }
+
+        .env-btn.active {
+            border-color: var(--secondary);
+            background-color: rgba(106, 153, 78, 0.1);
+        }
+
+        .env-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .env-label {
+            font-size: 0.75rem;
+        }
+
+        .plant {
+            position: absolute;
+            transform-origin: bottom center;
+            transition: transform 0.1s ease-out; /* For subtle movement */
+            pointer-events: auto; /* Allow interaction */
+            z-index: 10;
+        }
+
+        .plant-stem {
+            position: absolute;
+            background-color: var(--secondary);
+            width: 4px;
+            height: 0;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: height 1.5s ease-out, background-color 0.5s;
+            z-index: 1;
+            border-radius: 2px 2px 0 0;
+        }
+
+        .plant-flower {
+            position: absolute;
+            width: 20px; height: 20px; /* Base size */
+            border-radius: 50%;
+            opacity: 0;
+            transition: all 1s ease-out, background-color 0.5s;
+            z-index: 2;
+            transform: scale(0);
+            top: -10px; /* Position above stem */
+            left: 50%;
+            transform: translateX(-50%) scale(0);
+        }
+
+        .plant-leaf {
+            position: absolute;
+            background-color: var(--accent);
+            opacity: 0;
+            transition: all 1s ease-out, background-color 0.5s, transform 1s ease-out;
+            transform: scale(0) rotate(0deg);
+            z-index: 1;
+            width: 15px; height: 8px;
+            border-radius: 50% 0; /* Leaf shape */
+        }
+        .plant-leaf.left { transform-origin: top right; }
+        .plant-leaf.right { transform-origin: top left; }
+
+        /* Plant specific colors */
+        .plant.melody .plant-stem { background-color: var(--melody-color); }
+        .plant.melody .plant-flower { background-color: var(--melody-color); }
+        .plant.harmony .plant-stem { background-color: var(--harmony-color); }
+        .plant.harmony .plant-flower { background-color: var(--harmony-color); }
+        .plant.rhythm .plant-stem { background-color: var(--rhythm-color); }
+        .plant.rhythm .plant-flower { background-color: var(--rhythm-color); }
+        .plant.bass .plant-stem { background-color: var(--bass-color); }
+        .plant.bass .plant-flower { background-color: var(--bass-color); }
+
+        .play-btn {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .play-btn:hover {
+            background-color: var(--secondary);
+            transform: translateX(-50%) scale(1.05);
+        }
+
+        .transport-controls {
+            display: flex;
+            gap: 0.5rem;
+            position: absolute;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 100;
+        }
+
+        .season-indicator {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            padding: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+
+        .weather-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+
+        .modal {
+            display: flex; /* Changed from none to flex by JS when open */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-out;
+        }
+        .modal.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transform: translateY(20px);
+            transition: transform 0.3s ease-out;
+        }
+        .modal.open .modal-content {
+            transform: translateY(0);
+        }
+
+
+        .modal h2 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .garden-presets {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .garden-preset {
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .garden-preset:hover {
+            border-color: var(--secondary);
+            background-color: rgba(106, 153, 78, 0.1);
+        }
+
+        .garden-preset h4 {
+            margin-bottom: 0.5rem;
+            color: var(--secondary);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Loading state */
+        .loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            opacity: 1;
+            pointer-events: all;
+            transition: opacity 0.3s ease-out;
+        }
+        .loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Ground plane */
+        .ground {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background-color: var(--secondary);
+            opacity: 0.2;
+            z-index: 5;
+        }
+
+        /* Grid lines */
+        .grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .grid-line-x {
+            position: absolute;
+            height: 1px;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .grid-line-y {
+            position: absolute;
+            width: 1px;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        /* Context menu */
+        .context-menu {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 0.5rem 0;
+            min-width: 150px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+            display: none;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.1s ease-out;
+        }
+        .context-menu.open {
+            display: block;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+
+        .context-menu-item {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .context-menu-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .context-menu-item.danger {
+            color: var(--highlight);
+        }
+
+        /* Visual feedback */
+        .plant.active .plant-stem {
+            box-shadow: 0 0 10px 2px rgba(106, 153, 78, 0.5); /* Thicker shadow */
+        }
+
+        .plant.active .plant-flower {
+            box-shadow: 0 0 10px 2px rgba(188, 71, 73, 0.5);
+            animation: flowerPulse 1s infinite alternate;
+        }
+        @keyframes flowerPulse {
+            from { transform: translateX(-50%) scale(1.0); }
+            to { transform: translateX(-50%) scale(1.1); }
+        }
+        .plant.selected {
+            outline: 2px dashed var(--highlight);
+            outline-offset: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Botanica</h1>
+            <div class="header-controls">
+                <button id="saveBtn" class="btn btn-outline">Save Garden</button>
+                <button id="loadBtn" class="btn btn-outline">Load Garden</button>
+                <button id="helpBtn" class="btn">Help</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="garden" id="garden">
+                <!-- Grid lines -->
+                <div class="grid" id="grid"></div>
+
+                <!-- Ground plane -->
+                <div class="ground"></div>
+
+                <!-- Plants will be dynamically added here -->
+
+                <!-- Season indicator -->
+                <div class="season-indicator">
+                    <span id="seasonIcon">🌱</span>
+                    <span id="seasonText">Spring</span>
+                </div>
+
+                <!-- Weather indicator -->
+                <div class="weather-indicator">
+                    <span id="weatherIcon">☀️</span>
+                    <span id="weatherText">Clear</span>
+                </div>
+
+                <!-- Play/pause button -->
+                <button id="playBtn" class="play-btn">
+                    <span id="playIcon">▶</span>
+                    <span id="playText">Play</span>
+                </button>
+
+                <!-- Transport controls -->
+                <div class="transport-controls">
+                    <button id="timelapseBtn" class="btn btn-outline">Time-lapse</button>
+                    <button id="resetBtn" class="btn btn-outline">Reset</button>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="control-section">
+                    <h3>Seeds</h3>
+                    <div class="seed-library">
+                        <div class="seed melody active" data-type="melody" title="Melody Seed">🌺</div>
+                        <div class="seed harmony" data-type="harmony" title="Harmony Seed">🌿</div>
+                        <div class="seed rhythm" data-type="rhythm" title="Rhythm Seed">🍃</div>
+                        <div class="seed bass" data-type="bass" title="Bass Seed">🌱</div>
+                        <div class="seed melody" data-type="melody-alt" title="Alternate Melody">🌷</div>
+                        <div class="seed harmony" data-type="harmony-alt" title="Alternate Harmony">🌾</div>
+                        <div class="seed rhythm" data-type="rhythm-alt" title="Alternate Rhythm">🍂</div>
+                        <div class="seed bass" data-type="bass-alt" title="Alternate Bass">🌴</div>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Tools</h3>
+                    <div class="tool-controls">
+                        <button id="plantTool" class="tool-btn active" data-tool="plant" title="Plant Tool">🌱</button>
+                        <button id="waterTool" class="tool-btn" data-tool="water" title="Water Tool">💧</button>
+                        <button id="pruneTool" class="tool-btn" data-tool="prune" title="Prune Tool">✂️</button>
+                        <button id="pollinateTool" class="tool-btn" data-tool="pollinate" title="Pollinate Tool">🐝</button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Growth Speed</h3>
+                    <div class="slider-control">
+                        <div class="slider-label">
+                            <span>Slow</span>
+                            <span>Fast</span>
+                        </div>
+                        <input type="range" id="growthSpeed" min="1" max="10" value="5">
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Density</h3>
+                    <div class="slider-control">
+                        <div class="slider-label">
+                            <span>Sparse</span>
+                            <span>Dense</span>
+                        </div>
+                        <input type="range" id="density" min="1" max="10" value="5">
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Environment</h3>
+                    <div class="environment-controls">
+                        <div class="env-btn active" data-season="spring">
+                            <div class="env-icon">🌱</div>
+                            <div class="env-label">Spring</div>
+                        </div>
+                        <div class="env-btn" data-season="summer">
+                            <div class="env-icon">☀️</div>
+                            <div class="env-label">Summer</div>
+                        </div>
+                        <div class="env-btn" data-season="autumn">
+                            <div class="env-icon">🍂</div>
+                            <div class="env-label">Autumn</div>
+                        </div>
+                        <div class="env-btn" data-season="winter">
+                            <div class="env-icon">❄️</div>
+                            <div class="env-label">Winter</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Weather</h3>
+                    <div class="environment-controls">
+                        <div class="env-btn active" data-weather="clear">
+                            <div class="env-icon">☀️</div>
+                            <div class="env-label">Clear</div>
+                        </div>
+                        <div class="env-btn" data-weather="rain">
+                            <div class="env-icon">🌧️</div>
+                            <div class="env-label">Rain</div>
+                        </div>
+                        <div class="env-btn" data-weather="wind">
+                            <div class="env-icon">🌬️</div>
+                            <div class="env-label">Wind</div>
+                        </div>
+                        <div class="env-btn" data-weather="fog">
+                            <div class="env-icon">🌫️</div>
+                            <div class="env-label">Fog</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Context menu for plants -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" id="waterPlant">
+            <span>💧</span>
+            <span>Water</span>
+        </div>
+        <div class="context-menu-item" id="prunePlant">
+            <span>✂️</span>
+            <span>Prune</span>
+        </div>
+        <div class="context-menu-item" id="pollinatePlant">
+            <span>🐝</span>
+            <span>Pollinate</span>
+        </div>
+        <div class="context-menu-item danger" id="removePlant">
+            <span>🗑️</span>
+            <span>Remove</span>
+        </div>
+    </div>
+
+    <!-- Save garden modal -->
+    <div class="modal" id="saveModal">
+        <div class="modal-content">
+            <h2>Save Your Garden</h2>
+            <div>
+                <label for="gardenName">Garden Name:</label>
+                <input type="text" id="gardenName" style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;">
+            </div>
+            <div class="modal-actions">
+                <button id="cancelSave" class="btn btn-outline">Cancel</button>
+                <button id="confirmSave" class="btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load garden modal -->
+    <div class="modal" id="loadModal">
+        <div class="modal-content">
+            <h2>Load Garden</h2>
+            <div class="garden-presets" id="gardenPresets">
+                <!-- Garden presets will be added dynamically -->
+            </div>
+            <div class="modal-actions">
+                <button id="cancelLoad" class="btn btn-outline">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help modal -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content">
+            <h2>How to Use Botanica</h2>
+            <p style="margin-bottom: 1rem;">
+                Botanica is a musical garden where each plant creates sound. Plant seeds, nurture them, and listen to your garden grow!
+            </p>
+            <h3 style="margin-bottom: 0.5rem; color: var(--secondary);">Seed Types</h3>
+            <p style="margin-bottom: 1rem;">
+                <strong>🌺 Melody Seeds:</strong> Create melodic patterns as they flower<br>
+                <strong>🌿 Harmony Seeds:</strong> Generate chord progressions and textures<br>
+                <strong>🍃 Rhythm Seeds:</strong> Provide rhythmic patterns and percussion<br>
+                <strong>🌱 Bass Seeds:</strong> Create bass foundations through root systems
+            </p>
+            <h3 style="margin-bottom: 0.5rem; color: var(--secondary);">Tools</h3>
+            <p style="margin-bottom: 1rem;">
+                <strong>🌱 Plant:</strong> Select a seed and place it in the garden<br>
+                <strong>💧 Water:</strong> Increase intensity and density of plant sounds<br>
+                <strong>✂️ Prune:</strong> Shape and refine the musical patterns<br>
+                <strong>🐝 Pollinate:</strong> Create hybrid sounds between plants
+            </p>
+            <h3 style="margin-bottom: 0.5rem; color: var(--secondary);">Environment</h3>
+            <p style="margin-bottom: 1rem;">
+                Change seasons and weather to affect the overall musical character of your garden.
+            </p>
+            <div class="modal-actions">
+                <button id="closeHelp" class="btn">Got It</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Initial loading overlay for page assets -->
+    <div class="loading" id="loading"> 
+        <div class="loading-spinner"></div>
+        <p style="color: var(--primary); margin-top: 1rem;">Loading page assets...</p>
+        <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;" id="loadingHint">Please wait.</p>
+    </div>
+
+    <!-- Dedicated Audio Activation Overlay -->
+    <div class="loading" id="audioActivationOverlay" style="display:none;">
+        <p style="color: var(--primary); font-size: 1.2rem; margin-bottom: 1rem;">Audio Ready!</p>
+        <p style="font-size: 1rem; color: #666; text-align: center;">Your browser requires a click to start audio.</p>
+        <button id="activateAudioBtn" class="btn" style="margin-top: 1.5rem;">Click to Start Audio</button>
+        <p style="font-size: 0.8rem; color: #999; margin-top: 1rem;">(This starts the musical garden engine)</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.40/Tone.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Global State ---
+            let audioInitialized = false; // Flag to track if Tone.js audio context is fully running
+            let playing = false;
+            let activeTool = 'plant'; // 'plant', 'water', 'prune', 'pollinate'
+            let selectedSeedType = 'melody'; // Current seed type selected from palette
+            let currentSeason = 'spring'; // 'spring', 'summer', 'autumn', 'winter'
+            let currentWeather = 'clear'; // 'clear', 'rain', 'wind', 'fog'
+            let plants = []; // Array to store all plant objects
+            let nextPlantId = 1; // Unique ID counter for plants
+            let selectedPlant = null; // Currently selected plant for context menu
+            let lastGrowthUpdate = Tone.Transport.now(); // For tracking elapsed time for growth
+
+            // --- Tone.js Components (Declared globally but instantiated later) ---
+            let masterLimiter, masterReverb, masterDelay, masterChorus, masterFilter;
+            const synths = {}; // Object to hold all synth instances
+
+            // --- Element References ---
+            const garden = document.getElementById('garden');
+            const playBtn = document.getElementById('playBtn');
+            const playIcon = document.getElementById('playIcon');
+            const playText = document.getElementById('playText');
+            const timelapseBtn = document.getElementById('timelapseBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const loadBtn = document.getElementById('loadBtn');
+            const helpBtn = document.getElementById('helpBtn');
+            const tools = document.querySelectorAll('.tool-btn');
+            const seeds = document.querySelectorAll('.seed');
+            const seasonBtns = document.querySelectorAll('[data-season]');
+            const weatherBtns = document.querySelectorAll('[data-weather]');
+            const seasonText = document.getElementById('seasonText');
+            const seasonIcon = document.getElementById('seasonIcon');
+            const weatherText = document.getElementById('weatherText');
+            const weatherIcon = document.getElementById('weatherIcon');
+            const growthSpeedSlider = document.getElementById('growthSpeed');
+            const densitySlider = document.getElementById('density');
+            const grid = document.getElementById('grid');
+            const contextMenu = document.getElementById('contextMenu');
+
+            // --- Loading and Activation Overlays ---
+            const loadingOverlay = document.getElementById('loading'); // Initial asset loading overlay
+            const audioActivationOverlay = document.getElementById('audioActivationOverlay'); // New overlay for audio start
+            const activateAudioBtn = document.getElementById('activateAudioBtn'); // Button on audio activation overlay
+
+            // Modal elements
+            const saveModal = document.getElementById('saveModal');
+            const loadModal = document.getElementById('loadModal');
+            const helpModal = document.getElementById('helpModal');
+            const gardenNameInput = document.getElementById('gardenName');
+            const gardenPresets = document.getElementById('gardenPresets');
+            const confirmSaveBtn = document.getElementById('confirmSave');
+            const cancelSaveBtn = document.getElementById('cancelSave');
+            const cancelLoadBtn = document.getElementById('cancelLoad');
+            const closeHelpBtn = document.getElementById('closeHelp');
+
+            // Context menu items
+            const waterPlantMenuItem = document.getElementById('waterPlant');
+            const prunePlantMenuItem = document.getElementById('prunePlant');
+            const pollinatePlantMenuItem = document.getElementById('pollinatePlant');
+            const removePlantMenuItem = document.getElementById('removePlant');
+
+            let contextMenuTarget = null; // Store the plant element that opened the context menu
+
+            // --- Audio Synths & Effects Setup (Called AFTER Tone.start()) ---
+            const createAudioEngine = () => {
+                // Initialize Tone.js Master Effects
+                masterLimiter = new Tone.Limiter(-1).toDestination();
+                masterReverb = new Tone.Reverb({ decay: 2.5, wet: 0.3 }).connect(masterLimiter);
+                masterDelay = new Tone.FeedbackDelay({ delayTime: "8n", feedback: 0.2, wet: 0.15 }).connect(masterReverb);
+                masterChorus = new Tone.Chorus({ frequency: 1.5, depth: 0.7, spread: 180 }).connect(masterDelay);
+                masterFilter = new Tone.Filter(10000, "lowpass").connect(masterChorus);
+
+                // Synth definitions for different seed types
+                synths.melody = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: 'triangle' },
+                    envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 1 }
+                }).connect(masterFilter);
+                synths.melody.volume.value = -8;
+
+                synths['melody-alt'] = new Tone.PolySynth(Tone.AMSynth, {
+                    harmonicity: 3, oscillator: { type: 'sine' },
+                    envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 1.5 }
+                }).connect(masterFilter);
+                synths['melody-alt'].volume.value = -10;
+
+                synths.harmony = new Tone.PolySynth(Tone.FMSynth, {
+                    harmonicity: 1.5, modulationIndex: 2, oscillator: { type: 'triangle' },
+                    envelope: { attack: 0.1, decay: 0.2, sustain: 0.5, release: 1.5 },
+                    modulation: { type: 'square' }
+                }).connect(masterFilter);
+                synths.harmony.volume.value = -15;
+
+                synths['harmony-alt'] = new Tone.PolySynth(Tone.DuoSynth, {
+                    vibratoAmount: 0.5, vibratoRate: 5, harmonicity: 1.5,
+                    voice0: { oscillator: { type: 'sawtooth' } }, voice1: { oscillator: { type: 'sine' } }
+                }).connect(masterFilter);
+                synths['harmony-alt'].volume.value = -12;
+
+                synths.rhythm = new Tone.PolySynth(Tone.MembraneSynth, {
+                    pitchDecay: 0.05, octaves: 8, oscillator: { type: 'sine' },
+                    envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4 }
+                }).connect(masterFilter);
+                synths.rhythm.volume.value = -6;
+
+                // Temporarily commented out due to 'Voice must extend Monophonic class' error with PolySynth
+                /*
+                synths['rhythm-alt'] = new Tone.PolySynth(Tone.NoiseSynth, {
+                    noise: { type: 'white' },
+                    envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 }
+                }).connect(masterFilter);
+                synths['rhythm-alt'].volume.value = -12;
+                */
+
+                synths.bass = new Tone.MonoSynth({
+                    oscillator: { type: 'fatsawtooth', count: 3, spread: 20 },
+                    envelope: { attack: 0.05, decay: 0.2, sustain: 0.8, release: 1.5 }
+                }).connect(masterFilter);
+                synths.bass.volume.value = -10;
+
+                synths['bass-alt'] = new Tone.MonoSynth({
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 0.1, decay: 0.5, sustain: 0.7, release: 2 }
+                }).connect(masterFilter);
+                synths['bass-alt'].volume.value = -12;
+            };
+
+            // --- Musical Scales and Notes ---
+            const scales = {
+                major: [0, 2, 4, 5, 7, 9, 11],
+                minor: [0, 2, 3, 5, 7, 8, 10],
+                pentatonic: [0, 2, 4, 7, 9],
+                blues: [0, 3, 5, 6, 7, 10],
+                chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+            };
+
+            function getNoteFromScale(baseNote = 'C3', scaleName = 'major', heightFactor = 0.5) {
+                const scale = scales[scaleName] || scales.major;
+                const baseMidi = Tone.Frequency(baseNote).toMidi();
+                const octave = Math.floor(heightFactor * 3); // Map height to 3 octaves above base
+                const index = Math.floor(heightFactor * (scale.length - 1)); // Map height to index in scale
+                const midiNote = baseMidi + scale[index] + (octave * 12);
+                return Tone.Frequency(midiNote, 'midi').toNote();
+            }
+
+            function getRandomRhythmPattern(density) {
+                // Adjust density to be 0-10, then map to pattern style
+                const adjustedDensity = Math.min(10, Math.max(1, density));
+                const patterns = {
+                    1: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Very sparse
+                    2: [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    3: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                    4: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Standard 4-on-floor
+                    5: [1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0], // Medium complex
+                    6: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
+                    7: [1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0],
+                    8: [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0], // Mostly busy
+                    9: [1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0],
+                    10: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] // Max density
+                };
+                return patterns[adjustedDensity] || patterns[5]; // Default to medium
+            }
+
+            function getHarmonyNotes(baseNote = 'C3', scaleName = 'major', inversion = 0) {
+                const scale = scales[scaleName] || scales.major;
+                const baseMidi = Tone.Frequency(baseNote).toMidi();
+                let chord = [];
+
+                if (inversion === 0) { // Root position triad
+                    chord.push(baseMidi + scale[0]);
+                    chord.push(baseMidi + scale[2 % scale.length]); // Use modulo for smaller scales
+                    chord.push(baseMidi + scale[4 % scale.length]);
+                } else if (inversion === 1) { // 1st inversion
+                    chord.push(baseMidi + scale[2 % scale.length]);
+                    chord.push(baseMidi + scale[4 % scale.length]);
+                    chord.push(baseMidi + scale[0] + 12);
+                } else { // 2nd inversion
+                    chord.push(baseMidi + scale[4 % scale.length]);
+                    chord.push(baseMidi + scale[0] + 12);
+                    chord.push(baseMidi + scale[2 % scale.length] + 12);
+                }
+                return chord.map(midi => Tone.Frequency(midi, 'midi').toNote());
+            }
+
+            // --- Plant Object & Logic ---
+            class Plant {
+                constructor(id, type, x, y, options = {}) {
+                    this.id = id;
+                    this.type = type;
+                    this.x = x;
+                    this.y = y; // y coordinate from the bottom of the garden div
+                    this.growth = 0; // 0-100, determines height and complexity
+                    this.water = 50; // 0-100, determines intensity
+                    this.pruning = 50; // 0-100, determines musical shape/regularity
+                    this.pollination = 0; // 0-100, affects hybrid sounds
+                    this.isFlowering = false; // Flag for melodic triggers
+                    this.lifeCycle = 0; // Tracks internal musical evolution for patterns
+                    this.musicalParameters = this.initMusicalParameters(); // Stores dynamic musical data
+                    this.element = this.createElement();
+                    this.seq = null; // Tone.js sequence for this plant
+                    this.active = false; // Currently active in playback
+                    this.growthSpeed = options.growthSpeed || 5; // From slider
+                    this.density = options.density || 5; // From slider
+
+                    plants.push(this);
+                    garden.appendChild(this.element);
+                    this.updateVisual();
+                    this.setupSequence(); // Will set up sequence only if audio is initialized
+                }
+
+                initMusicalParameters() {
+                    let params = {
+                        baseNote: 'C3',
+                        scale: 'major',
+                        rhythmPattern: getRandomRhythmPattern(this.density),
+                        rhythmStep: 0,
+                        lastFlowerTime: Tone.Transport.now(),
+                        flowerInterval: 4, // beats
+                        // Add more plant-specific musical parameters here
+                    };
+                    switch (this.type) {
+                        case 'melody':
+                        case 'melody-alt':
+                            params.baseNote = 'C4';
+                            params.scale = 'major';
+                            break;
+                        case 'harmony':
+                        case 'harmony-alt':
+                            params.baseNote = 'C3';
+                            params.scale = 'major';
+                            params.inversion = 0;
+                            break;
+                        case 'rhythm':
+                        case 'rhythm-alt':
+                            params.baseNote = 'C1'; // For percussion
+                            params.pitchRandomness = 0;
+                            break;
+                        case 'bass':
+                        case 'bass-alt':
+                            params.baseNote = 'C2';
+                            params.scale = 'minor';
+                            break;
+                    }
+                    return params;
+                }
+
+                createElement() {
+                    const plantEl = document.createElement('div');
+                    plantEl.className = `plant ${this.type}`;
+                    plantEl.style.left = `${this.x}px`;
+                    // Y coordinate is from bottom, so CSS bottom property matches directly
+                    plantEl.style.bottom = `${this.y}px`;
+
+                    const stemEl = document.createElement('div');
+                    stemEl.className = 'plant-stem';
+                    plantEl.appendChild(stemEl);
+                    this.stem = stemEl;
+
+                    const flowerEl = document.createElement('div');
+                    flowerEl.className = 'plant-flower';
+                    plantEl.appendChild(flowerEl);
+                    this.flower = flowerEl;
+
+                    // Add some leaves based on plant type
+                    if (this.type.includes('melody') || this.type.includes('harmony')) {
+                        for (let i = 0; i < 2; i++) {
+                            const leaf = document.createElement('div');
+                            leaf.className = `plant-leaf ${i % 2 === 0 ? 'left' : 'right'}`;
+                            plantEl.appendChild(leaf);
+                            this[`leaf${i}`] = leaf; // Store leaf references
+                        }
+                    }
+
+                    plantEl.addEventListener('click', (e) => this.handleClick(e));
+                    plantEl.addEventListener('contextmenu', (e) => this.handleContextMenu(e));
+                    return plantEl;
+                }
+
+                handleClick(e) {
+                    e.stopPropagation(); // Prevent garden click
+                    if (activeTool === 'water') {
+                        this.waterPlant();
+                    } else if (activeTool === 'prune') {
+                        this.prunePlant();
+                    } else if (activeTool === 'pollinate') {
+                        this.pollinatePlant();
+                    } else if (activeTool === 'plant') {
+                        // Select existing plant for context menu
+                        this.selectPlant();
+                    }
+                }
+
+                handleContextMenu(e) {
+                    e.preventDefault(); // Prevent default browser context menu
+                    this.selectPlant();
+                    contextMenuTarget = this;
+                    contextMenu.style.left = `${e.clientX}px`;
+                    contextMenu.style.top = `${e.clientY}px`;
+                    contextMenu.classList.add('open');
+                }
+
+                selectPlant() {
+                    if (selectedPlant) {
+                        selectedPlant.element.classList.remove('selected');
+                    }
+                    selectedPlant = this;
+                    this.element.classList.add('selected');
+                }
+
+                updateVisual() {
+                    // Stem height based on growth
+                    const stemHeight = 50 + this.growth * 2; // 50px to 250px
+                    this.stem.style.height = `${stemHeight}px`;
+                    // Stem color already set by CSS class based on plant type
+
+                    // Flower size and opacity based on growth and flowering
+                    const flowerSize = 10 + this.growth * 0.3; // 10px to 40px
+                    this.flower.style.width = `${flowerSize}px`;
+                    this.flower.style.height = `${flowerSize}px`;
+                    this.flower.style.opacity = this.growth > 10 ? 1 : 0; // Only visible if grown a bit
+                    this.flower.style.transform = `translateX(-50%) scale(${this.isFlowering ? 1.2 : 1.0})`;
+
+                    // Position flower relative to stem top
+                    this.flower.style.bottom = `${stemHeight - flowerSize / 2}px`; // Center flower on top of stem
+
+                    // Leaf properties
+                    if (this.leaf0) {
+                        const leafScale = this.growth > 20 ? (this.growth - 20) * 0.015 : 0; // Start growing after 20%
+                        this.leaf0.style.opacity = leafScale > 0 ? 1 : 0;
+                        this.leaf0.style.transform = `scale(${leafScale}) rotate(-45deg)`;
+                        this.leaf0.style.bottom = `${stemHeight * 0.4}px`;
+                        this.leaf0.style.left = `calc(50% - ${stemHeight * 0.05}px)`;
+                    }
+                    if (this.leaf1) {
+                        const leafScale = this.growth > 30 ? (this.growth - 30) * 0.015 : 0;
+                        this.leaf1.style.opacity = leafScale > 0 ? 1 : 0;
+                        this.leaf1.style.transform = `scale(${leafScale}) rotate(45deg)`;
+                        this.leaf1.style.bottom = `${stemHeight * 0.6}px`;
+                        this.leaf1.style.left = `calc(50% + ${stemHeight * 0.05}px)`;
+                    }
+
+                    // Opacity for plant active state
+                    this.element.style.opacity = this.active ? 1 : 0.8;
+                }
+
+                updateMusicalParameters() {
+                    // Scale and base note can evolve based on growth/season/weather
+                    let scale = this.musicalParameters.scale;
+                    if (currentSeason === 'autumn') scale = 'minor';
+                    if (currentWeather === 'rain') scale = 'blues';
+                    this.musicalParameters.scale = scale;
+
+                    // Rhythm complexity based on density and pruning
+                    this.musicalParameters.rhythmPattern = getRandomRhythmPattern(this.density);
+                    if (this.pruning < 30) this.musicalParameters.rhythmPattern = getRandomRhythmPattern(1); // Sparse if heavily pruned
+                    if (this.pruning > 70) this.musicalParameters.rhythmPattern = getRandomRhythmPattern(10); // Dense if well-shaped
+
+                    // Intensity based on water
+                    if (audioInitialized && synths[this.type]) { // Check if synth is defined (important after refactor)
+                        synths[this.type].volume.value = -20 + (this.water / 100) * 15; // -20dB to -5dB
+                    }
+
+
+                    // Timbre changes with environment
+                    if (audioInitialized && synths[this.type] && synths[this.type].filter) { // Check for filter property
+                        synths[this.type].filter.frequency.value = 1000 + (this.growth / 100) * 10000;
+                        if (currentWeather === 'fog') synths[this.type].filter.frequency.value *= 0.5;
+                    }
+                }
+
+                grow() {
+                    // Growth affected by speed, water, pruning
+                    this.growth = Math.min(100, this.growth + (this.growthSpeed / 20) * (this.water / 100) * (this.pruning / 100 + 0.5));
+                    this.updateVisual();
+                    this.updateMusicalParameters();
+                }
+
+                waterPlant() {
+                    this.water = Math.min(100, this.water + 10);
+                    this.element.classList.add('active'); // Visual feedback
+                    setTimeout(() => this.element.classList.remove('active'), 200);
+                    this.updateMusicalParameters();
+                    showNotification(`Plant ${this.id} watered!`);
+                }
+
+                prunePlant() {
+                    this.pruning = Math.min(100, this.pruning + 10);
+                    this.element.classList.add('active');
+                    setTimeout(() => this.element.classList.remove('active'), 200);
+                    this.updateMusicalParameters();
+                    showNotification(`Plant ${this.id} pruned!`);
+                }
+
+                pollinatePlant(otherPlant = null) {
+                    this.pollination = Math.min(100, this.pollination + 20);
+                    this.element.classList.add('active');
+                    setTimeout(() => this.element.classList.remove('active'), 200);
+                    if (otherPlant) {
+                        // Hybridize: combine features or influence each other's parameters
+                        this.musicalParameters.scale = otherPlant.musicalParameters.scale;
+                        this.musicalParameters.baseNote = otherPlant.musicalParameters.baseNote; // Take base note from other
+                        showNotification(`Plant ${this.id} pollinated with ${otherPlant.id}!`);
+                    } else {
+                         showNotification(`Plant ${this.id} pollinated!`);
+                    }
+
+                    this.updateMusicalParameters();
+                }
+
+                remove() {
+                    if (this.seq) this.seq.dispose();
+                    garden.removeChild(this.element);
+                    plants = plants.filter(p => p.id !== this.id);
+                    if (selectedPlant === this) selectedPlant = null;
+                    showNotification(`Plant ${this.id} removed.`);
+                }
+
+                // Tone.js Sequencing Logic
+                setupSequence() {
+                    if (!audioInitialized) return; // Don't create sequence if audio engine not ready
+                    if (this.seq) this.seq.dispose(); // Clear existing sequence
+
+                    this.seq = new Tone.Sequence((time, step) => {
+                        this.musicalParameters.rhythmStep = step;
+                        if (this.musicalParameters.rhythmPattern[step]) {
+                            this.playMusicalEvent(time);
+                        }
+                    }, Array.from(Array(16).keys()), "16n"); // 16 steps per bar
+                    this.seq.loop = true;
+                    this.seq.loopEnd = "1m"; // Loop every measure
+                    // If already playing, start new sequence immediately
+                    if (playing) {
+                        this.seq.start(0);
+                    }
+                }
+
+                playMusicalEvent(time) {
+                    if (this.growth < 10) return; // Only play if grown a bit
+                    if (!audioInitialized || !synths[this.type]) { // Ensure synth is created and audio is ready
+                         console.warn(`Synth for type ${this.type} not found or audio not initialized.`);
+                         return;
+                    }
+
+                    const synth = synths[this.type];
+                    const baseNote = this.musicalParameters.baseNote;
+                    const scale = this.musicalParameters.scale;
+                    const heightFactor = this.growth / 100; // Map growth to height
+
+                    // Trigger visual "bloom" effect
+                    this.isFlowering = true;
+                    setTimeout(() => { this.isFlowering = false; this.updateVisual(); }, 200); // Reset after 200ms
+                    this.updateVisual();
+                    this.element.classList.add('active'); // Visual feedback
+                    setTimeout(() => this.element.classList.remove('active'), 100);
+
+
+                    switch (this.type) {
+                        case 'melody':
+                        case 'melody-alt':
+                            const melodyNote = getNoteFromScale(baseNote, scale, heightFactor);
+                            synth.triggerAttackRelease(melodyNote, "8n", time);
+                            break;
+                        case 'harmony':
+                        case 'harmony-alt':
+                            const harmonyNotes = getHarmonyNotes(baseNote, scale, Math.floor(Math.random() * 3)); // Random inversion
+                            synth.triggerAttackRelease(harmonyNotes, "4n", time);
+                            break;
+                        case 'rhythm':
+                        case 'rhythm-alt':
+                            // Rhythm plants can vary their sounds/pitch based on growth
+                            let rhythmNote = 'C1';
+                            if (this.growth > 50) rhythmNote = 'C2';
+                            if (this.type === 'rhythm-alt') { // Noise-based rhythm
+                                synth.triggerAttackRelease("16n", time);
+                            } else { // Pitched rhythm
+                                synth.triggerAttackRelease(rhythmNote, "16n", time);
+                            }
+                            break;
+                        case 'bass':
+                        case 'bass-alt':
+                            const bassNote = getNoteFromScale(baseNote, scale, heightFactor * 0.5); // Bass in lower octaves
+                            synth.triggerAttackRelease(bassNote, "2n", time);
+                            break;
+                    }
+                }
+
+                // Public method to trigger growth step in time-lapse
+                timeLapseGrow() {
+                    this.grow();
+                    // No explicit transition disable needed here if using CSS transitions
+                    // and just updating properties. Browsers are smart about it.
+                }
+            }
+
+            // --- UI & Event Handlers ---
+
+            function createGridVisual() {
+                grid.innerHTML = '';
+                const gardenWidth = garden.offsetWidth;
+                const gardenHeight = garden.offsetHeight;
+
+                // Create horizontal grid lines
+                for (let i = 1; i < 12; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'grid-line-x';
+                    line.style.top = `${(i * gardenHeight) / 12}px`;
+                    grid.appendChild(line);
+                }
+
+                // Create vertical grid lines
+                for (let i = 1; i < 16; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'grid-line-y';
+                    line.style.left = `${(i * gardenWidth) / 16}px`;
+                    grid.appendChild(line);
+                }
+            }
+
+            function handleGardenClick(event) {
+                // Hide context menu if open
+                hideContextMenu();
+
+                // Get click coordinates relative to the garden
+                const rect = garden.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                // Y is from top, convert to Y from bottom for plant positioning
+                const y = garden.offsetHeight - (event.clientY - rect.top);
+
+                if (activeTool === 'plant' && !event.target.closest('.plant')) { // Only plant if clicking empty space
+                    new Plant(nextPlantId++, selectedSeedType, x, y, {
+                        growthSpeed: parseFloat(growthSpeedSlider.value),
+                        density: parseFloat(densitySlider.value)
+                    });
+                } else if (activeTool === 'water' || activeTool === 'prune' || activeTool === 'pollinate') {
+                    // Tool active but clicked empty space, deselect plant if any
+                    if (selectedPlant && !event.target.closest('.plant')) { // Deselect only if not clicking on the plant itself
+                        selectedPlant.element.classList.remove('selected');
+                        selectedPlant = null;
+                    }
+                }
+            }
+
+            // Centralized function to start Tone.Transport and all sequences
+            function startSequencer() {
+                if (!audioInitialized) {
+                    console.error("Attempted to start sequencer before audio engine was initialized.");
+                    return; // Should not happen if `togglePlay` logic is followed
+                }
+
+                playing = true;
+                playText.textContent = 'Pause';
+                playIcon.textContent = '❚❚';
+                Tone.Transport.start();
+                // Start sequences for all existing plants
+                plants.forEach(p => p.setupSequence()); // Re-setup to ensure new sequences are active
+                plants.forEach(p => p.seq.start(0)); // Start all plant sequences from the beginning of the loop
+                Tone.Transport.scheduleRepeat(updatePlantGrowth, "1s"); // Schedule periodic growth updates
+            }
+
+            // Centralized function to pause Tone.Transport and all sequences
+            function pauseSequencer() {
+                if (!audioInitialized) return;
+
+                playing = false;
+                playText.textContent = 'Play';
+                playIcon.textContent = '▶';
+                Tone.Transport.pause();
+                plants.forEach(p => p.seq.pause()); // Pause all plant sequences
+                Tone.Transport.clear(updatePlantGrowth); // Clear growth update schedule
+            }
+
+            // Main toggle function for play/pause
+            async function togglePlay() {
+                const audioReady = await ensureAudioReady();
+                if (!audioReady) {
+                    showNotification("Audio not ready. Please click 'Activate Audio' or the garden.");
+                    return;
+                }
+
+                // Step 2: Audio engine IS ready, just toggle playback
+                if (playing) { pauseSequencer(); } else { startSequencer(); }
+            }
+
+            function updatePlantGrowth(time) {
+                plants.forEach(plant => {
+                    plant.grow();
+                });
+                lastGrowthUpdate = time; // Update last growth time
+                updateEnvironmentEffects(); // Update effects based on environment
+            }
+
+            function updateEnvironmentEffects() {
+                if (!audioInitialized) return; // Crucial check to prevent errors before audio nodes are created
+
+                // Growth speed affects Tone.Transport.bpm
+                const bpm = 60 + (parseFloat(growthSpeedSlider.value) / 10) * 120; // 60 to 180 BPM
+                Tone.Transport.bpm.value = bpm;
+
+                // Density affects reverb wetness and delay feedback
+                const densityFactor = parseFloat(densitySlider.value) / 10;
+                masterReverb.wet.value = 0.1 + densityFactor * 0.4; // 0.1 to 0.5 wet
+                masterDelay.feedback.value = 0.1 + densityFactor * 0.4; // 0.1 to 0.5 feedback
+
+                // Season affects master filter/EQ/Chorus/Reverb decay
+                switch (currentSeason) {
+                    case 'spring':
+                        masterFilter.frequency.value = 10000;
+                        masterChorus.depth.value = 0.7;
+                        masterReverb.decay = 2.5;
+                        break;
+                    case 'summer':
+                        masterFilter.frequency.value = 15000;
+                        masterChorus.depth.value = 0.5;
+                        masterReverb.decay = 2; // Shorter reverb
+                        break;
+                    case 'autumn':
+                        masterFilter.frequency.value = 5000;
+                        masterChorus.depth.value = 0.9;
+                        masterReverb.decay = 3.5; // Longer, darker reverb
+                        break;
+                    case 'winter':
+                        masterFilter.frequency.value = 2000;
+                        masterChorus.depth.value = 0.5;
+                        masterReverb.decay = 4; // Longest, coldest reverb
+                        break;
+                }
+
+                // Weather affects subtle random variations or effects
+                if (currentWeather === 'rain') {
+                    masterDelay.wet.value = 0.4; // More delay for rain
+                    masterChorus.spread = 240; // Wider sound
+                } else {
+                    masterDelay.wet.value = 0.15;
+                    masterChorus.spread = 180;
+                }
+                // Wind could add tremolo or subtle pitch bends (more advanced)
+                // Fog could add more low-pass filtering (masterFilter already does this)
+            }
+
+
+            function showNotification(message) {
+                // A simple notification system (can be expanded to a toast/snackbar)
+                console.log(`Notification: ${message}`);
+            }
+
+            // Modals
+            function openModal(modalEl) {
+                modalEl.classList.add('open');
+            }
+            function closeModal(modalEl) {
+                modalEl.classList.remove('open');
+            }
+
+            // Save/Load Garden
+            function saveGarden() {
+                const gardenName = gardenNameInput.value.trim();
+                if (!gardenName) {
+                    alert("Please enter a garden name.");
+                    return;
+                }
+                const gardenState = {
+                    name: gardenName,
+                    plants: plants.map(p => ({
+                        id: p.id,
+                        type: p.type,
+                        x: p.x,
+                        y: p.y,
+                        growth: p.growth,
+                        water: p.water,
+                        pruning: p.pruning,
+                        pollination: p.pollination,
+                        // musicalParameters: p.musicalParameters, // Don't save Tone.js objects directly
+                        growthSpeed: p.growthSpeed,
+                        density: p.density
+                    })),
+                    environment: {
+                        season: currentSeason,
+                        weather: currentWeather,
+                        growthSpeed: parseFloat(growthSpeedSlider.value),
+                        density: parseFloat(densitySlider.value)
+                    }
+                };
+                let savedGardens = JSON.parse(localStorage.getItem('botanicaGardens') || '{}');
+                savedGardens[gardenName] = gardenState;
+                localStorage.setItem('botanicaGardens', JSON.stringify(savedGardens));
+                closeModal(saveModal);
+                showNotification(`Garden "${gardenName}" saved!`);
+            }
+
+            function loadGarden(gardenName) {
+                let savedGardens = JSON.parse(localStorage.getItem('botanicaGardens') || '{}');
+                const loadedState = savedGardens[gardenName];
+                if (!loadedState) {
+                    alert("Garden not found.");
+                    return;
+                }
+
+                // Stop playback/timelapse and clear current garden
+                if (playing) pauseSequencer();
+                if (timelapseInterval) toggleTimelapse();
+                plants.forEach(p => p.remove()); // This also disposes Tone.js sequences
+                plants = [];
+                nextPlantId = 1;
+
+                // Load environment
+                currentSeason = loadedState.environment.season;
+                currentWeather = loadedState.environment.weather;
+                growthSpeedSlider.value = loadedState.environment.growthSpeed;
+                densitySlider.value = loadedState.environment.density;
+
+                // Update UI elements for environment
+                document.querySelectorAll('[data-season]').forEach(btn => btn.classList.toggle('active', btn.dataset.season === currentSeason));
+                document.querySelectorAll('[data-weather]').forEach(btn => btn.classList.toggle('active', btn.dataset.weather === currentWeather));
+                updateSeasonIndicator(currentSeason);
+                updateWeatherIndicator(currentWeather);
+
+                // Load plants (must happen after environment is loaded for correct parameter initialization)
+                loadedState.plants.forEach(pData => {
+                    const newPlant = new Plant(pData.id, pData.type, pData.x, pData.y, {
+                        growthSpeed: pData.growthSpeed,
+                        density: pData.density
+                    });
+                    // Re-assign basic numerical/string properties directly
+                    Object.assign(newPlant, {
+                        growth: pData.growth,
+                        water: pData.water,
+                        pruning: pData.pruning,
+                        pollination: pData.pollination,
+                        // musicalParameters: pData.musicalParameters // Re-initialize or load selectively
+                    });
+                    // Re-initialize musical parameters, as Tone.js objects aren't saved
+                    newPlant.musicalParameters = newPlant.initMusicalParameters(); // Resets to default for type
+                    // If you want to save/load specific musical parameters, you need to store them as simple data types (e.g., baseNote, scale)
+                    // newPlant.musicalParameters.baseNote = pData.musicalParameters.baseNote;
+                    // newPlant.musicalParameters.scale = pData.musicalParameters.scale;
+
+                    newPlant.updateVisual();
+                    newPlant.setupSequence(); // Re-create Tone.js sequence
+                    nextPlantId = Math.max(nextPlantId, pData.id + 1);
+                });
+
+
+                closeModal(loadModal);
+                showNotification(`Garden "${gardenName}" loaded!`);
+                updateEnvironmentEffects(); // Apply loaded settings to audio engine (important after loading)
+            }
+
+            function renderGardenPresets() {
+                gardenPresets.innerHTML = '';
+                const savedGardens = JSON.parse(localStorage.getItem('botanicaGardens') || '{}');
+                Object.keys(savedGardens).forEach(name => {
+                    const presetEl = document.createElement('div');
+                    presetEl.className = 'garden-preset';
+                    presetEl.innerHTML = `<h4>${name}</h4><p style="font-size:0.8rem;">Plants: ${savedGardens[name].plants.length}</p>`;
+                    presetEl.addEventListener('click', () => loadGarden(name));
+                    gardenPresets.appendChild(presetEl);
+                });
+                if (Object.keys(savedGardens).length === 0) {
+                    gardenPresets.innerHTML = '<p style="text-align: center; opacity: 0.7;">No saved gardens found.</p>';
+                }
+            }
+
+
+            // Time-lapse
+            let timelapseInterval = null;
+            function toggleTimelapse() {
+                if (timelapseInterval) {
+                    clearInterval(timelapseInterval);
+                    timelapseInterval = null;
+                    timelapseBtn.classList.remove('active');
+                    showNotification('Time-lapse stopped.');
+                } else {
+                    timelapseBtn.classList.add('active');
+                    timelapseInterval = setInterval(() => {
+                        plants.forEach(p => p.timeLapseGrow());
+                    }, 50); // Grow every 50ms (faster time-lapse)
+                    showNotification('Time-lapse started!');
+                }
+            }
+
+            // Reset Garden
+            function resetGarden() {
+                if (playing) pauseSequencer(); // Stop playback
+                if (timelapseInterval) toggleTimelapse(); // Stop timelapse
+                plants.forEach(p => p.remove()); // This also disposes Tone.js sequences
+                plants = [];
+                nextPlantId = 1;
+                currentSeason = 'spring';
+                currentWeather = 'clear';
+                growthSpeedSlider.value = 5;
+                densitySlider.value = 5;
+                // Reset UI elements
+                document.querySelectorAll('[data-season]').forEach(btn => btn.classList.remove('active'));
+                document.querySelector('[data-season="spring"]').classList.add('active');
+                document.querySelectorAll('[data-weather]').forEach(btn => btn.classList.remove('active'));
+                document.querySelector('[data-weather="clear"]').classList.add('active');
+                updateSeasonIndicator(currentSeason);
+                updateWeatherIndicator(currentWeather);
+                updateEnvironmentEffects(); // Apply reset settings to audio (important after loading)
+                showNotification('Garden reset to default.');
+            }
+
+            // --- Initial Setup (DOM content ready) ---
+            createGridVisual(); // Create grid lines
+            updateSeasonIndicator(currentSeason);
+            updateWeatherIndicator(currentWeather);
+
+            // Hide initial loading overlay and show audio activation overlay
+            window.addEventListener('load', () => {
+                loadingOverlay.classList.add('hidden'); // Hide asset loading overlay
+                audioActivationOverlay.style.display = 'flex'; // Show audio activation overlay
+                audioActivationOverlay.style.opacity = '1';
+                audioActivationOverlay.style.pointerEvents = 'all';
+            });
+
+
+            // --- Event Listeners ---
+            garden.addEventListener('click', handleGardenClick);
+            garden.addEventListener('contextmenu', (e) => {
+                e.preventDefault(); // Prevent default browser context menu
+                hideContextMenu(); // Ensure any existing context menu is hidden
+            });
+
+            // Play button (now just toggles playback, after audio is initialized)
+            playBtn.addEventListener('click', togglePlay);
+            timelapseBtn.addEventListener('click', toggleTimelapse);
+            resetBtn.addEventListener('click', resetGarden);
+
+            // Audio Activation Button (crucial for Tone.js start)
+            activateAudioBtn.addEventListener('click', async () => {
+                const audioReady = await ensureAudioReady();
+                if (audioReady) {
+                    // Automatically start playback after successful audio activation
+                    // This creates a seamless "click to play" experience.
+                    console.log("Audio activated by button, starting sequencer.");
+                    startSequencer(); 
+                } else {
+                    console.log("Audio activation by button failed.");
+                }
+            });
+
+
+            // Simplified initial interaction for audio (can be garden click or activate button)
+            // This ensures that any first click can potentially start the audio, 
+            // complementing the explicit activateAudioBtn.
+            const initialInteractionListener = async () => {
+                await ensureAudioReady();
+                // Once interaction occurs, remove this general listener to avoid redundancy with specific buttons.
+                document.removeEventListener('click', initialInteractionListener);
+                document.removeEventListener('touchstart', initialInteractionListener);
+                console.log("Initial interaction listener removed.");
+            };
+            document.addEventListener('click', initialInteractionListener);
+            document.addEventListener('touchstart', initialInteractionListener);
+            console.log("Initial general interaction listener added for audio.");
+
+            // Tools selection
+            tools.forEach(toolBtn => {
+                toolBtn.addEventListener('click', () => {
+                    tools.forEach(btn => btn.classList.remove('active'));
+                    toolBtn.classList.add('active');
+                    activeTool = toolBtn.dataset.tool;
+                    garden.className = `garden tool-${activeTool}`; // Update cursor
+                });
+            });
+
+            // Seed selection
+            seeds.forEach(seedBtn => {
+                seedBtn.addEventListener('click', () => {
+                    seeds.forEach(btn => btn.classList.remove('active'));
+                    seedBtn.classList.add('active');
+                    selectedSeedType = seedBtn.dataset.type;
+                });
+            });
+
+            // Environment controls
+            seasonBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    seasonBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentSeason = btn.dataset.season;
+                    updateSeasonIndicator(currentSeason);
+                    updateEnvironmentEffects();
+                });
+            });
+            weatherBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    weatherBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentWeather = btn.dataset.weather;
+                    updateWeatherIndicator(currentWeather);
+                    updateEnvironmentEffects();
+                });
+            });
+
+            // Growth Speed and Density sliders
+            growthSpeedSlider.addEventListener('input', updateEnvironmentEffects);
+            densitySlider.addEventListener('input', updateEnvironmentEffects);
+
+            // Header buttons (modals)
+            saveBtn.addEventListener('click', () => openModal(saveModal));
+            loadBtn.addEventListener('click', () => {
+                renderGardenPresets();
+                openModal(loadModal);
+            });
+            helpBtn.addEventListener('click', () => openModal(helpModal));
+
+            // Modal actions
+            confirmSaveBtn.addEventListener('click', saveGarden);
+            cancelSaveBtn.addEventListener('click', () => closeModal(saveModal));
+            cancelLoadBtn.addEventListener('click', () => closeModal(loadModal));
+            closeHelpBtn.addEventListener('click', () => closeModal(helpModal));
+
+            // Context menu actions
+            waterPlantMenuItem.addEventListener('click', () => { if (contextMenuTarget) contextMenuTarget.waterPlant(); hideContextMenu(); });
+            prunePlantMenuItem.addEventListener('click', () => { if (contextMenuTarget) contextMenuTarget.prunePlant(); hideContextMenu(); });
+            pollinatePlantMenuItem.addEventListener('click', () => {
+                if (contextMenuTarget) {
+                    const nonSelectedPlants = plants.filter(p => p.id !== contextMenuTarget.id);
+                    if (nonSelectedPlants.length > 0) {
+                        const randomOtherPlant = nonSelectedPlants[Math.floor(Math.random() * nonSelectedPlants.length)];
+                        contextMenuTarget.pollinatePlant(randomOtherPlant);
+                    } else {
+                        contextMenuTarget.pollinatePlant(); // Pollinate with self if no other plants
+                    }
+                }
+                hideContextMenu();
+            });
+            removePlantMenuItem.addEventListener('click', () => { if (contextMenuTarget) contextMenuTarget.remove(); hideContextMenu(); });
+
+            // Hide context menu if clicking anywhere else
+            document.addEventListener('click', (e) => {
+                // If the click is not inside the context menu AND it's not a plant (which might open the menu)
+                if (!contextMenu.contains(e.target) && !e.target.closest('.plant')) {
+                    hideContextMenu();
+                }
+            });
+
+            function hideContextMenu() {
+                contextMenu.classList.remove('open');
+                contextMenuTarget = null;
+                if (selectedPlant) {
+                    selectedPlant.element.classList.remove('selected');
+                    selectedPlant = null;
+                }
+            }
+
+            // Utility for environment indicators
+            function updateSeasonIndicator(season) {
+                const indicators = {
+                    spring: { text: 'Spring', icon: '🌱' },
+                    summer: { text: 'Summer', icon: '☀️' },
+                    autumn: { text: 'Autumn', icon: '🍂' },
+                    winter: { text: 'Winter', icon: '❄️' }
+                };
+                seasonText.textContent = indicators[season].text;
+                seasonIcon.textContent = indicators[season].icon;
+            }
+            function updateWeatherIndicator(weather) {
+                const indicators = {
+                    clear: { text: 'Clear', icon: '☀️' },
+                    rain: { text: 'Rain', icon: '🌧️' },
+                    wind: { text: 'Wind', icon: '🌬️' },
+                    fog: { text: 'Fog', icon: '🌫️' }
+                };
+                weatherText.textContent = indicators[weather].text;
+                weatherIcon.textContent = indicators[weather].icon;
+            }
+
+            // Audio Initialization Logic
+            async function ensureAudioReady() {
+                if (audioInitialized) {
+                    return true; // Already initialized
+                }
+
+                // Hide overlay optimistically, show again on error
+                audioActivationOverlay.style.opacity = '0';
+                audioActivationOverlay.style.pointerEvents = 'none';
+                audioActivationOverlay.style.display = 'none';
+
+                try {
+                    console.log("Attempting Tone.start()...");
+                    await Tone.start();
+                    console.log("Tone.start() successful. Creating audio engine...");
+                    createAudioEngine(); // Setup synths, effects, etc.
+                    audioInitialized = true;
+                    console.log("Audio engine created and audio fully initialized.");
+                    showNotification("Audio Activated!", "success");
+                    return true;
+                } catch (e) {
+                    console.error("Error during audio initialization (ensureAudioReady):", e);
+                    showNotification("Audio activation failed. Please try again.", "error");
+                    // Re-show activation overlay on failure
+                    audioActivationOverlay.style.display = 'flex';
+                    audioActivationOverlay.style.opacity = '1';
+                    audioActivationOverlay.style.pointerEvents = 'all';
+                    // alert for critical failure
+                    // alert(
+                    //     "Audio could not start. Your browser might have blocked it or an internal error occurred.\n\n" +
+                    //     "Please ensure your browser allows autoplay for this site and try clicking 'Activate Audio' again.\n" +
+                    //     "Check console for more details (Right-click > Inspect > Console)."
+                    // );
+                    return false;
+                }
+            }
+            // --- END Consolidated Audio Initialization Logic ---
+
+            // REMOVE OLD/REDUNDANT LISTENERS AND HANDLER
+            // document.removeEventListener('click', firstInteractionHandler); // Already removed by its own logic if it ever ran
+            // document.removeEventListener('touchstart', firstInteractionHandler); // ditto
+            // console.log("First interaction listeners (old ones) ensured removed if they existed.");
+        });
+    </script>
+</body>
+</html>

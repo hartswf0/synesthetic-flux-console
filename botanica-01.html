@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Botanica: Garden Sequencer</title>
+    <style>
+        :root {
+            --color-soil: #3d2b1f;
+            --color-foliage: #4a7c59;
+            --color-accent1: #f4b942;
+            --color-accent2: #c05746;
+            --color-sky: #a8d0db;
+            --color-ui: #f5f5f5;
+            --color-ui-dark: #333333;
+            --font-main: 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-main);
+            background-color: var(--color-sky);
+            color: var(--color-ui-dark);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            padding: 1rem;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-weight: 300;
+            letter-spacing: 2px;
+            font-size: 1.8rem;
+        }
+        
+        .garden-container {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(to bottom, var(--color-sky), #d0e8f2);
+            overflow: hidden;
+        }
+        
+        .soil {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 25%;
+            background-color: var(--color-soil);
+            border-top-left-radius: 50% 20%;
+            border-top-right-radius: 50% 20%;
+            transform: scale(1.1);
+            z-index: 2; /* Ensure soil is above plants' roots */
+        }
+        
+        .garden {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 70%;
+            display: flex;
+            justify-content: center;
+            cursor: default; /* Default cursor for general garden area */
+        }
+        
+        .control-panel {
+            position: absolute;
+            top: 5rem;
+            right: 1rem;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 5;
+            width: 220px;
+        }
+        
+        .seed-panel {
+            position: absolute;
+            left: 1rem;
+            top: 5rem;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 5;
+            width: 220px;
+        }
+        
+        .panel-title {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--color-ui-dark);
+        }
+        
+        .plant {
+            position: absolute;
+            bottom: 0;
+            transform-origin: bottom center;
+            transition: transform 0.1s ease-out, filter 0.3s ease, box-shadow 0.3s ease; /* Added filter transition for visual feedback */
+            cursor: pointer; /* Plants are clickable */
+        }
+        
+        .stem {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 5px;
+            background-color: var(--color-foliage);
+            border-radius: 2px;
+            transition: height 0.5s ease-out, width 0.2s ease, transform 0.1s ease-out; /* Added width transition */
+        }
+        
+        .leaf {
+            position: absolute;
+            background-color: var(--color-foliage);
+            border-radius: 50% 50% 50% 0;
+            /* transform is set dynamically for rotation and scaleX */
+            transform-origin: bottom left;
+            opacity: 0.9;
+            transition: all 0.3s ease;
+        }
+        
+        .flower {
+            position: absolute;
+            border-radius: 50%;
+            transform-origin: center;
+            transition: all 0.5s ease;
+        }
+        
+        .flower-inner {
+            position: absolute;
+            border-radius: 50%;
+            background-color: var(--color-accent1);
+            width: 50%;
+            height: 50%;
+            top: 25%;
+            left: 25%;
+        }
+        
+        .root {
+            position: absolute;
+            bottom: 0;
+            height: 2px;
+            background-color: rgba(61, 43, 31, 0.6);
+            transform-origin: center;
+            transition: all 0.1s ease-out; /* For pulse effect */
+        }
+        
+        .control-group {
+            margin-bottom: 1rem;
+        }
+        
+        label {
+            display: block;
+            font-size: 0.8rem;
+            margin-bottom: 0.3rem;
+            color: #555;
+        }
+        
+        button {
+            background-color: var(--color-foliage);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #3d6a4b;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        select, input[type="range"] {
+            width: 100%;
+            padding: 0.3rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .transport {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background-color: rgba(255, 255, 255, 0.8);
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+        
+        .transport button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 0.3rem;
+        }
+        
+        .transport-icon {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .time-display {
+            font-size: 0.8rem;
+            margin: 0 1rem;
+            width: 80px;
+            text-align: center;
+        }
+        
+        .tool-tray {
+            display: flex;
+            position: absolute;
+            bottom: 5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 0.5rem;
+            border-radius: 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+        
+        .tool {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: white;
+            margin: 0 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+        
+        .tool.active {
+            background-color: var(--color-accent1);
+            box-shadow: 0 2px 8px rgba(244, 185, 66, 0.5);
+        }
+        
+        .tool:hover {
+            transform: translateY(-2px);
+        }
+        
+        .tool-icon {
+            width: 24px;
+            height: 24px;
+            opacity: 0.7;
+        }
+        
+        .weather {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .weather-icon {
+            width: 32px;
+            height: 32px;
+            margin-right: 0.5rem;
+        }
+        
+        .season-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            padding: 0.3rem 0.8rem;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 1rem;
+            z-index: 5;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .close {
+            float: right;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>BOTANICA</h1>
+        <div>
+            <button id="save-btn">Save Garden</button>
+            <button id="load-btn">Load Garden</button>
+            <button id="help-btn">?</button>
+        </div>
+    </header>
+    
+    <div class="garden-container">
+        <div class="soil"></div>
+        <div class="garden" id="garden"></div>
+        
+        <div class="seed-panel">
+            <div class="panel-title">PLANT SEEDS</div>
+            <div class="control-group">
+                <label for="plant-type">Plant Type:</label>
+                <select id="plant-type">
+                    <option value="percussion">Percussion (Shrubs)</option>
+                    <option value="bass">Bass (Roots)</option>
+                    <option value="melody" selected>Melody (Flowers)</option>
+                    <option value="harmony">Harmony (Vines)</option>
+                    <option value="texture">Texture (Moss)</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="plant-scale">Musical Scale:</label>
+                <select id="plant-scale">
+                    <option value="major">Major</option>
+                    <option value="minor">Minor</option>
+                    <option value="pentatonic" selected>Pentatonic</option>
+                    <option value="japanese">Japanese</option>
+                    <option value="blues">Blues</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="growth-speed">Growth Speed:</label>
+                <input type="range" id="growth-speed" min="1" max="10" value="5">
+            </div>
+            
+            <div class="button-group">
+                <button id="seed-btn">Plant Seed</button>
+                <button id="clear-btn">Clear Garden</button>
+            </div>
+        </div>
+        
+        <div class="control-panel">
+            <div class="panel-title">GARDEN CONTROLS</div>
+            <div class="control-group">
+                <label for="water-level">Water Level:</label>
+                <input type="range" id="water-level" min="0" max="10" value="5">
+            </div>
+            
+            <div class="control-group">
+                <label for="sunlight">Sunlight:</label>
+                <input type="range" id="sunlight" min="0" max="10" value="7">
+            </div>
+            
+            <div class="control-group">
+                <label for="seasonality">Season Speed:</label>
+                <input type="range" id="seasonality" min="1" max="10" value="3">
+            </div>
+            
+            <div class="control-group">
+                <label for="reverb">Garden Reverb:</label>
+                <input type="range" id="reverb" min="0" max="10" value="3">
+            </div>
+            
+            <div class="button-group">
+                <button id="time-lapse">Time Lapse</button>
+                <button id="cross-pollinate">Cross-Pollinate</button>
+            </div>
+        </div>
+        
+        <div class="transport">
+            <button id="play-btn">
+                <svg class="transport-icon" viewBox="0 0 24 24">
+                    <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+                </svg>
+            </button>
+            <button id="stop-btn">
+                <svg class="transport-icon" viewBox="0 0 24 24">
+                    <rect x="5" y="5" width="14" height="14" fill="currentColor"/>
+                </svg>
+            </button>
+            <div class="time-display">0:00</div>
+            <button id="record-btn">
+                <svg class="transport-icon" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="7" fill="#c05746"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="tool-tray">
+            <div class="tool active" data-tool="plant">
+                <svg class="tool-icon" viewBox="0 0 24 24">
+                    <path d="M12,3l6,6v12h-1v-5h-4v5h-2v-5H7v5H6V9L12,3z" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="tool" data-tool="water">
+                <svg class="tool-icon" viewBox="0 0 24 24">
+                    <path d="M12,2c0,0-5.2,5.2-5.2,10.4c0,2.9,2.3,5.2,5.2,5.2s5.2-2.3,5.2-5.2C17.2,7.2,12,2,12,2z" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="tool" data-tool="prune">
+                <svg class="tool-icon" viewBox="0 0 24 24">
+                    <path d="M6,3C4.9,3,4,3.9,4,5c0,0.7,0.4,1.4,1,1.7V15c0,1.1,0.9,2,2,2h1v3h2v-3h1v-2H7V6.7c0.6-0.3,1-1,1-1.7C8,3.9,7.1,3,6,3z" fill="currentColor"/>
+                    <path d="M18,3c-1.1,0-2,0.9-2,2c0,0.7,0.4,1.4,1,1.7V15c0,1.1,0.9,2,2,2h1v3h2v-3h1v-2h-4V6.7c0.6-0.3,1-1,1-1.7C20,3.9,19.1,3,18,3z" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="tool" data-tool="pollinate">
+                <svg class="tool-icon" viewBox="0 0 24 24">
+                    <circle cx="8" cy="8" r="4" fill="currentColor"/>
+                    <circle cx="16" cy="16" r="4" fill="currentColor"/>
+                    <line x1="10.5" y1="10.5" x2="13.5" y2="13.5" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </div>
+        </div>
+        
+        <div class="season-indicator">SPRING</div>
+    </div>
+    
+    <div class="modal" id="help-modal">
+        <div class="modal-content">
+            <span class="close">×</span>
+            <h2>Botanica: How to Use</h2>
+            <p>Welcome to Botanica, where music composition becomes botanical cultivation!</p>
+            <br>
+            <h3>Basic Concepts:</h3>
+            <ul>
+                <li>Plant different seeds to create various instrument sounds</li>
+                <li>Watch as growth patterns determine rhythmic structures</li>
+                <li>Flowers trigger melodic events when they bloom</li>
+                <li>Root systems create bass foundations</li>
+            </ul>
+            <br>
+            <h3>Tools:</h3>
+            <ul>
+                <li><strong>Plant:</strong> Add new musical plants to your garden. Select options in the 'Plant Seeds' panel and click 'Plant Seed'.</li>
+                <li><strong>Water:</strong> Click on an existing plant to water it, increasing its musical density and intensity.</li>
+                <li><strong>Prune:</strong> Click on a plant to prune it, simplifying its musical pattern and reducing its growth.</li>
+                <li><strong>Pollinate:</strong> Click a first plant to select it, then click a second plant to cross-pollinate them, potentially creating a hybrid sound.</li>
+            </ul>
+            <br>
+            <h3>Garden Controls:</h3>
+            <ul>
+                <li><strong>Water Level:</strong> Controls overall volume and activity in the garden.</li>
+                <li><strong>Sunlight:</strong> Affects timbre brightness and harmony of instruments.</li>
+                <li><strong>Season Speed:</strong> Controls how quickly seasons change, influencing overall musical character.</li>
+                <li><strong>Garden Reverb:</strong> Adjusts the spatial atmosphere of the garden's sound.</li>
+                <li><strong>Time Lapse:</strong> Temporarily speeds up plant growth and musical evolution.</li>
+                <li><strong>Cross-Pollinate:</strong> Randomly cross-pollinates two plants in the garden.</li>
+            </ul>
+            <br>
+            <p>Experiment with different combinations to create your unique sonic garden!</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Tone.js
+            let audioInitialized = false;
+            let playing = false;
+            const gardenElement = document.getElementById('garden');
+            const timeDisplay = document.querySelector('.time-display');
+            const plants = []; // Array to store plant objects
+            let activeTool = 'plant'; // Current active tool
+            let selectedPlant = null; // ID of the currently selected plant for tools like pollinate
+            let currentSeason = 'spring';
+            let seasonCounter = 0; // To track time for season changes
+            const seasons = ['spring', 'summer', 'autumn', 'winter'];
+            const seasonColors = {
+                spring: {
+                    sky: '#a8d0db',
+                    foliage: '#4a7c59',
+                    accent1: '#f4b942', // Yellow for flowers
+                    accent2: '#c05746' // Red/Orange for flower inner/autumn
+                },
+                summer: {
+                    sky: '#87ceeb', // Brighter blue
+                    foliage: '#2e8b57', // Darker green
+                    accent1: '#ff6347', // Coral
+                    accent2: '#ffa500' // Orange
+                },
+                autumn: {
+                    sky: '#deb887', // Tan/brownish
+                    foliage: '#d2691e', // Chocolate orange
+                    accent1: '#8b4513', // Saddle brown
+                    accent2: '#cc5500' // Burnt orange
+                },
+                winter: {
+                    sky: '#b0c4de', // Light steel blue
+                    foliage: '#2f4f4f', // Dark slate gray
+                    accent1: '#afeeee', // Pale turquoise
+                    accent2: '#e0ffff' // Light cyan
+                }
+            };
+            
+            // Set up Tone.js effects (these are shared by all instruments)
+            const reverb = new Tone.Reverb(3).toDestination();
+            reverb.wet.value = 0.3; // Default reverb
+
+            // Shared synths for harmony and texture (these are single instances)
+            const harmonySynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'sawtooth' },
+                envelope: { attack: 0.05, decay: 1, sustain: 0.4, release: 2 }
+            }).connect(reverb);
+            
+            const textureSynth = new Tone.Synth({
+                oscillator: { 
+                    type: 'fmsawtooth',
+                    modulationType: 'sine',
+                    modulationIndex: 3,
+                    harmonicity: 3.4
+                },
+                envelope: {
+                    attack: 0.2,
+                    decay: 0.1,
+                    sustain: 0.9,
+                    release: 1
+                }
+            }).connect(reverb);
+            
+            // Musical scales
+            const scales = {
+                major: ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'],
+                minor: ['C4', 'D4', 'Eb4', 'F4', 'G4', 'Ab4', 'Bb4', 'C5'],
+                pentatonic: ['C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5', 'E5'],
+                japanese: ['C4', 'Db4', 'F4', 'G4', 'Bb4', 'C5', 'Db5', 'F5'],
+                blues: ['C4', 'Eb4', 'F4', 'Gb4', 'G4', 'Bb4', 'C5', 'Eb5']
+            };
+            
+            // Bass scales (octave lower)
+            const bassScales = {};
+            Object.keys(scales).forEach(scale => {
+                bassScales[scale] = scales[scale].map(note => {
+                    return note.replace(/(\w)(\d)/, (match, pitch, octave) => {
+                        return pitch + (parseInt(octave) - 1);
+                    });
+                });
+            });
+
+            // Utility functions
+            function getRandomInt(min, max) {
+                return Math.floor(Math.random() * (max - min + 1)) + min;
+            }
+
+            function mapRange(value, inMin, inMax, outMin, outMax) {
+                return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+            }
+
+            // Event handlers for global controls
+            document.getElementById('play-btn').addEventListener('click', () => {
+                initAudio(); // Initialize audio context on first play
+                if (!playing) {
+                    Tone.Transport.start();
+                    playing = true;
+                    document.getElementById('play-btn').innerHTML = `
+                        <svg class="transport-icon" viewBox="0 0 24 24">
+                            <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                            <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                        </svg>
+                    `;
+                } else {
+                    Tone.Transport.pause();
+                    playing = false;
+                    document.getElementById('play-btn').innerHTML = `
+                        <svg class="transport-icon" viewBox="0 0 24 24">
+                            <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+                        </svg>
+                    `;
+                }
+            });
+            
+            document.getElementById('stop-btn').addEventListener('click', () => {
+                Tone.Transport.stop();
+                playing = false;
+                document.getElementById('play-btn').innerHTML = `
+                    <svg class="transport-icon" viewBox="0 0 24 24">
+                        <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+                    </svg>
+                `;
+                Tone.Transport.bpm.value = 90; // Reset BPM after time lapse
+                plants.forEach(p => {
+                    if (p.timeLapseGrowthModifier) {
+                        p.growthSpeed /= p.timeLapseGrowthModifier; // Reset growth
+                        delete p.timeLapseGrowthModifier;
+                    }
+                });
+            });
+            
+            document.getElementById('seed-btn').addEventListener('click', () => {
+                initAudio();
+                plantSeed();
+            });
+            
+            document.getElementById('clear-btn').addEventListener('click', () => {
+                clearGarden();
+            });
+            
+            document.getElementById('time-lapse').addEventListener('click', () => {
+                timeLapse();
+            });
+            
+            // Fix: Call the correct function `pollinatePlants`
+            document.getElementById('cross-pollinate').addEventListener('click', () => {
+                pollinatePlants(); // Call with no arguments to randomly cross-pollinate
+            });
+            
+            document.getElementById('help-btn').addEventListener('click', () => {
+                document.getElementById('help-modal').style.display = 'flex';
+            });
+            
+            document.querySelector('.close').addEventListener('click', () => {
+                document.getElementById('help-modal').style.display = 'none';
+            });
+
+            document.getElementById('save-btn').addEventListener('click', saveGarden);
+            document.getElementById('load-btn').addEventListener('click', loadGarden);
+            
+            // Tool selection
+            document.querySelectorAll('.tool').forEach(tool => {
+                tool.addEventListener('click', () => {
+                    document.querySelectorAll('.tool').forEach(t => t.classList.remove('active'));
+                    tool.classList.add('active');
+                    activeTool = tool.dataset.tool;
+                    // Reset selected plant when changing tools, unless it's 'pollinate' and a plant is already selected
+                    if (activeTool !== 'pollinate' && selectedPlant !== null) {
+                        const prevSelected = document.querySelector(`.plant[data-id="${selectedPlant}"]`);
+                        if (prevSelected) prevSelected.style.transform = 'scale(1)';
+                        selectedPlant = null;
+                    }
+                });
+            });
+            
+            document.getElementById('reverb').addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                reverb.decay = mapRange(value, 0, 10, 0.5, 6); // More distinct decay range
+                reverb.wet.value = mapRange(value, 0, 10, 0, 0.5); // Wetness from 0 to 0.5
+            });
+            
+            document.getElementById('water-level').addEventListener('input', (e) => {
+                const value = parseInt(e.target.value) / 10;
+                // Global effect on overall volume/activity
+                Tone.Destination.volume.value = mapRange(value, 0, 1, -20, 0); // From -20dB to 0dB
+                plants.forEach(plant => {
+                    plant.waterLevel = value;
+                    updatePlantSound(plant); // Rerun sound update for water impact
+                });
+            });
+            
+            document.getElementById('sunlight').addEventListener('input', (e) => {
+                const value = parseInt(e.target.value) / 10;
+                // Affect timbre brightness/harmony - these affect shared synths or active synths
+                harmonySynth.voices.forEach(voice => voice.filter && (voice.filter.frequency.value = mapRange(value, 0, 1, 600, 6000)));
+                textureSynth.filter.frequency.value = mapRange(value, 0, 1, 1000, 8000); // For texture
+                textureSynth.volume.value = mapRange(value, 0, 1, -30, -10); // Adjust volume for texture
+
+                // For individual synths (Melody, Bass, Percussion)
+                plants.forEach(plant => {
+                    if (plant.instrument && plant.instrument.filter) {
+                        if (plant.type === 'melody' || plant.type === 'bass') {
+                            plant.instrument.filter.frequency.value = mapRange(value, 0, 1, 500, 5000);
+                        }
+                    }
+                    if (plant.instrument && plant.type === 'percussion') {
+                         // Adjust percussion volume/timbre based on sunlight
+                        plant.instrument.volume.value = mapRange(value, 0, 1, -20, -5);
+                    }
+                    plant.sunlight = value;
+                });
+            });
+
+            document.getElementById('seasonality').addEventListener('input', (e) => {
+                // This control now influences how many Tone.Transport.seconds it takes for a season to change.
+                // Lower value means faster season changes.
+            });
+            
+            // Initialize audio context on user gesture
+            function initAudio() {
+                if (!audioInitialized) {
+                    Tone.start().then(() => { // Ensure context is running before scheduling
+                        Tone.Transport.bpm.value = 90;
+                        
+                        // Update time display and handle season changes
+                        Tone.Transport.scheduleRepeat(() => {
+                            const seconds = Math.floor(Tone.Transport.seconds);
+                            const minutes = Math.floor(seconds / 60);
+                            const remainingSeconds = seconds % 60;
+                            timeDisplay.textContent = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+                            
+                            // Season changes based on seasonality slider
+                            const seasonSpeedMultiplier = parseInt(document.getElementById('seasonality').value); // 1-10
+                            seasonCounter++;
+                            if (seasonCounter >= (11 - seasonSpeedMultiplier) * 8) { // Slower at 1 (10*8=80 beats), faster at 10 (1*8=8 beats)
+                                changeSeasons();
+                                seasonCounter = 0;
+                            }
+
+                            // Grow plants over time (visuals & sound complexity)
+                            plants.forEach(plant => growPlant(plant));
+
+                        }, '1n'); // Update every whole note for growth/season checks
+                        
+                        audioInitialized = true;
+                        console.log('AudioContext initialized and Transport started.');
+                    }).catch(e => console.error('Failed to start AudioContext:', e));
+                }
+            }
+            
+            // Helper function to create a new instrument instance based on type
+            function createInstrumentInstance(type) {
+                switch (type) {
+                    case 'melody':
+                        const melodySynthConstructors = [
+                            () => new Tone.FMSynth({ envelope: { attack: 0.01, decay: 0.5, sustain: 0.1, release: 1.5 } }),
+                            () => new Tone.AMSynth({ envelope: { attack: 0.05, decay: 0.8, sustain: 0.2, release: 2 } }),
+                            () => new Tone.MonoSynth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.02, decay: 0.6, sustain: 0.15, release: 1.8 } })
+                        ];
+                        return melodySynthConstructors[getRandomInt(0, melodySynthConstructors.length - 1)]().connect(reverb);
+                    case 'bass':
+                        const bassSynthConstructors = [
+                            () => new Tone.MonoSynth({ oscillator: { type: 'sine' }, envelope: { attack: 0.1, decay: 0.3, sustain: 0.9, release: 1.2 } }),
+                            () => new Tone.FMSynth({ modulationIndex: 3, envelope: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 1.5 }, frequency: 'C1' })
+                        ];
+                        return bassSynthConstructors[getRandomInt(0, bassSynthConstructors.length - 1)]().connect(reverb);
+                    case 'percussion':
+                        const percussionSynthConstructors = [
+                            () => new Tone.MembraneSynth({octaves: 1, pitchDecay: 0.05}),
+                            () => new Tone.MetalSynth({envelope: {attack: 0.001, decay: 0.1, sustain: 0}}),
+                            () => new Tone.NoiseSynth({ volume: -10, envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.2 } })
+                        ];
+                        return percussionSynthConstructors[getRandomInt(0, percussionSynthConstructors.length - 1)]().connect(reverb);
+                    case 'harmony':
+                        return harmonySynth; // Shared instance
+                    case 'texture':
+                        return textureSynth; // Shared instance
+                    default:
+                        return new Tone.Synth().connect(reverb); // Fallback
+                }
+            }
+
+
+            // Create a new plant object and its visual representation
+            function plantSeed() {
+                const plantType = document.getElementById('plant-type').value;
+                const scaleType = document.getElementById('plant-scale').value;
+                const growthSpeed = parseInt(document.getElementById('growth-speed').value); // 1-10
+                
+                // Calculate a random position in the garden
+                const x = Math.random() * (gardenElement.offsetWidth - 100) + 50; // Ensure within bounds
+                
+                const plant = {
+                    id: 'plant-' + Date.now() + '-' + Math.random().toFixed(4).substring(2),
+                    x: x, // Store x position for saving/loading
+                    type: plantType,
+                    scaleType: scaleType,
+                    growthSpeed: growthSpeed, // 1-10 (influences how fast age increases)
+                    age: 0, // In abstract units, max 100 for full growth
+                    height: 0, // Visual height
+                    waterLevel: parseFloat(document.getElementById('water-level').value) / 10, // 0-1
+                    sunlight: parseFloat(document.getElementById('sunlight').value) / 10, // 0-1
+                    flowering: false, // For melody plants
+                    isTexturing: false, // For texture plants
+                    element: null, // DOM element for the plant
+                    instrument: null, // Tone.js instrument
+                    sequence: null, // Tone.js Sequence or Part
+                    musicalPattern: [], // Array of musical events (not strictly used for all types)
+                    patternComplexity: 0, // Level of musical complexity
+                    maxHeight: getRandomInt(80, 150), // Max visual height
+                };
+
+                plant.instrument = createInstrumentInstance(plant.type);
+                
+                // Create visual representation
+                const plantElement = document.createElement('div');
+                plantElement.className = 'plant';
+                plantElement.style.left = `${x}px`;
+                plantElement.dataset.id = plant.id;
+                plantElement.style.zIndex = Math.floor(x); // Closer plants appear in front
+                
+                // Stem
+                const stem = document.createElement('div');
+                stem.className = 'stem';
+                plantElement.appendChild(stem);
+
+                // Flower (for melody plants)
+                if (plant.type === 'melody') {
+                    const flower = document.createElement('div');
+                    flower.className = 'flower';
+                    flower.style.backgroundColor = `var(--color-accent1)`;
+                    flower.style.display = 'none'; // Hidden initially
+                    const flowerInner = document.createElement('div');
+                    flowerInner.className = 'flower-inner';
+                    flowerInner.style.backgroundColor = `var(--color-accent2)`;
+                    flower.appendChild(flowerInner);
+                    plantElement.appendChild(flower);
+                    plant.flowerElement = flower;
+                }
+
+                // Root (for bass plants)
+                if (plant.type === 'bass') {
+                    const root = document.createElement('div');
+                    root.className = 'root';
+                    root.style.width = '0px';
+                    plantElement.appendChild(root);
+                    plant.rootElement = root;
+                }
+                
+                plant.element = plantElement; // Store reference to DOM element
+                gardenElement.appendChild(plantElement);
+                plants.push(plant);
+                
+                // Make plants interactive
+                plantElement.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent garden container click from firing
+                    if (activeTool === 'plant') {
+                        // If the "plant" tool is active, clicking an existing plant selects it for viewing/modifying properties (not implemented in detail but for selection style)
+                        if (selectedPlant === plant.id) {
+                            selectedPlant = null;
+                            plantElement.style.transform = 'scale(1)';
+                        } else {
+                            if (selectedPlant !== null) {
+                                const prevSelected = document.querySelector(`.plant[data-id="${selectedPlant}"]`);
+                                if (prevSelected) prevSelected.style.transform = 'scale(1)';
+                            }
+                            selectedPlant = plant.id;
+                            plantElement.style.transform = 'scale(1.05)';
+                            // Optionally, load plant properties into the seed panel for editing
+                        }
+                    } else if (activeTool === 'water') {
+                        plant.waterLevel = Math.min(plant.waterLevel + 0.2, 1); // Max out at 1
+                        updatePlantVisualization(plant);
+                        updatePlantSound(plant); // Re-evaluate sound for water impact
+                        plant.element.style.filter = 'brightness(1.2)'; // Visual feedback
+                        setTimeout(() => plant.element.style.filter = 'none', 100);
+                    } else if (activeTool === 'prune') {
+                        prunePlant(plant);
+                    } else if (activeTool === 'pollinate') {
+                        if (selectedPlant === null) {
+                            selectedPlant = plant.id;
+                            plantElement.style.transform = 'scale(1.05) translateY(-5px)'; // Lift slightly when selected for pollinate
+                            plantElement.style.boxShadow = '0 0 10px 3px var(--color-accent1)';
+                        } else if (selectedPlant !== plant.id) {
+                            // Cross-pollinate with currently selected plant
+                            const sourcePlant = plants.find(p => p.id === selectedPlant);
+                            pollinatePlants(sourcePlant, plant);
+                            // Reset selection after pollination
+                            document.querySelector(`.plant[data-id="${selectedPlant}"]`).style.transform = 'scale(1)';
+                            document.querySelector(`.plant[data-id="${selectedPlant}"]`).style.boxShadow = 'none';
+                            selectedPlant = null;
+                        } else {
+                            // Deselect if clicking the same plant twice
+                            selectedPlant = null;
+                            plantElement.style.transform = 'scale(1)';
+                            plantElement.style.boxShadow = 'none';
+                        }
+                    }
+                });
+
+                // Trigger initial update for visualization and sound
+                updatePlantVisualization(plant);
+                updatePlantSound(plant);
+                console.log(`New ${plant.type} plant planted at x: ${plant.x.toFixed(0)}`);
+            }
+
+            // Main growth loop for plants
+            function growPlant(plant) {
+                if (!plant.element) return; // Plant might have been cleared
+
+                // Age increases faster with higher growthSpeed and sunlight, slower in winter
+                plant.age += (plant.growthSpeed / 10) * (plant.sunlight + 0.5) * (currentSeason === 'winter' ? 0.5 : 1); 
+                if (plant.age > 100) plant.age = 100; // Max age
+
+                // Update visual representation
+                updatePlantVisualization(plant);
+
+                // Update sound pattern based on age and water level
+                updatePlantSound(plant);
+            }
+            
+            // Updates visual aspects of a plant based on its properties
+            function updatePlantVisualization(plant) {
+                const plantElement = plant.element;
+                if (!plantElement) return;
+
+                // Stem height grows with age
+                plant.height = mapRange(plant.age, 0, 100, 10, plant.maxHeight); // Min 10px, max dynamic
+                const stem = plantElement.querySelector('.stem');
+                if (stem) {
+                    stem.style.height = `${plant.height}px`;
+                    stem.style.width = `${mapRange(plant.waterLevel, 0, 1, 3, 8)}px`; // Thicker with more water
+                    stem.style.backgroundColor = `var(--color-foliage)`; // Ensure stem color reflects season
+                }
+
+                // Leaves grow and appear with age
+                let leafCount = Math.floor(mapRange(plant.age, 0, 100, 0, 6)); // Up to 6 leaves
+                let existingLeaves = Array.from(plantElement.querySelectorAll('.leaf')); // Convert to array to use array methods
+                
+                // Remove excess leaves
+                while (existingLeaves.length > leafCount) {
+                    existingLeaves.pop().remove(); // Remove last leaf
+                }
+                
+                // Add new leaves
+                while (existingLeaves.length < leafCount) {
+                    const leaf = document.createElement('div');
+                    leaf.className = 'leaf';
+                    stem.appendChild(leaf); // Append to stem
+                    existingLeaves.push(leaf); // Add to tracking array
+                }
+
+                // Update all existing leaves' properties
+                existingLeaves.forEach((leaf, index) => {
+                    const leafSize = mapRange(plant.age, 0, 100, 8, 20); // Leaves get bigger
+                    const leafPosition = getRandomInt(10 + (index * (plant.height / leafCount)), plant.height - 10 - ((leafCount - 1 - index) * (plant.height / leafCount))); // Spread out along stem
+                    const leafSide = (index % 2 === 0) ? 'left' : 'right'; // Alternate sides
+
+                    leaf.style.width = `${leafSize}px`;
+                    leaf.style.height = `${leafSize * 0.7}px`;
+                    leaf.style.bottom = `${leafPosition}px`;
+                    leaf.style.transform = leafSide === 'left' ? 'rotate(45deg)' : 'rotate(-45deg) scaleX(-1)';
+                    leaf.style.left = leafSide === 'left' ? '-2px' : 'calc(100% - 2px)'; // Position relative to stem width, considering leaf's own width
+                    leaf.style.opacity = mapRange(plant.waterLevel, 0, 1, 0.5, 1); // More opaque with water
+                    leaf.style.backgroundColor = currentSeason === 'autumn' ? 'var(--color-accent2)' : 'var(--color-foliage)'; // Autumn color
+                });
+
+
+                // Flower (for melody plants)
+                if (plant.type === 'melody' && plant.flowerElement) {
+                    if (plant.age > 70) { // Flowers start blooming at 70% age
+                        plant.flowering = true;
+                        plant.flowerElement.style.display = 'block';
+                        const flowerSize = mapRange(plant.age, 70, 100, 15, 30);
+                        plant.flowerElement.style.width = `${flowerSize}px`;
+                        plant.flowerElement.style.height = `${flowerSize}px`;
+                        plant.flowerElement.style.top = `-${flowerSize / 2}px`; // Position above stem
+                        plant.flowerElement.style.left = `calc(50% - ${flowerSize / 2}px)`;
+                        plant.flowerElement.style.backgroundColor = plant.sunlight > 0.7 ? 'var(--color-accent1)' : 'var(--color-accent2)'; // Brighter in more sun
+                        plant.flowerElement.querySelector('.flower-inner').style.backgroundColor = `var(--color-accent2)`;
+                    } else {
+                        plant.flowering = false;
+                        plant.flowerElement.style.display = 'none';
+                    }
+                }
+
+                // Root (for bass plants)
+                if (plant.type === 'bass' && plant.rootElement) {
+                    const rootLength = mapRange(plant.age, 0, 100, 0, 60); // Max 60px
+                    const rootThickness = mapRange(plant.waterLevel, 0, 1, 2, 6);
+                    plant.rootElement.style.width = `${rootLength}px`;
+                    plant.rootElement.style.height = `${rootThickness}px`;
+                    plant.rootElement.style.left = `calc(50% - ${rootLength/2}px)`; // Centered
+                }
+            }
+
+            // Generates or updates the musical sequence for a plant
+            function updatePlantSound(plant) {
+                if (!plant.instrument) return;
+
+                const currentNotes = plant.type === 'bass' ? bassScales[plant.scaleType] : scales[plant.scaleType];
+                const notesToUse = currentNotes.slice(0, Math.floor(mapRange(plant.age, 0, 100, 3, currentNotes.length))); // More notes as plant grows
+
+                // Adjust pattern complexity based on age and water level
+                plant.patternComplexity = Math.floor(mapRange(plant.age * plant.waterLevel, 0, 100, 1, 4)); // 1 (simple) to 4 (complex)
+
+                // For texture plants, handle continuous parameters and return
+                if (plant.type === 'texture') {
+                    const filterFreq = mapRange(plant.age, 0, 100, 100, 5000);
+                    const modulationIndex = mapRange(plant.sunlight, 0, 1, 0, 10);
+                    plant.instrument.oscillator.modulationIndex.value = modulationIndex;
+                    plant.instrument.filter.frequency.value = filterFreq;
+                    plant.instrument.volume.value = mapRange(plant.waterLevel, 0, 1, -30, -10); // Subtle volume
+
+                    // Trigger a sustained note if not already playing
+                    if (!plant.isTexturing && audioInitialized && playing) { // Only play if audio is initialized and playing
+                        plant.instrument.triggerAttack(currentNotes[0], Tone.now());
+                        plant.isTexturing = true;
+                    } else if (plant.isTexturing && (!audioInitialized || !playing)) {
+                        plant.instrument.triggerRelease(Tone.now());
+                        plant.isTexturing = false;
+                    }
+                    return; // No sequence for texture
+                }
+
+                // Stop existing sequence if it exists and dispose
+                if (plant.sequence) {
+                    plant.sequence.stop();
+                    plant.sequence.dispose();
+                    plant.sequence = null;
+                }
+
+                let newPatternEvents = []; // Array of notes or objects for Tone.Sequence/Part
+                let subdivisionsPerMeasure = 16; // Default for 16th notes per measure, for calculating timing
+
+                // Define patterns based on plant type and complexity
+                switch (plant.type) {
+                    case 'melody':
+                        // Melody: sparse at low complexity, more notes and variation at higher complexity
+                        subdivisionsPerMeasure = 8; // 8th notes, total 8 beats for a measure
+                        for (let i = 0; i < subdivisionsPerMeasure; i++) {
+                            if (plant.flowering && Math.random() < (0.2 + plant.patternComplexity * 0.15)) {
+                                newPatternEvents.push(notesToUse[getRandomInt(0, notesToUse.length - 1)]);
+                            } else {
+                                newPatternEvents.push(null);
+                            }
+                        }
+                        // Ensure there's always at least one note if flowering and pattern is empty
+                        if (plant.flowering && newPatternEvents.every(n => n === null) && notesToUse.length > 0) {
+                            newPatternEvents[0] = notesToUse[0];
+                        }
+                        break;
+                    case 'bass':
+                        subdivisionsPerMeasure = 4; // Quarter notes for bass clarity
+                        for (let i = 0; i < subdivisionsPerMeasure; i++) { // Generate for 1 measure
+                            if (i === 0 || (plant.patternComplexity > 1 && Math.random() < 0.4)) { // Emphasize downbeats, add more with complexity
+                                newPatternEvents.push(notesToUse[getRandomInt(0, notesToUse.length - 1)]);
+                            } else {
+                                newPatternEvents.push(null);
+                            }
+                        }
+                        break;
+                    case 'percussion':
+                        subdivisionsPerMeasure = 8; // 8th notes
+                        for (let i = 0; i < subdivisionsPerMeasure; i++) { // Generate for 1 measure
+                            let shouldPlay = false;
+                            if (i === 0) shouldPlay = true; // Kick on 1
+                            if (plant.patternComplexity > 1 && i === 4) shouldPlay = true; // Snare-like on 3rd beat
+                            if (plant.patternComplexity > 2 && Math.random() < 0.3) shouldPlay = true; // Random hi-hats/fills
+                            
+                            if (shouldPlay) {
+                                let hitType = 'C3'; // Default for membrane
+                                if (plant.instrument.name === "MetalSynth") hitType = "C#5"; 
+                                else if (plant.instrument.name === "NoiseSynth") hitType = "C2";
+                                newPatternEvents.push(hitType);
+                            } else {
+                                newPatternEvents.push(null);
+                            }
+                        }
+                        break;
+                    case 'harmony':
+                        // For harmony, we will use Tone.Part to trigger chords at specific times
+                        let chordNotes = [];
+                        const root = notesToUse[0];
+                        if (root) chordNotes.push(root); // Root always
+                        if (plant.age > 50 && root) chordNotes.push(Tone.Frequency(root).transpose(4).toNote()); // Major 3rd
+                        if (plant.age > 70 && root) chordNotes.push(Tone.Frequency(root).transpose(7).toNote()); // Perfect 5th
+                        if (plant.patternComplexity > 2 && plant.age > 80 && root) chordNotes.push(Tone.Frequency(root).transpose(10).toNote()); // Minor 7th
+
+                        newPatternEvents = [
+                            ["0:0:0", chordNotes] // Play chord at the start of the measure
+                        ];
+                        break;
+                }
+
+                // Only create and start sequences if there are events
+                if (newPatternEvents.length === 0 || (newPatternEvents.length === 1 && newPatternEvents[0] === null && plant.type !== 'harmony') ) {
+                    // console.log(`Plant ${plant.id} has no notes, not scheduling sequence.`);
+                    return;
+                }
+
+                if (plant.type === 'harmony') {
+                    plant.sequence = new Tone.Part((time, chord) => {
+                        if (chord.length > 0) { // Only play if there are notes in the chord
+                            plant.instrument.triggerAttackRelease(chord, '1m', time, mapRange(plant.waterLevel, 0, 1, 0.4, 0.8));
+                        }
+                    }, newPatternEvents).start(0);
+                    plant.sequence.loop = true;
+                    plant.sequence.loopEnd = '1m';
+                } else {
+                    plant.sequence = new Tone.Sequence((time, note) => {
+                        if (note !== null) {
+                            let duration = '8n'; // Default
+                            if (plant.type === 'bass') duration = '4n';
+                            plant.instrument.triggerAttackRelease(note, duration, time, mapRange(plant.waterLevel, 0, 1, 0.5, 1));
+                            
+                            // Visual feedback during playback
+                            if (plant.type === 'melody' && plant.flowerElement && plant.flowering) {
+                                plant.flowerElement.style.transform += ' scale(1.1)';
+                                setTimeout(() => plant.flowerElement.style.transform = plant.flowerElement.style.transform.replace(' scale(1.1)', ''), 100);
+                            } else if (plant.type === 'bass' && plant.rootElement) {
+                                plant.rootElement.style.transform = 'scale(1.1)';
+                                setTimeout(() => plant.rootElement.style.transform = 'scale(1)', 100);
+                            } else if (plant.element.querySelector('.stem')) { // For percussion, etc.
+                                 const stem = plant.element.querySelector('.stem');
+                                 stem.style.transform += ' translateY(-2px)';
+                                 setTimeout(() => stem.style.transform = stem.style.transform.replace(' translateY(-2px)', ''), 100);
+                            }
+                        }
+                    }, newPatternEvents, `${subdivisionsPerMeasure}n`).start(0);
+                    plant.sequence.loop = true;
+                    plant.sequence.loopEnd = '1m'; // Loop every measure
+                }
+            }
+
+            // Clears all plants from the garden
+            function clearGarden() {
+                plants.forEach(plant => {
+                    if (plant.sequence) {
+                        plant.sequence.stop().dispose();
+                    }
+                    if (plant.instrument && plant.type === 'texture' && plant.isTexturing) {
+                        plant.instrument.triggerRelease(Tone.now());
+                        plant.isTexturing = false;
+                    }
+                    // Dispose of individual instruments (not shared ones)
+                    if (plant.instrument && plant.instrument !== harmonySynth && plant.instrument !== textureSynth) {
+                        plant.instrument.dispose();
+                    }
+                    if (plant.element) {
+                        plant.element.remove();
+                    }
+                });
+                plants.length = 0; // Clear the array
+                selectedPlant = null;
+                console.log('Garden cleared.');
+            }
+
+            // Prunes a plant, reducing its complexity and possibly size
+            function prunePlant(plant) {
+                if (!plant) return;
+                plant.age = Math.max(0, plant.age - 20); // Reduce age
+                plant.growthSpeed = Math.max(1, plant.growthSpeed - 1); // Reduce growth speed
+                plant.waterLevel = Math.max(0.1, plant.waterLevel - 0.1); // Make it slightly less dense
+                plant.patternComplexity = Math.max(1, plant.patternComplexity - 1); // Reduce complexity
+
+                updatePlantVisualization(plant);
+                updatePlantSound(plant); // Re-evaluate sound pattern
+                console.log(`Plant ${plant.id} pruned. New age: ${plant.age.toFixed(0)}, complexity: ${plant.patternComplexity}`);
+                // Visual feedback
+                plant.element.style.filter = 'brightness(0.7)';
+                setTimeout(() => plant.element.style.filter = 'none', 300);
+            }
+
+            // Cross-pollinates two plants, or random ones if none are selected
+            function pollinatePlants(plant1 = null, plant2 = null) {
+                if (plants.length < 2 && (!plant1 || !plant2)) {
+                    console.warn('Need at least two plants to cross-pollinate!');
+                    return;
+                }
+
+                if (!plant1 || !plant2) {
+                    // Pick two random distinct plants
+                    const indices = Array.from({ length: plants.length }, (_, i) => i);
+                    const idx1 = indices.splice(getRandomInt(0, indices.length - 1), 1)[0];
+                    const idx2 = indices.splice(getRandomInt(0, indices.length - 1), 1)[0];
+                    plant1 = plants[idx1];
+                    plant2 = plants[idx2];
+                }
+
+                if (!plant1 || !plant2 || plant1.id === plant2.id) {
+                    console.warn('Cannot pollinate a plant with itself or insufficient plants.');
+                    return;
+                }
+
+                console.log(`Cross-pollinating ${plant1.id} and ${plant2.id}`);
+
+                // Store old type to check for instrument re-creation
+                const oldPlant1Type = plant1.type;
+
+                // Modify plant1's properties
+                plant1.scaleType = Math.random() < 0.5 ? plant2.scaleType : plant1.scaleType;
+                plant1.growthSpeed = Math.round((plant1.growthSpeed + plant2.growthSpeed) / 2);
+                plant1.waterLevel = (plant1.waterLevel + plant2.waterLevel) / 2;
+                plant1.sunlight = (plant1.sunlight + plant2.sunlight) / 2;
+                plant1.age = Math.min(100, Math.max(plant1.age, plant2.age) + 10); // Hybrid is at least as old as the older parent, plus a boost
+                plant1.maxHeight = Math.max(plant1.maxHeight, plant2.maxHeight); // Can grow taller
+                plant1.patternComplexity = Math.round((plant1.patternComplexity + plant2.patternComplexity) / 2);
+
+                // Change type occasionally for interesting hybrids
+                const plantTypes = ['percussion', 'bass', 'melody', 'harmony', 'texture'];
+                if (Math.random() < 0.3) { // 30% chance to change type
+                    plant1.type = plantTypes[getRandomInt(0, plantTypes.length - 1)];
+                    console.log(`Plant ${plant1.id} type changed to ${plant1.type}`);
+                }
+
+                // Re-assign instrument if type changed OR if it's a non-shared instrument that needs a new instance
+                if (plant1.type !== oldPlant1Type || (plant1.instrument !== harmonySynth && plant1.instrument !== textureSynth && plant1.instrument.name === plant1.type)) {
+                    // Dispose old instrument if it's an individual instance
+                    if (plant1.instrument && plant1.instrument !== harmonySynth && plant1.instrument !== textureSynth) {
+                        plant1.instrument.dispose();
+                    }
+                    plant1.instrument = createInstrumentInstance(plant1.type);
+                }
+
+                // Re-create visual elements if type changed
+                if (plant1.type !== oldPlant1Type) {
+                    const oldElement = plant1.element;
+                    const newElement = document.createElement('div');
+                    newElement.className = 'plant';
+                    newElement.style.left = oldElement.style.left;
+                    newElement.dataset.id = plant1.id;
+                    newElement.style.zIndex = oldElement.style.zIndex;
+
+                    const stem = document.createElement('div');
+                    stem.className = 'stem';
+                    newElement.appendChild(stem);
+
+                    if (plant1.type === 'melody') {
+                        const flower = document.createElement('div');
+                        flower.className = 'flower';
+                        flower.style.backgroundColor = `var(--color-accent1)`;
+                        flower.style.display = 'none';
+                        const flowerInner = document.createElement('div');
+                        flowerInner.className = 'flower-inner';
+                        flowerInner.style.backgroundColor = `var(--color-accent2)`;
+                        flower.appendChild(flowerInner);
+                        newElement.appendChild(flower);
+                        plant1.flowerElement = flower;
+                    } else {
+                        plant1.flowerElement = null; // Clear old flower reference
+                    }
+
+                    if (plant1.type === 'bass') {
+                        const root = document.createElement('div');
+                        root.className = 'root';
+                        root.style.width = '0px';
+                        newElement.appendChild(root);
+                        plant1.rootElement = root;
+                    } else {
+                        plant1.rootElement = null; // Clear old root reference
+                    }
+                    
+                    // Re-attach event listeners (using a clone to avoid issues with `this`)
+                    const newPlantElement = plant1; // Reference to the plant object inside the event listener scope
+                    const cloneListener = (e) => {
+                        e.stopPropagation();
+                        if (activeTool === 'plant') {
+                            if (selectedPlant === newPlantElement.id) {
+                                selectedPlant = null;
+                                newElement.style.transform = 'scale(1)';
+                            } else {
+                                if (selectedPlant !== null) {
+                                    const prevSelected = document.querySelector(`.plant[data-id="${selectedPlant}"]`);
+                                    if (prevSelected) prevSelected.style.transform = 'scale(1)';
+                                }
+                                selectedPlant = newPlantElement.id;
+                                newElement.style.transform = 'scale(1.05)';
+                            }
+                        } else if (activeTool === 'water') {
+                            newPlantElement.waterLevel = Math.min(newPlantElement.waterLevel + 0.2, 1);
+                            updatePlantVisualization(newPlantElement);
+                            updatePlantSound(newPlantElement);
+                            newElement.style.filter = 'brightness(1.2)'; // Visual feedback
+                            setTimeout(() => newElement.style.filter = 'none', 100);
+                        } else if (activeTool === 'prune') {
+                            prunePlant(newPlantElement);
+                        } else if (activeTool === 'pollinate') {
+                            if (selectedPlant === null) {
+                                selectedPlant = newPlantElement.id;
+                                newElement.style.transform = 'scale(1.05) translateY(-5px)';
+                                newElement.style.boxShadow = '0 0 10px 3px var(--color-accent1)';
+                            } else if (selectedPlant !== newPlantElement.id) {
+                                const sourcePlant = plants.find(p => p.id === selectedPlant);
+                                pollinatePlants(sourcePlant, newPlantElement);
+                                document.querySelector(`.plant[data-id="${selectedPlant}"]`).style.transform = 'scale(1)';
+                                document.querySelector(`.plant[data-id="${selectedPlant}"]`).style.boxShadow = 'none';
+                                selectedPlant = null;
+                            } else {
+                                selectedPlant = null;
+                                newElement.style.transform = 'scale(1)';
+                                newElement.style.boxShadow = 'none';
+                            }
+                        }
+                    };
+                    newElement.addEventListener('click', cloneListener);
+
+                    oldElement.replaceWith(newElement);
+                    plant1.element = newElement;
+                }
+
+                updatePlantVisualization(plant1);
+                updatePlantSound(plant1); // Update musical pattern
+                
+                // Visual feedback for pollination
+                plant1.element.style.boxShadow = '0 0 15px 5px rgba(244, 185, 66, 0.7)';
+                setTimeout(() => plant1.element.style.boxShadow = 'none', 1000);
+            }
+
+            // Accelerates musical evolution and growth temporarily
+            function timeLapse() {
+                if (Tone.Transport.state === 'stopped') {
+                    console.warn('Start the transport first to use time lapse!');
+                    return;
+                }
+                
+                const originalBPM = Tone.Transport.bpm.value;
+                const timeLapseBPM = originalBPM * 2; // Double BPM
+                Tone.Transport.bpm.rampTo(timeLapseBPM, 0.5); // Smooth transition
+
+                plants.forEach(plant => {
+                    // Temporarily increase growth rate
+                    plant.timeLapseGrowthModifier = 2; // Store modifier to reset later
+                    plant.growthSpeed *= plant.timeLapseGrowthModifier;
+                });
+
+                // Revert after a duration
+                setTimeout(() => {
+                    Tone.Transport.bpm.rampTo(originalBPM, 0.5);
+                    plants.forEach(plant => {
+                        if (plant.timeLapseGrowthModifier) {
+                            plant.growthSpeed /= plant.timeLapseGrowthModifier;
+                            delete plant.timeLapseGrowthModifier;
+                        }
+                    });
+                    console.log('Time lapse ended.');
+                }, 10000); // 10 seconds of time lapse
+                console.log('Time lapse activated!');
+            }
+
+            // Changes the season and updates colors/musical character
+            function changeSeasons() {
+                const nextSeasonIndex = (seasons.indexOf(currentSeason) + 1) % seasons.length;
+                currentSeason = seasons[nextSeasonIndex];
+                
+                // Update CSS variables for root
+                const root = document.documentElement;
+                const colors = seasonColors[currentSeason];
+                root.style.setProperty('--color-sky', colors.sky);
+                root.style.setProperty('--color-foliage', colors.foliage);
+                root.style.setProperty('--color-accent1', colors.accent1);
+                root.style.setProperty('--color-accent2', colors.accent2);
+
+                document.querySelector('.season-indicator').textContent = currentSeason.toUpperCase();
+
+                // Adjust global musical character
+                switch (currentSeason) {
+                    case 'spring':
+                        Tone.Transport.bpm.rampTo(90, 1);
+                        reverb.decay = 3;
+                        reverb.wet.value = 0.3;
+                        break;
+                    case 'summer':
+                        Tone.Transport.bpm.rampTo(100, 1);
+                        reverb.decay = 2; // Drier sound
+                        reverb.wet.value = 0.2;
+                        break;
+                    case 'autumn':
+                        Tone.Transport.bpm.rampTo(80, 1);
+                        reverb.decay = 4; // More resonance
+                        reverb.wet.value = 0.4;
+                        break;
+                    case 'winter':
+                        Tone.Transport.bpm.rampTo(70, 1);
+                        reverb.decay = 5; // More space, sparser
+                        reverb.wet.value = 0.5;
+                        break;
+                }
+
+                // Update all plants based on new season (growth, colors)
+                plants.forEach(plant => {
+                    updatePlantVisualization(plant); // Update colors of leaves/flowers
+                    updatePlantSound(plant); // Re-evaluate musical patterns if season affects them
+                });
+
+                console.log(`Season changed to ${currentSeason}.`);
+            }
+
+            // Save garden state to localStorage
+            function saveGarden() {
+                const gardenState = plants.map(plant => {
+                    // Only save serializable properties
+                    return {
+                        id: plant.id,
+                        x: plant.x, // Saved directly from plant object
+                        type: plant.type,
+                        scaleType: plant.scaleType,
+                        growthSpeed: plant.growthSpeed,
+                        age: plant.age,
+                        waterLevel: plant.waterLevel,
+                        sunlight: plant.sunlight,
+                        maxHeight: plant.maxHeight
+                    };
+                });
+                localStorage.setItem('botanicaGarden', JSON.stringify(gardenState));
+                alert('Garden saved!');
+                console.log('Garden state saved:', gardenState);
+            }
+
+            // Load garden state from localStorage
+            function loadGarden() {
+                const savedState = localStorage.getItem('botanicaGarden');
+                if (savedState) {
+                    clearGarden(); // Clear current garden first
+                    const gardenState = JSON.parse(savedState);
+                    gardenState.forEach(savedPlant => {
+                        const plant = {
+                            id: savedPlant.id,
+                            x: savedPlant.x,
+                            type: savedPlant.type,
+                            scaleType: savedPlant.scaleType,
+                            growthSpeed: savedPlant.growthSpeed,
+                            age: savedPlant.age,
+                            waterLevel: savedPlant.waterLevel,
+                            sunlight: savedPlant.sunlight,
+                            maxHeight: savedPlant.maxHeight,
+                            flowering: savedPlant.type === 'melody' && savedPlant.age > 70, // Re-evaluate flowering
+                            isTexturing: false, 
+                            element: null, 
+                            instrument: null,
+                            sequence: null,
+                            musicalPattern: [],
+                            patternComplexity: 0
+                        };
+
+                        // Re-assign instrument based on type
+                        plant.instrument = createInstrumentInstance(plant.type);
+
+                        const plantElement = document.createElement('div');
+                        plantElement.className = 'plant';
+                        plantElement.style.left = `${savedPlant.x}px`;
+                        plantElement.dataset.id = plant.id;
+                        plantElement.style.zIndex = Math.floor(savedPlant.x);
+
+                        const stem = document.createElement('div');
+                        stem.className = 'stem';
+                        plantElement.appendChild(stem);
+
+                        if (plant.type === 'melody') {
+                            const flower = document.createElement('div');
+                            flower.className = 'flower';
+                            flower.style.backgroundColor = `var(--color-accent1)`;
+                            const flowerInner = document.createElement('div');
+                            flowerInner.className = 'flower-inner';
+                            flowerInner.style.backgroundColor = `var(--color-accent2)`;
+                            flower.appendChild(flowerInner);
+                            plantElement.appendChild(flower);
+                            plant.flowerElement = flower;
+                        }
+
+                        if (plant.type === 'bass') {
+                            const root = document.createElement('div');
+                            root.className = 'root';
+                            root.style.width = '0px';
+                            plantElement.appendChild(root);
+                            plant.rootElement = root;
+                        }
+
+                        plant.element = plantElement;
+                        gardenElement.appendChild(plantElement);
+                        plants.push(plant);
+
+                        // Re-attach event listeners
+                        plantElement.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if (activeTool === 'plant') {
+                                if (selectedPlant === plant.id) {
+                                    selectedPlant = null;
+                                    plantElement.style.transform = 'scale(1)';
+                                } else {
+                                    if (selectedPlant !== null) {
+                                        const prevSelected = document.querySelector(`.plant[data-id="${selectedPlant}"]`);
+                                        if (prevSelected) prevSelected.style.transform = 'scale(1)';
+                                    }
+                                    selectedPlant = plant.id;
+                                    plantElement.style.transform = 'scale(1.05)';
+                                }
+                            } else if (activeTool === 'water') {
+                                plant.waterLevel = Math.min(plant.waterLevel + 0.2, 1);
+                                updatePlantVisualization(plant);
+                                updatePlantSound(plant);
+                                plantElement.style.filter = 'brightness(1.2)'; // Visual feedback
+                                setTimeout(() => plantElement.style.filter = 'none', 100);
+                            } else if (activeTool === 'prune') {
+                                prunePlant(plant);
+                            } else if (activeTool === 'pollinate') {
+                                if (selectedPlant === null) {
+                                    selectedPlant = plant.id;
+                                    plantElement.style.transform = 'scale(1.05) translateY(-5px)';
+                                    plantElement.style.boxShadow = '0 0 10px 3px var(--color-accent1)';
+                                } else if (selectedPlant !== plant.id) {
+                                    const sourcePlant = plants.find(p => p.id === selectedPlant);
+                                    pollinatePlants(sourcePlant, plant);
+                                    document.querySelector(`.plant[data-id="${selectedPlant}"]`).style.transform = 'scale(1)';
+                                    document.querySelector(`.plant[data-id="${selectedPlant}"]`).style.boxShadow = 'none';
+                                    selectedPlant = null;
+                                } else {
+                                    selectedPlant = null;
+                                    plantElement.style.transform = 'scale(1)';
+                                    plantElement.style.boxShadow = 'none';
+                                }
+                            }
+                        });
+                        
+                        // Update visuals and sound for loaded plant
+                        updatePlantVisualization(plant);
+                        updatePlantSound(plant);
+                    });
+                    alert('Garden loaded!');
+                    console.log('Garden state loaded:', gardenState);
+                } else {
+                    alert('No saved garden found!');
+                    console.log('No saved garden found in localStorage.');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

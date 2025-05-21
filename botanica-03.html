@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Botanica - A Brian Eno-inspired Digital Sound Garden</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <style>
+    :root {
+      --bg-color: #0a1f1c;
+      --text-color: #e0f4e8;
+      --accent-1: #3cc47c; /* Green */
+      --accent-2: #1d7373; /* Teal */
+      --accent-3: #e9b44c; /* Gold */
+      --accent-4: #aa4465; /* Rose */
+      --accent-5: #9c7bd6; /* Purple (for Ambient seed) */
+
+      /* Mobile specific variables */
+      --mobile-controls-width: 80%; /* Adjust as needed */
+    }
+    
+    body {
+      font-family: 'Courier New', monospace;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* Prevent body scroll */
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw; /* Ensure full viewport width */
+    }
+    
+    header {
+      padding: 1rem;
+      text-align: center;
+      background-color: rgba(10, 31, 28, 0.8);
+      border-bottom: 2px solid var(--accent-2);
+      position: relative; /* For mobile menu button */
+      z-index: 10; /* Ensure header is above controls */
+    }
+    
+    h1 {
+      font-weight: 300;
+      letter-spacing: 4px;
+      margin: 0;
+      color: var(--accent-1);
+    }
+    
+    .subtitle {
+      font-style: italic;
+      opacity: 0.8;
+      margin-top: 0.5rem;
+    }
+    
+    main {
+      display: flex;
+      flex: 1;
+      position: relative; /* For mobile controls positioning */
+      overflow: hidden; /* For mobile controls slide effect */
+    }
+    
+    #garden-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden; /* Ensure canvas doesn't overflow */
+    }
+    
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none; /* Prevent scrolling/zooming on canvas touch */
+    }
+    
+    #controls {
+      width: 280px; /* Desktop width */
+      background-color: rgba(10, 31, 28, 0.95); /* Slightly less transparent */
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      border-left: 2px solid var(--accent-2);
+      overflow-y: auto;
+      flex-shrink: 0; /* Prevent shrinking on desktop */
+      z-index: 5; /* Below header */
+    }
+    
+    .control-section {
+      background-color: rgba(29, 115, 115, 0.2);
+      padding: 1rem;
+      border-radius: 6px;
+      border: 1px solid var(--accent-2);
+    }
+    
+    .section-title {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 0;
+      margin-bottom: 1rem;
+      color: var(--accent-1);
+      border-bottom: 1px solid var(--accent-1);
+      padding-bottom: 0.5rem;
+    }
+    
+    .control-group {
+      margin-bottom: 1rem;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+    
+    select, input[type="range"] {
+      width: 100%;
+      padding: 0.5rem;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--accent-2);
+      color: var(--text-color);
+      border-radius: 4px;
+      -webkit-appearance: none; /* Remove default browser styling for inputs/selects */
+      -moz-appearance: none;
+      appearance: none;
+    }
+
+    /* Style for select dropdown arrow */
+    select {
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e0f4e8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 0.7em top 50%;
+      background-size: 0.65em auto;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--accent-1);
+      cursor: pointer;
+      border: 1px solid var(--text-color);
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--accent-1);
+      cursor: pointer;
+      border: 1px solid var(--text-color);
+    }
+    
+    button {
+      background-color: var(--accent-2);
+      color: var(--text-color);
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.9rem;
+    }
+    
+    button:hover {
+      background-color: var(--accent-1);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+      background-color: var(--accent-1);
+    }
+    
+    .seed-btn {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      width: 100%;
+      justify-content: space-between;
+    }
+    
+    .seed-btn:before {
+      content: "•"; /* Visually separate from seed name */
+      margin-right: 0.5rem;
+      opacity: 0.6;
+    }
+    
+    .seed-icon {
+      width: 20px; /* Slightly smaller */
+      height: 20px;
+      border-radius: 50%;
+      margin-left: 0.5rem;
+      border: 1px solid rgba(255,255,255,0.2); /* Subtle border */
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
+    
+    #rhythm-seed .seed-icon { background-color: var(--accent-3); } /* Gold */
+    #melody-seed .seed-icon { background-color: var(--accent-1); } /* Green */
+    #bass-seed .seed-icon { background-color: var(--accent-2); } /* Teal */
+    #ambient-seed .seed-icon { background-color: var(--accent-5); } /* Purple */
+
+    /* Active seed button state */
+    .seed-btn.active {
+      background-color: var(--accent-1);
+      color: var(--bg-color); /* Darker text for contrast */
+      font-weight: bold;
+    }
+
+    .seed-btn.active .seed-icon {
+      border-color: var(--bg-color); /* Match text color */
+      box-shadow: 0 0 8px var(--text-color);
+    }
+
+    .seed-btn.active:hover {
+        background-color: var(--accent-1); /* Keep active color on hover */
+    }
+    
+    .status {
+      position: absolute;
+      bottom: 1rem; /* Changed to bottom for better visibility on mobile */
+      left: 1rem;
+      right: 1rem; /* Span full width on mobile */
+      background-color: rgba(10, 31, 28, 0.8);
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      border: 1px solid var(--accent-2);
+      font-size: 0.8rem; /* Slightly smaller */
+      pointer-events: none;
+      text-align: center; /* Center text on mobile */
+      z-index: 2; /* Above canvas */
+    }
+    
+    .environment-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    
+    .environment-btn.active {
+      background-color: var(--accent-1);
+    }
+
+    .environment-btn span {
+      font-weight: bold;
+      margin-left: 0.5rem;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .environment-btn.active span {
+      color: var(--bg-color);
+    }
+    
+    .slider-value {
+      display: inline-block;
+      margin-left: 0.5rem;
+      width: 2.5rem;
+      text-align: right;
+    }
+    
+    #clear-btn {
+      background-color: var(--accent-4); /* Rose color */
+      margin-top: 1rem;
+    }
+    
+    #clear-btn:hover {
+      background-color: #d81159; /* Brighter red on hover */
+    }
+    
+    .info-text {
+      font-size: 0.8rem;
+      opacity: 0.8;
+      margin-top: 0.5rem;
+      font-style: italic;
+    }
+
+    /* Mobile specific styles */
+    .mobile-menu-toggle {
+        display: none; /* Hidden on desktop */
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        background: var(--accent-2);
+        color: var(--text-color);
+        border: none;
+        padding: 0.5rem 0.8rem;
+        font-size: 1.2rem;
+        border-radius: 4px;
+        cursor: pointer;
+        z-index: 11; /* Above header */
+    }
+
+    @media (max-width: 768px) {
+        body {
+            flex-direction: column;
+            overflow-y: auto; /* Allow body scroll on mobile if controls are open */
+        }
+
+        main {
+            flex-direction: column; /* Stack garden and controls vertically */
+            position: static; /* Remove relative positioning from main */
+        }
+        
+        #garden-container {
+            height: 60vh; /* Give garden more space, but allow controls */
+            flex: none; /* Don't let it stretch */
+        }
+
+        #controls {
+            position: fixed; /* Overlay on mobile */
+            top: 0;
+            right: 0;
+            width: var(--mobile-controls-width);
+            height: 100vh;
+            border-left: none; /* No border on left */
+            border-bottom: 2px solid var(--accent-2); /* Border at bottom if sliding from top */
+            transform: translateX(100%); /* Start off-screen */
+            transition: transform 0.3s ease-out;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5); /* Shadow for sliding effect */
+            z-index: 10; /* Above garden, below menu toggle */
+        }
+
+        #controls.open {
+            transform: translateX(0); /* Slide into view */
+        }
+
+        .mobile-menu-toggle {
+            display: block; /* Show on mobile */
+        }
+
+        /* Adjust header padding if menu toggle is inside it */
+        header {
+            padding-left: 5rem; /* Make space for menu toggle */
+            text-align: center;
+        }
+
+        .status {
+            bottom: 0.5rem; /* Closer to bottom on mobile */
+            left: 0.5rem;
+            right: 0.5rem;
+            font-size: 0.75rem;
+            padding: 0.4rem 0.8rem;
+        }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle">☰</button>
+    <h1>BOTANICA</h1>
+    <div class="subtitle">A Brian Eno-inspired Digital Sound Garden</div>
+  </header>
+  
+  <main>
+    <div id="garden-container">
+      <canvas id="garden"></canvas>
+      <div class="status" id="status-text">Tap to plant. Press SPACE (or Start button) to toggle sound.</div>
+    </div>
+    
+    <div id="controls">
+      <div class="control-section">
+        <h2 class="section-title">Plant Seeds</h2>
+        <div class="control-group">
+          <button id="rhythm-seed" class="seed-btn active">Rhythm Seed <span class="seed-icon"></span></button>
+          <button id="melody-seed" class="seed-btn">Melody Seed <span class="seed-icon"></span></button>
+          <button id="bass-seed" class="seed-btn">Bass Seed <span class="seed-icon"></span></button>
+          <button id="ambient-seed" class="seed-btn">Ambient Seed <span class="seed-icon"></span></button>
+          <p class="info-text">Select a seed type, then tap/click in the garden to plant.</p>
+        </div>
+      </div>
+      
+      <div class="control-section">
+        <h2 class="section-title">Environment</h2>
+        <div class="control-group">
+          <div class="environment-controls">
+            <button id="rain-btn" class="environment-btn">Rain (Reverb) <span>Off</span></button>
+            <button id="sunshine-btn" class="environment-btn">Sunshine (Brightness) <span>Off</span></button>
+            <button id="wind-btn" class="environment-btn">Wind (Modulation) <span>Off</span></button>
+          </div>
+        </div>
+        
+        <div class="control-group">
+          <label for="season-select">Season (Tonal Shift):</label>
+          <select id="season-select">
+            <option value="spring">Spring (Major)</option>
+            <option value="summer">Summer (Lydian)</option>
+            <option value="autumn">Autumn (Minor)</option>
+            <option value="winter">Winter (Phrygian)</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="control-section">
+        <h2 class="section-title">Growth Settings</h2>
+        <div class="control-group">
+          <label for="growth-speed">Growth Speed: <span class="slider-value" id="growth-speed-value">1.0</span></label>
+          <input type="range" id="growth-speed" min="0.5" max="2" step="0.1" value="1">
+        </div>
+        
+        <div class="control-group">
+          <label for="density">Growth Density: <span class="slider-value" id="density-value">0.7</span></label>
+          <input type="range" id="density" min="0.2" max="1" step="0.1" value="0.7">
+        </div>
+        
+        <div class="control-group">
+          <label for="tempo">Garden Tempo: <span class="slider-value" id="tempo-value">110</span></label>
+          <input type="range" id="tempo" min="60" max="180" step="1" value="110">
+        </div>
+      </div>
+      
+      <div class="control-section">
+        <h2 class="section-title">Garden Controls</h2>
+        <button id="play-btn">Start Garden</button>
+        <button id="pause-btn">Pause Garden</button>
+        <button id="clear-btn">Clear Garden</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // --- Constants and Global State ---
+    const CANVAS = document.getElementById('garden');
+    const CTX = CANVAS.getContext('2d');
+    const STATUS_TEXT = document.getElementById('status-text');
+    const CONTROLS = document.getElementById('controls');
+    const MOBILE_MENU_TOGGLE = document.getElementById('mobile-menu-toggle');
+
+    let audioInitialized = false;
+    let isPlaying = false;
+    let plants = [];
+    let selectedSeedType = 'rhythm';
+    let lastFrameTime = 0;
+    let growthSpeed = parseFloat(document.getElementById('growth-speed').value); // Initialize from slider
+    let isRaining = false;
+    let isSunny = false;
+    let isWindy = false;
+
+    // --- Tone.js Audio Setup ---
+    const reverb = new Tone.Reverb({
+      decay: 4,
+      wet: 0 // Initial wetness
+    }).toDestination();
+    
+    const filter = new Tone.Filter({
+      type: "lowpass",
+      frequency: 10000 // Initial frequency
+    }).connect(reverb);
+    
+    const chorus = new Tone.Chorus({
+      frequency: 1.5,
+      delayTime: 3.5,
+      depth: 0.7,
+      wet: 0 // Initial wetness
+    }).connect(filter);
+    
+    const rhythmSynth = new Tone.MembraneSynth({
+      pitchDecay: 0.05,
+      octaves: 4,
+      oscillator: { type: "square4" },
+      envelope: {
+        attack: 0.001,
+        decay: 0.4,
+        sustain: 0.01,
+        release: 1.4,
+        attackCurve: "exponential"
+      }
+    }).connect(chorus);
+    
+    const melodySynth = new Tone.PolySynth(Tone.FMSynth, {
+      harmonicity: 2,
+      modulationIndex: 1,
+      oscillator: { type: "sine" },
+      envelope: {
+        attack: 0.1,
+        decay: 0.2,
+        sustain: 0.2,
+        release: 1.5,
+      },
+      modulation: { type: "square" },
+      modulationEnvelope: {
+        attack: 0.5,
+        decay: 0.1,
+        sustain: 0.2,
+        release: 0.5
+      }
+    }).connect(chorus);
+    
+    const bassSynth = new Tone.MonoSynth({
+      oscillator: { type: "sawtooth" },
+      envelope: {
+        attack: 0.1,
+        decay: 0.3,
+        sustain: 0.4,
+        release: 2
+      },
+      filterEnvelope: {
+        attack: 0.001,
+        decay: 0.7,
+        sustain: 0.1,
+        release: 0.8,
+        baseFrequency: 200,
+        octaves: 4
+      }
+    }).connect(chorus);
+    
+    const ambientSynth = new Tone.PolySynth(Tone.AMSynth, {
+      harmonicity: 3,
+      detune: 0,
+      oscillator: { type: "sine" },
+      envelope: {
+        attack: 1,
+        decay: 2,
+        sustain: 0.8,
+        release: 4
+      },
+      modulation: { type: "sine" },
+      modulationEnvelope: {
+        attack: 1,
+        decay: 0.5,
+        sustain: 0.5,
+        release: 4
+      }
+    }).connect(chorus);
+
+    // --- Plant Class Definition ---
+    class Plant {
+      constructor(x, y, type, opt = {}) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.age = 0;
+        this.maxAge = 100 + Math.random() * 100;
+        this.size = 5;
+        this.maxSize = 30 + Math.random() * 40;
+        this.growthRate = opt.growthSpeed || 1; // Renamed to avoid confusion with global growthSpeed
+        this.branches = [];
+        this.color = this.getColorByType();
+        this.lastNotePlayedTime = 0; // Timestamp for visual glow
+        this.active = true;
+        
+        this.initBranches();
+        this.setupToneLoop(); // Setup Tone.Loop for scheduled playback
+      }
+      
+      getColorByType() {
+        switch (this.type) {
+          case 'rhythm': return 'var(--accent-3)'; // Gold
+          case 'melody': return 'var(--accent-1)'; // Green
+          case 'bass': return 'var(--accent-2)'; // Teal
+          case 'ambient': return 'var(--accent-5)'; // Purple
+          default: return '#ffffff';
+        }
+      }
+      
+      // Returns Tone.Time strings for loop intervals
+      getNoteIntervalByType() {
+        switch (this.type) {
+          case 'rhythm': return ['8n', '16n'][Math.floor(Math.random() * 2)]; // Faster, more percussive
+          case 'melody': return ['4n', '8n.'][Math.floor(Math.random() * 2)]; // Melodic phrases
+          case 'bass': return ['1n', '2n'][Math.floor(Math.random() * 2)]; // Slower, foundational
+          case 'ambient': return ['2n', '1n', '1n.'][Math.floor(Math.random() * 3)]; // Long, sustained
+          default: return '1n';
+        }
+      }
+      
+      getScaleBySeason(season) {
+        const scales = {
+          spring: ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'], // C Major
+          summer: ['D4', 'E4', 'F#4', 'G#4', 'A4', 'B4', 'C#5', 'D5'], // D Lydian
+          autumn: ['A3', 'C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5'], // A Minor Pentatonic / C Major Pentatonic (Eno often uses pentatonic scales)
+          winter: ['E3', 'F3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4'] // E Phrygian
+        };
+        return scales[season] || scales.spring; // Default to spring
+      }
+
+      // Initialize branches for visual representation
+      initBranches() {
+        const numBranches = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < numBranches; i++) {
+          const angle = (i * Math.PI * 2 / numBranches) + (Math.random() * 0.5 - 0.25); // Add slight random offset
+          const length = this.maxSize * (0.6 + Math.random() * 0.4);
+          this.branches.push({
+            angle,
+            length,
+            curve: Math.random() * 0.4 - 0.2, // Curvature of the branch
+            nodes: Math.floor(5 + Math.random() * 5) // Number of segments/nodes in branch
+          });
+        }
+      }
+
+      // Setup Tone.Loop for this plant
+      setupToneLoop() {
+        this.noteLoop = new Tone.Loop(time => {
+          if (this.active && isPlaying) { // Only play if active and global playing state is true
+            this.playNoteScheduled(time);
+          }
+        }, this.getNoteIntervalByType());
+        this.noteLoop.probability = 0.8; // Add some randomness to note playback
+      }
+
+      // Method called by Tone.Loop for precise timing
+      playNoteScheduled(time) {
+        this.lastNotePlayedTime = Date.now(); // Update for visual glow
+        
+        const currentSeason = document.getElementById('season-select').value;
+        const scale = this.getScaleBySeason(currentSeason);
+        
+        let note, duration, velocity;
+        switch (this.type) {
+          case 'rhythm':
+            note = scale[Math.floor(Math.random() * 3)]; // Use lower notes for rhythm
+            duration = "8n";
+            velocity = 0.7 + (Math.random() * 0.3);
+            rhythmSynth.triggerAttackRelease(note, duration, time, velocity);
+            break;
+            
+          case 'melody':
+            note = scale[Math.floor(Math.random() * scale.length)];
+            duration = "4n";
+            velocity = 0.5 + (Math.random() * 0.3);
+            melodySynth.triggerAttackRelease(note, duration, time, velocity);
+            break;
+            
+          case 'bass':
+            note = scale[Math.floor(Math.random() * 3)];
+            note = note.replace(/(\d+)/, (match) => parseInt(match) - 1); // Transpose bass notes down an octave
+            duration = "2n";
+            velocity = 0.6 + (Math.random() * 0.2);
+            bassSynth.triggerAttackRelease(note, duration, time, velocity);
+            break;
+            
+          case 'ambient':
+            const rootIndex = Math.floor(Math.random() * (scale.length - 2));
+            const chord = [
+              scale[rootIndex],
+              scale[rootIndex + 2],
+              scale[rootIndex + 4 % scale.length]
+            ];
+            duration = "1n"; // Longer duration for ambient chords
+            velocity = 0.3 + (Math.random() * 0.2);
+            ambientSynth.triggerAttackRelease(chord, duration, time, velocity);
+            break;
+        }
+      }
+
+      startPlayback() {
+        this.noteLoop.start(0); // Start immediately
+      }
+
+      stopPlayback() {
+        this.noteLoop.stop();
+      }
+      
+      grow(delta) {
+        if (!this.active) return;
+        
+        // Growth is scaled by global growthSpeed and individual plant's growthRate
+        this.age += delta * growthSpeed * this.growthRate;
+        
+        if (this.age >= this.maxAge) {
+          this.active = false; // Plant "dies" after maxAge
+          this.stopPlayback(); // Stop its sound loop
+          return;
+        }
+        
+        this.size = Math.min(this.maxSize, 5 + (this.age / this.maxAge) * this.maxSize);
+      }
+      
+      draw(ctx) {
+        if (this.size <= 0) return;
+        
+        // Draw plant core
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size / 3, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        
+        // Draw branches
+        this.branches.forEach(branch => {
+          this.drawBranch(ctx, branch);
+        });
+        
+        // Add glow effect when playing
+        const glowDuration = 200; // ms
+        if (isPlaying && Date.now() - this.lastNotePlayedTime < glowDuration) {
+          const alpha = 1 - (Date.now() - this.lastNotePlayedTime) / glowDuration;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size * 1.5, 0, Math.PI * 2);
+          ctx.fillStyle = `${this.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
+          ctx.fill();
+        }
+      }
+      
+      drawBranch(ctx, branch) {
+        const growthFactor = Math.min(1, this.size / this.maxSize);
+        const currentLength = branch.length * growthFactor;
+        
+        // Calculate points for a smooth curve
+        const points = [];
+        for (let i = 0; i <= branch.nodes; i++) {
+          const t = i / branch.nodes;
+          const distance = currentLength * t;
+          const angle = branch.angle + (branch.curve * Math.sin(t * Math.PI)); // Sine for smooth curve
+          
+          const x = this.x + Math.cos(angle) * distance;
+          const y = this.y + Math.sin(angle) * distance;
+          points.push({ x, y });
+        }
+        
+        // Draw branch curve
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        for (let i = 1; i < points.length; i++) {
+          const xc = (points[i-1].x + points[i].x) / 2;
+          const yc = (points[i-1].y + points[i].y) / 2;
+          ctx.quadraticCurveTo(points[i-1].x, points[i-1].y, xc, yc);
+        }
+        
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = Math.max(1, this.size / 10);
+        ctx.lineCap = "round";
+        ctx.stroke();
+        
+        // Draw nodes along branch
+        for (let i = 1; i < points.length; i++) {
+          const nodeSize = Math.max(1, this.size / 6) * (1 - (i / points.length) * 0.5); // Nodes get smaller towards tip
+          ctx.beginPath();
+          ctx.arc(points[i].x, points[i].y, nodeSize, 0, Math.PI * 2);
+          ctx.fillStyle = this.color;
+          ctx.fill();
+        }
+      }
+    }
+
+    // --- Canvas and UI Setup ---
+    function resizeCanvas() {
+      CANVAS.width = CANVAS.parentElement.clientWidth;
+      CANVAS.height = CANVAS.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); // Initial resize
+
+    // UI elements references (already declared in HTML, good practice to get references once)
+    const rhythmSeedBtn = document.getElementById('rhythm-seed');
+    const melodySeedBtn = document.getElementById('melody-seed');
+    const bassSeedBtn = document.getElementById('bass-seed');
+    const ambientSeedBtn = document.getElementById('ambient-seed');
+    const seedButtons = [rhythmSeedBtn, melodySeedBtn, bassSeedBtn, ambientSeedBtn];
+
+    const playBtn = document.getElementById('play-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const rainBtn = document.getElementById('rain-btn');
+    const sunshineBtn = document.getElementById('sunshine-btn');
+    const windBtn = document.getElementById('wind-btn');
+    const seasonSelect = document.getElementById('season-select');
+    const growthSpeedSlider = document.getElementById('growth-speed');
+    const growthSpeedValue = document.getElementById('growth-speed-value');
+    const densitySlider = document.getElementById('density');
+    const densityValue = document.getElementById('density-value');
+    const tempoSlider = document.getElementById('tempo');
+    const tempoValue = document.getElementById('tempo-value');
+
+    // --- Event Listeners ---
+
+    // Seed selection
+    seedButtons.forEach(btn => {
+      btn.addEventListener('click', () => selectSeed(btn.id.replace('-seed', '')));
+    });
+    function selectSeed(type) {
+      selectedSeedType = type;
+      seedButtons.forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`${type}-seed`).classList.add('active');
+      STATUS_TEXT.textContent = `Selected: ${type} seed. Click to plant.`;
+    }
+    // Initial selection
+    selectSeed('rhythm');
+
+    // Environment controls
+    rainBtn.addEventListener('click', toggleRain);
+    sunshineBtn.addEventListener('click', toggleSunshine);
+    windBtn.addEventListener('click', toggleWind);
+    
+    function toggleRain() {
+      isRaining = !isRaining;
+      rainBtn.classList.toggle('active', isRraining);
+      rainBtn.querySelector('span').textContent = isRaining ? 'On' : 'Off';
+      reverb.wet.value = isRaining ? 0.6 : 0;
+    }
+    
+    function toggleSunshine() {
+      isSunny = !isSunny;
+      sunshineBtn.classList.toggle('active', isSunny);
+      sunshineBtn.querySelector('span').textContent = isSunny ? 'On' : 'Off';
+      filter.frequency.value = isSunny ? 18000 : 10000; // Brighter filter frequency
+    }
+    
+    function toggleWind() {
+      isWindy = !isWindy;
+      windBtn.classList.toggle('active', isWindy);
+      windBtn.querySelector('span').textContent = isWindy ? 'On' : 'Off';
+      chorus.wet.value = isWindy ? 0.5 : 0;
+    }
+    
+    // Season control
+    seasonSelect.addEventListener('change', updateSeason);
+    function updateSeason() {
+      const season = seasonSelect.value;
+      STATUS_TEXT.textContent = `Season changed to: ${season}. Plants will adapt.`;
+    }
+    
+    // Growth speed slider
+    growthSpeedSlider.addEventListener('input', () => {
+      growthSpeed = parseFloat(growthSpeedSlider.value);
+      growthSpeedValue.textContent = growthSpeed.toFixed(1);
+    });
+    
+    // Density slider
+    densitySlider.addEventListener('input', () => {
+      densityValue.textContent = densitySlider.value;
+    });
+    
+    // Tempo slider
+    tempoSlider.addEventListener('input', () => {
+      const tempo = parseInt(tempoSlider.value);
+      tempoValue.textContent = tempo;
+      if (audioInitialized) { // Only change if audio context is running
+        Tone.Transport.bpm.value = tempo;
+      }
+    });
+
+    // Garden Controls
+    playBtn.addEventListener('click', startGarden);
+    pauseBtn.addEventListener('click', pauseGarden);
+    clearBtn.addEventListener('click', clearGarden);
+    
+    function startGarden() {
+      if (!audioInitialized) {
+        Tone.start();
+        Tone.Transport.start();
+        audioInitialized = true;
+        STATUS_TEXT.textContent = "Audio initialized. Garden is growing and playing...";
+      }
+      
+      if (!isPlaying) {
+        isPlaying = true;
+        STATUS_TEXT.textContent = "Garden is growing and playing...";
+        Tone.Transport.bpm.value = parseInt(tempoSlider.value);
+        plants.forEach(plant => plant.startPlayback()); // Start all plant loops
+      }
+    }
+    
+    function pauseGarden() {
+      if (isPlaying) {
+        isPlaying = false;
+        STATUS_TEXT.textContent = "Garden paused. Press SPACE or click Start Garden to resume.";
+        plants.forEach(plant => plant.stopPlayback()); // Stop all plant loops
+      }
+    }
+    
+    function clearGarden() {
+      plants.forEach(plant => plant.stopPlayback()); // Stop all loops first
+      plants = [];
+      STATUS_TEXT.textContent = "Garden cleared. Plant new seeds!";
+      // Also reset environmental effects if desired, or leave them
+      // toggleRain(false);
+      // toggleSunshine(false);
+      // toggleWind(false);
+    }
+    
+    // Canvas click/tap handler
+    CANVAS.addEventListener('click', handleCanvasInteraction);
+    // Add touch event for better mobile responsiveness for planting
+    CANVAS.addEventListener('touchstart', handleCanvasInteraction, {passive: false}); // Prevent default for potential scrolling
+
+    function handleCanvasInteraction(e) {
+      if (!audioInitialized) {
+        Tone.start();
+        Tone.Transport.start();
+        audioInitialized = true;
+      }
+      
+      // Get coordinates consistently for mouse or touch
+      let clientX, clientY;
+      if (e.type === 'touchstart') {
+        e.preventDefault(); // Prevent scrolling on touch
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+
+      const rect = CANVAS.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      
+      const density = parseFloat(densitySlider.value);
+      const minDistance = 50 * (1 - density); // Smaller density means closer plants
+      
+      let tooClose = plants.some(plant => {
+        const dx = plant.x - x;
+        const dy = plant.y - y;
+        return Math.sqrt(dx*dx + dy*dy) < minDistance;
+      });
+      
+      if (!tooClose) {
+        const plant = new Plant(x, y, selectedSeedType, { growthSpeed });
+        plants.push(plant);
+        if (isPlaying) { // If garden is already playing, start new plant's loop
+            plant.startPlayback();
+        }
+        STATUS_TEXT.textContent = `Planted ${selectedSeedType} seed at (${Math.round(x)}, ${Math.round(y)}).`;
+      } else {
+        STATUS_TEXT.textContent = "Too close to other plants! Adjust density or find more space.";
+      }
+    }
+    
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (isPlaying) {
+          pauseGarden();
+        } else {
+          startGarden();
+        }
+      }
+    });
+
+    // Mobile menu toggle
+    MOBILE_MENU_TOGGLE.addEventListener('click', () => {
+        CONTROLS.classList.toggle('open');
+        // If controls are open, prevent garden interaction temporarily on touch devices
+        // (optional, but can improve UX by preventing accidental planting)
+        if (CONTROLS.classList.contains('open')) {
+            CANVAS.style.pointerEvents = 'none';
+        } else {
+            CANVAS.style.pointerEvents = 'auto';
+        }
+    });
+
+    // Close controls if clicked outside on mobile (for larger screens, or if a modal backdrop is used)
+    // For this simple slide-out, user will likely just hit toggle again or interact with garden.
+
+    // --- Visual Effects Drawing Functions ---
+    let rainDrops = [];
+    function drawRain() {
+      // Create new drops
+      if (Math.random() < 0.8) { // Adjust frequency
+        rainDrops.push({
+          x: Math.random() * CANVAS.width,
+          y: -10, // Start above canvas
+          length: 10 + Math.random() * 20,
+          speed: 5 + Math.random() * 10
+        });
+      }
+
+      CTX.strokeStyle = 'rgba(200, 230, 255, 0.4)'; // Light blue, semi-transparent
+      CTX.lineWidth = 1;
+
+      for (let i = 0; i < rainDrops.length; i++) {
+        const drop = rainDrops[i];
+        
+        CTX.beginPath();
+        CTX.moveTo(drop.x, drop.y);
+        CTX.lineTo(drop.x, drop.y + drop.length);
+        CTX.stroke();
+
+        drop.y += drop.speed; // Move down
+
+        // Remove if off-screen
+        if (drop.y > CANVAS.height) {
+          rainDrops.splice(i, 1);
+          i--;
+        }
+      }
+    }
+
+    function drawSunshine() {
+      const gradient = CTX.createRadialGradient(
+        CANVAS.width * 0.75, CANVAS.height * 0.25, 0, // Inner circle (center, radius)
+        CANVAS.width * 0.75, CANVAS.height * 0.25, Math.max(CANVAS.width, CANVAS.height) * 0.6 // Outer circle
+      );
+      gradient.addColorStop(0, 'rgba(255, 220, 100, 0.1)'); // Bright yellow center
+      gradient.addColorStop(0.5, 'rgba(255, 180, 50, 0.05)'); // Orange-yellow fade
+      gradient.addColorStop(1, 'rgba(255, 160, 0, 0)'); // Fully transparent at edge
+
+      CTX.fillStyle = gradient;
+      CTX.fillRect(0, 0, CANVAS.width, CANVAS.height);
+    }
+
+    let windParticles = [];
+    function drawWind() {
+        // Add new particles occasionally
+        if (Math.random() < 0.2) {
+            windParticles.push({
+                x: Math.random() * CANVAS.width,
+                y: Math.random() * CANVAS.height,
+                dx: (Math.random() - 0.5) * 5, // Random horizontal movement
+                dy: (Math.random() - 0.5) * 2, // Random vertical movement
+                life: 60 + Math.random() * 60, // frames
+                age: 0,
+                size: 1 + Math.random() * 2
+            });
+        }
+
+        CTX.fillStyle = 'rgba(255, 255, 255, 0.1)'; // Faint white particles
+
+        for (let i = 0; i < windParticles.length; i++) {
+            const p = windParticles[i];
+            
+            // Fade out
+            CTX.globalAlpha = (1 - p.age / p.life) * 0.5; // Gradually become more transparent
+            CTX.beginPath();
+            CTX.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            CTX.fill();
+            CTX.globalAlpha = 1; // Reset alpha
+
+            p.x += p.dx;
+            p.y += p.dy;
+            p.age++;
+
+            if (p.age > p.life) {
+                windParticles.splice(i, 1);
+                i--;
+            }
+        }
+    }
+
+
+    // --- Animation Loop ---
+    function animate(timestamp) {
+      const deltaTime = (timestamp - lastFrameTime) / 1000; // Time in seconds
+      lastFrameTime = timestamp;
+      
+      // Clear canvas
+      CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
+      
+      // Draw background
+      CTX.fillStyle = 'var(--bg-color)';
+      CTX.fillRect(0, 0, CANVAS.width, CANVAS.height);
+      
+      // Update and draw plants
+      // Filter out inactive plants for performance
+      plants = plants.filter(plant => plant.active);
+
+      plants.forEach(plant => {
+        plant.grow(deltaTime); // Growth happens regardless of playing state
+        plant.draw(CTX);
+      });
+      
+      // Draw environmental effects
+      if (isRaining) {
+        drawRain();
+      }
+      if (isSunny) {
+        drawSunshine();
+      }
+      if (isWindy) {
+        drawWind();
+      }
+      
+      requestAnimationFrame(animate);
+    }
+
+    // Start the animation loop
+    requestAnimationFrame(animate);
+
+    // Initial status text for mobile
+    if (window.innerWidth <= 768) {
+      STATUS_TEXT.textContent = "Tap to plant. Tap 'Start Garden' to play sound.";
+    }
+  </script>
+</body>
+</html>

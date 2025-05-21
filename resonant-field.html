@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resonant Field</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #05070a;
+            color: #ffffff;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            width: 240px;
+        }
+        label {
+            margin-right: 10px;
+            font-size: 14px;
+            width: 80px;
+        }
+        input[type="range"] {
+            width: 150px;
+            height: 6px;
+            background: #0d1118;
+            outline: none;
+            border-radius: 3px;
+        }
+        button {
+            background-color: rgba(120, 140, 255, 0.3);
+            color: white;
+            border: 1px solid rgba(120, 140, 255, 0.5);
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: rgba(120, 140, 255, 0.5);
+        }
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 18px;
+            font-weight: 300;
+            opacity: 0.7;
+            z-index: 10;
+        }
+        .info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 14px;
+            opacity: 0.7;
+            text-align: right;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">Resonant Field</div>
+    <div class="info">Click to create resonant points</div>
+    
+    <div class="controls">
+        <div class="slider-container">
+            <label for="resonance">Resonance</label>
+            <input type="range" id="resonance" min="0" max="100" value="50">
+        </div>
+        <div class="slider-container">
+            <label for="decay">Decay</label>
+            <input type="range" id="decay" min="10" max="200" value="100">
+        </div>
+        <div class="slider-container">
+            <label for="scale">Scale</label>
+            <select id="scale">
+                <option value="pentatonic">Pentatonic</option>
+                <option value="major">Major</option>
+                <option value="minor">Minor</option>
+                <option value="lydian">Lydian</option>
+            </select>
+        </div>
+        <div>
+            <button id="clear">Clear All</button>
+            <button id="mute">Mute</button>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // Initialize canvas
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Initialize controls
+        const resonanceSlider = document.getElementById('resonance');
+        const decaySlider = document.getElementById('decay');
+        const scaleSelector = document.getElementById('scale');
+        const clearButton = document.getElementById('clear');
+        const muteButton = document.getElementById('mute');
+        
+        // Set canvas dimensions
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        // Initialize audio context
+        let audioCtx;
+        let masterGain;
+        let compressor;
+        let reverb;
+        let delay;
+        let muted = false;
+        
+        // Initialize audio on first user interaction
+        function initAudio() {
+            if (audioCtx) return;
+            
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Create master gain
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.7;
+            
+            // Create compressor
+            compressor = audioCtx.createDynamicsCompressor();
+            compressor.threshold.value = -24;
+            compressor.knee.value = 30;
+            compressor.ratio.value = 12;
+            compressor.attack.value = 0.003;
+            compressor.release.value = 0.25;
+            
+            // Create reverb
+            reverb = audioCtx.createConvolver();
+            createReverb().then(buffer => {
+                reverb.buffer = buffer;
+            });
+            
+            // Create delay
+            delay = audioCtx.createDelay(2.0);
+            delay.delayTime.value = 0.5;
+            
+            const delayFeedback = audioCtx.createGain();
+            delayFeedback.gain.value = 0.2;
+            
+            delay.connect(delayFeedback);
+            delayFeedback.connect(delay);
+            
+            // Connect nodes
+            masterGain.connect(delay);
+            delay.connect(reverb);
+            reverb.connect(compressor);
+            masterGain.connect(compressor);
+            compressor.connect(audioCtx.destination);
+        }
+        
+        // Create reverb impulse response
+        async function createReverb() {
+            const sampleRate = audioCtx.sampleRate;
+            const length = 2 * sampleRate; // 2 seconds
+            const decay = 2.0;
+            
+            const buffer = audioCtx.createBuffer(2, length, sampleRate);
+            
+            for (let channel = 0; channel < 2; channel++) {
+                const data = buffer.getChannelData(channel);
+                
+                for (let i = 0; i < length; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+                }
+            }
+            
+            return buffer;
+        }
+        
+        // Scale definitions
+        const scales = {
+            pentatonic: [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24],
+            major: [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19, 21, 23, 24],
+            minor: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15, 17, 19, 20, 22, 24],
+            lydian: [0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24]
+        };
+        
+        // Base frequency for C3
+        const baseFrequency = 261.63;
+        
+        // Resonant points
+        let points = [];
+        let nextId = 0;
+        
+        class ResonantPoint {
+            constructor(x, y) {
+                this.id = nextId++;
+                this.x = x;
+                this.y = y;
+                this.radius = 6;
+                this.energy = 1.0;
+                this.decayRate = 0.002;
+                this.connections = [];
+                this.color = this.generateColor();
+                this.ripples = [];
+                this.maxRipples = 3;
+                this.frequency = this.calculateFrequency();
+                this.synth = null;
+                this.modulator = null;
+                this.createSynth();
+                this.lastPulseTime = performance.now();
+            }
+            
+            generateColor() {
+                // Generate colors in the blue to purple spectrum
+                const hue = 220 + Math.random() * 60; // 220-280 = blue to purple
+                const saturation = 60 + Math.random() * 40; // 60-100%
+                const lightness = 60 + Math.random() * 20; // 60-80%
+                return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            }
+            
+            calculateFrequency() {
+                // Map Y position to a note in the selected scale
+                const currentScale = scales[scaleSelector.value];
+                const octaveShift = Math.floor(this.y / canvas.height * 3); // 0-3 octaves down
+                const noteIndex = Math.floor((this.x / canvas.width) * currentScale.length);
+                const semitones = currentScale[noteIndex % currentScale.length];
+                
+                // Apply frequency formula: base * 2^(semitones/12)
+                return baseFrequency * Math.pow(2, (semitones - 12*octaveShift) / 12);
+            }
+            
+            createSynth() {
+                if (!audioCtx) return;
+                
+                // Create oscillator and gain nodes
+                const osc = audioCtx.createOscillator();
+                
+                // Choose from sine, triangle, or FM synthesis based on point position
+                const synthType = Math.floor(this.x / canvas.width * 3);
+                
+                if (synthType === 2) {
+                    // FM synthesis
+                    this.modulator = audioCtx.createOscillator();
+                    const modulatorGain = audioCtx.createGain();
+                    
+                    osc.frequency.value = this.frequency;
+                    this.modulator.frequency.value = this.frequency * (0.5 + Math.random() * 1.5);
+                    modulatorGain.gain.value = this.frequency * (0.1 + Math.random() * 0.5);
+                    
+                    this.modulator.connect(modulatorGain);
+                    modulatorGain.connect(osc.frequency);
+                    this.modulator.start();
+                } else {
+                    // Simple oscillator (sine or triangle)
+                    osc.type = synthType === 0 ? 'sine' : 'triangle';
+                    osc.frequency.value = this.frequency;
+                }
+                
+                // Create gain node for amplitude envelope
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0;
+                
+                // Create filter
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 500 + (this.y / canvas.height) * 5000;
+                filter.Q.value = 1 + resonanceSlider.value / 25;
+                
+                // Connect nodes
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(masterGain);
+                
+                // Store references
+                this.synth = {
+                    oscillator: osc,
+                    gain: gain,
+                    filter: filter
+                };
+                
+                // Start oscillator
+                osc.start();
+            }
+            
+            pulse(energy = 1.0) {
+                this.energy = Math.min(this.energy + energy, 1.0);
+                
+                if (this.ripples.length < this.maxRipples) {
+                    this.ripples.push({
+                        radius: this.radius,
+                        alpha: 0.7
+                    });
+                }
+                
+                if (this.synth && !muted) {
+                    const now = audioCtx.currentTime;
+                    const decayValue = decaySlider.value / 100;
+                    
+                    // Apply envelope
+                    this.synth.gain.gain.cancelScheduledValues(now);
+                    this.synth.gain.gain.setValueAtTime(this.synth.gain.gain.value, now);
+                    this.synth.gain.gain.linearRampToValueAtTime(0.2 * energy, now + 0.01);
+                    this.synth.gain.gain.exponentialRampToValueAtTime(0.001, now + 2 * decayValue);
+                    
+                    // Filter sweep
+                    this.synth.filter.frequency.cancelScheduledValues(now);
+                    this.synth.filter.frequency.setValueAtTime(this.synth.filter.frequency.value, now);
+                    this.synth.filter.frequency.linearRampToValueAtTime(500 + 7000 * energy, now + 0.05);
+                    this.synth.filter.frequency.exponentialRampToValueAtTime(500 + (this.y / canvas.height) * 3000, now + 1.5 * decayValue);
+                    
+                    // Update filter resonance based on slider
+                    this.synth.filter.Q.value = 1 + resonanceSlider.value / 25;
+                }
+                
+                // Propagate energy to connected points based on resonance
+                const resonanceValue = resonanceSlider.value / 100;
+                
+                setTimeout(() => {
+                    this.connections.forEach(connection => {
+                        const connectedPoint = points.find(p => p.id === connection.id);
+                        if (connectedPoint) {
+                            const distance = connection.distance;
+                            const resonanceFactor = 1 - (distance / (200 + resonanceValue * 300));
+                            const energyTransfer = energy * resonanceFactor * resonanceValue;
+                            
+                            if (energyTransfer > 0.05) {
+                                connectedPoint.pulse(energyTransfer);
+                            }
+                        }
+                    });
+                }, 100 + Math.random() * 200 * (1 - resonanceValue));
+                
+                this.lastPulseTime = performance.now();
+            }
+            
+            update() {
+                // Decay energy over time
+                const decayMod = decaySlider.value / 100;
+                this.energy = Math.max(0, this.energy - this.decayRate * (2 - decayMod));
+                
+                // Update ripples
+                for (let i = this.ripples.length - 1; i >= 0; i--) {
+                    const ripple = this.ripples[i];
+                    ripple.radius += 1.5;
+                    ripple.alpha -= 0.01;
+                    
+                    if (ripple.alpha <= 0) {
+                        this.ripples.splice(i, 1);
+                    }
+                }
+                
+                // Update connections based on resonance value
+                const resonanceValue = resonanceSlider.value / 100;
+                const connectionRange = 200 + resonanceValue * 300;
+                
+                this.connections = points
+                    .filter(point => point.id !== this.id)
+                    .map(point => {
+                        const dx = point.x - this.x;
+                        const dy = point.y - this.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        return { id: point.id, distance };
+                    })
+                    .filter(conn => conn.distance < connectionRange)
+                    .sort((a, b) => a.distance - b.distance);
+                
+                // Limit connections for performance
+                if (this.connections.length > 5) {
+                    this.connections = this.connections.slice(0, 5);
+                }
+                
+                // Auto-pulse after time if resonance is high enough
+                const timeSinceLastPulse = performance.now() - this.lastPulseTime;
+                const autoPulseThreshold = 5000 - resonanceValue * 3000;
+                
+                if (resonanceValue > 0.5 && timeSinceLastPulse > autoPulseThreshold && Math.random() < 0.01) {
+                    this.pulse(0.3 + resonanceValue * 0.4);
+                }
+            }
+            
+            draw() {
+                // Draw connections
+                const resonanceValue = resonanceSlider.value / 100;
+                
+                this.connections.forEach(connection => {
+                    const point = points.find(p => p.id === connection.id);
+                    if (point) {
+                        const distance = connection.distance;
+                        const maxDist = 200 + resonanceValue * 300;
+                        const alpha = (1 - distance / maxDist) * resonanceValue * this.energy;
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(this.x, this.y);
+                        ctx.lineTo(point.x, point.y);
+                        ctx.strokeStyle = `rgba(120, 140, 255, ${alpha.toFixed(3)})`;
+                        ctx.lineWidth = 1 + alpha * 2;
+                        ctx.stroke();
+                        
+                        // Draw small particles along the connection
+                        if (alpha > 0.2 && Math.random() < 0.3) {
+                            const particlePos = Math.random();
+                            const px = this.x + (point.x - this.x) * particlePos;
+                            const py = this.y + (point.y - this.y) * particlePos;
+                            
+                            ctx.beginPath();
+                            ctx.arc(px, py, 1 + alpha * 2, 0, Math.PI * 2);
+                            ctx.fillStyle = `rgba(180, 200, 255, ${alpha.toFixed(3)})`;
+                            ctx.fill();
+                        }
+                    }
+                });
+                
+                // Draw ripples
+                this.ripples.forEach(ripple => {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, ripple.radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(180, 210, 255, ${ripple.alpha.toFixed(3)})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                });
+                
+                // Draw point
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                const glow = 10 + this.energy * 20;
+                ctx.shadowBlur = glow;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                
+                // Draw energy indicator
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 1.5, 0, Math.PI * 2 * this.energy);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${(this.energy * 0.7).toFixed(3)})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            
+            cleanup() {
+                if (this.synth) {
+                    this.synth.oscillator.stop();
+                    this.synth.gain.disconnect();
+                }
+                
+                if (this.modulator) {
+                    this.modulator.stop();
+                }
+            }
+        }
+        
+        // Animation loop
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background with subtle gradient
+            const gradient = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height / 2, 0,
+                canvas.width / 2, canvas.height / 2, canvas.width / 1.5
+            );
+            gradient.addColorStop(0, '#0d1118');
+            gradient.addColorStop(1, '#05070a');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Update and draw points
+            points.forEach(point => {
+                point.update();
+                point.draw();
+            });
+            
+            // Draw subtle particles in the background
+            for (let i = 0; i < 3; i++) {
+                if (Math.random() < 0.1) {
+                    const x = Math.random() * canvas.width;
+                    const y = Math.random() * canvas.height;
+                    const radius = 1 + Math.random();
+                    
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(120, 140, 255, ${(0.1 + Math.random() * 0.2).toFixed(2)})`;
+                    ctx.fill();
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Event listeners
+        function handleClick(e) {
+            initAudio();
+            
+            // Get position, accounting for touch events
+            const x = e.clientX || e.touches[0].clientX;
+            const y = e.clientY || e.touches[0].clientY;
+            
+            // Check if clicking on UI elements
+            const controlsElement = document.querySelector('.controls');
+            const controlsRect = controlsElement.getBoundingClientRect();
+            if (
+                x >= controlsRect.left &&
+                x <= controlsRect.right &&
+                y >= controlsRect.top &&
+                y <= controlsRect.bottom
+            ) {
+                return;
+            }
+            
+            // Create new point
+            const point = new ResonantPoint(x, y);
+            points.push(point);
+            
+            // Activate the point
+            point.pulse();
+        }
+        
+        function handleScaleChange() {
+            // Update frequencies for all points when scale changes
+            points.forEach(point => {
+                point.frequency = point.calculateFrequency();
+                if (point.synth) {
+                    point.synth.oscillator.frequency.setValueAtTime(
+                        point.frequency,
+                        audioCtx ? audioCtx.currentTime : 0
+                    );
+                }
+            });
+        }
+        
+        function toggleMute() {
+            if (!audioCtx) return;
+            
+            muted = !muted;
+            masterGain.gain.value = muted ? 0 : 0.7;
+            muteButton.textContent = muted ? 'Unmute' : 'Mute';
+        }
+        
+        function clearPoints() {
+            points.forEach(point => point.cleanup());
+            points = [];
+        }
+        
+        // Initialize
+        function init() {
+            resizeCanvas();
+            animate();
+            
+            // Event listeners
+            canvas.addEventListener('click', handleClick);
+            canvas.addEventListener('touchstart', handleClick);
+            window.addEventListener('resize', resizeCanvas);
+            
+            scaleSelector.addEventListener('change', handleScaleChange);
+            clearButton.addEventListener('click', clearPoints);
+            muteButton.addEventListener('click', toggleMute);
+            
+            // Create initial points
+            for (let i = 0; i < 3; i++) {
+                const x = canvas.width * (0.25 + 0.5 * Math.random());
+                const y = canvas.height * (0.25 + 0.5 * Math.random());
+                const point = new ResonantPoint(x, y);
+                points.push(point);
+            }
+        }
+        
+        // Start the application
+        init();
+        
+        // Prevent scrolling on mobile
+        document.body.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>

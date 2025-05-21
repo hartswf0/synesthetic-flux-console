@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breath</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #ffffff;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .welcome {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.98);
+            z-index: 100;
+            transition: opacity 2s ease-in-out;
+        }
+        
+        .welcome h1 {
+            font-weight: 200;
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 2rem;
+        }
+        
+        .welcome p {
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.6;
+            color: #666;
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+        
+        .start-button {
+            background: none;
+            border: 1px solid #ddd;
+            padding: 12px 24px;
+            font-size: 1rem;
+            color: #333;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 300;
+        }
+        
+        .start-button:hover {
+            background-color: #f8f8f8;
+        }
+        
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .debug-panel {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.1);
+            color: #333;
+            font-size: 12px;
+            font-family: monospace;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome" id="welcome">
+        <h1>Breath</h1>
+        <p>
+            An instrument that transforms your breathing into sound.<br>
+            Simply breathe naturally and listen as music emerges.
+        </p>
+        <p>
+            This experience requires microphone access.
+        </p>
+        <button class="start-button" id="startButton">Begin</button>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+    
+    <div class="debug-panel" id="debugPanel">
+        <div id="breathStatus">Breath state: -</div>
+        <div id="breathPower">Power: -</div>
+        <div id="breathCycle">Breath cycle: -</div>
+    </div>
+
+    <script>
+        // Core variables
+        let audioContext;
+        let analyzer;
+        let microphone;
+        let breathState = 'none'; // 'inhale', 'exhale', 'none'
+        let prevBreathState = 'none';
+        let breathPower = 0;
+        let breathCycleCount = 0;
+        let lastBreathTime = 0;
+        let breathPattern = [];
+        let isFirstBreath = true;
+        let startTime;
+                
+        // Canvas and visual elements
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        
+        // Synth variables
+        let synthsInitialized = false;
+        let inhaleSynth, exhaleSynth, droneSynth, ambienceSynth;
+        let reverb, delay;
+        
+        // Debug elements
+        const debugPanel = document.getElementById('debugPanel');
+        const breathStatusEl = document.getElementById('breathStatus');
+        const breathPowerEl = document.getElementById('breathPower');
+        const breathCycleEl = document.getElementById('breathCycle');
+        
+        // Start button event
+        document.getElementById('startButton').addEventListener('click', startExperience);
+        
+        // Initialize canvas dimensions
+        function setupCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        
+        window.addEventListener('resize', setupCanvas);
+        setupCanvas();
+        
+        // Start the audio experience
+        async function startExperience() {
+            try {
+                // Initialize audio context
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                await Tone.start();
+                Tone.setContext(audioContext);
+                
+                // Get microphone stream
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Create audio analyzer
+                analyzer = audioContext.createAnalyser();
+                analyzer.fftSize = 2048;
+                
+                // Connect microphone to analyzer
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyzer);
+                
+                // Initialize synths and effects
+                initializeSynths();
+                
+                // Hide welcome screen
+                document.getElementById('welcome').classList.add('hidden');
+                
+                // Start the audio analysis loop
+                analyzeAudio();
+                
+                // Start the animation loop
+                startTime = Date.now();
+                animate();
+                
+            } catch (error) {
+                console.error("Error accessing microphone:", error);
+                alert("Could not access microphone. Please make sure you've granted permission.");
+            }
+        }
+        
+        // Initialize all synths and effects
+        function initializeSynths() {
+            if (synthsInitialized) return;
+            
+            // Create reverb effect
+            reverb = new Tone.Reverb({
+                decay: 8,
+                wet: 0.6
+            }).toDestination();
+            
+            // Create delay effect
+            delay = new Tone.FeedbackDelay({
+                delayTime: 0.5,
+                feedback: 0.4,
+                wet: 0.3
+            }).connect(reverb);
+            
+            // Synth for inhalation
+            inhaleSynth = new Tone.PolySynth(Tone.FMSynth).connect(reverb);
+            inhaleSynth.set({
+                harmonicity: 1.5,
+                modulationIndex: 3,
+                envelope: {
+                    attack: 0.5,
+                    decay: 0.5,
+                    sustain: 0.8,
+                    release: 1.5
+                },
+                modulation: {
+                    type: "sine"
+                },
+                modulationEnvelope: {
+                    attack: 0.5,
+                    decay: 0.2,
+                    sustain: 0.2,
+                    release: 1.5
+                },
+                volume: -15
+            });
+            
+            // Synth for exhalation
+            exhaleSynth = new Tone.PolySynth(Tone.AMSynth).connect(delay);
+            exhaleSynth.set({
+                harmonicity: 2,
+                detune: 0,
+                oscillator: {
+                    type: "sine"
+                },
+                envelope: {
+                    attack: 0.3,
+                    decay: 1,
+                    sustain: 0.8,
+                    release: 2
+                },
+                modulation: {
+                    type: "square"
+                },
+                modulationEnvelope: {
+                    attack: 0.5,
+                    decay: 0.5,
+                    sustain: 0.5,
+                    release: 1.5
+                },
+                volume: -18
+            });
+            
+            // Drone synth for background atmosphere
+            droneSynth = new Tone.PolySynth(Tone.FMSynth).connect(reverb);
+            droneSynth.set({
+                harmonicity: 3,
+                modulationIndex: 5,
+                oscillator: {
+                    type: "sine"
+                },
+                envelope: {
+                    attack: 5,
+                    decay: 3,
+                    sustain: 0.8,
+                    release: 8
+                },
+                modulation: {
+                    type: "triangle"
+                },
+                modulationEnvelope: {
+                    attack: 8,
+                    decay: 3,
+                    sustain: 0.4,
+                    release: 10
+                },
+                volume: -25
+            });
+            
+            // Ambience synth for subtle textures
+            ambienceSynth = new Tone.NoiseSynth({
+                noise: {
+                    type: "pink"
+                },
+                envelope: {
+                    attack: 5,
+                    decay: 2,
+                    sustain: 0.2,
+                    release: 8
+                },
+                volume: -40
+            }).connect(reverb);
+            
+            // Start the drone
+            playDrone();
+            
+            synthsInitialized = true;
+        }
+        
+        // Play drone notes
+        function playDrone() {
+            const rootNote = "D2";
+            const notes = [rootNote, "A2", "D3", "F3"];
+            
+            notes.forEach((note, i) => {
+                droneSynth.triggerAttack(note, "+0.5", 0.1 + (i * 0.05));
+            });
+            
+            // Add subtle ambient noise
+            ambienceSynth.triggerAttackRelease(10);
+        }
+        
+        // Analyze microphone audio to detect breathing
+        function analyzeAudio() {
+            const bufferLength = analyzer.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            // Fill array with frequency data
+            analyzer.getByteFrequencyData(dataArray);
+            
+            // Focus on frequency range typical for breathing (roughly 100-800 Hz)
+            const breathLowFreq = 5;
+            const breathHighFreq = 40;
+            let breathSum = 0;
+            
+            for (let i = breathLowFreq; i < breathHighFreq; i++) {
+                breathSum += dataArray[i];
+            }
+            
+            // Calculate average power in the breathing frequency range
+            const breathAvg = breathSum / (breathHighFreq - breathLowFreq);
+            breathPower = breathAvg / 128; // Normalize to 0-1 range
+            
+            // Apply smoothing to reduce false positives
+            breathPower = Math.min(breathPower, 1);
+            
+            // Set threshold for breath detection
+            const breathThreshold = 0.15;
+            const now = Date.now();
+            
+            // Determine breath state
+            if (breathPower > breathThreshold) {
+                // Determine if inhaling or exhaling based on pattern analysis
+                // This is a simplified approximation - real breath detection would
+                // involve more sophisticated audio analysis
+                
+                if (prevBreathState === 'none' || prevBreathState === 'exhale') {
+                    // Moving from no breath or exhale to active breath is likely an inhale
+                    breathState = 'inhale';
+                    
+                    if (prevBreathState !== 'inhale') {
+                        if (!isFirstBreath) {
+                            playInhaleNote();
+                        } else {
+                            isFirstBreath = false;
+                        }
+                    }
+                } else if (now - lastBreathTime > 1000 && prevBreathState === 'inhale') {
+                    // If we've been inhaling for a while, transition to exhale
+                    breathState = 'exhale';
+                    playExhaleNote();
+                    breathCycleCount++;
+                    breathPattern.push({
+                        duration: now - lastBreathTime,
+                        power: breathPower
+                    });
+                }
+            } else {
+                breathState = 'none';
+            }
+            
+            // Update timing
+            if (breathState !== prevBreathState) {
+                lastBreathTime = now;
+            }
+            
+            prevBreathState = breathState;
+            
+            // Update debug display
+            updateDebugDisplay();
+            
+            // Continue the analysis loop
+            requestAnimationFrame(analyzeAudio);
+        }
+        
+        // Play a note for inhalation
+        function playInhaleNote() {
+            // Use breath power to influence the note selection and volume
+            const intensity = Math.min(breathPower * 1.5, 1);
+            
+            // Generate notes based on breathing pattern and cycle count
+            // More complex chord structures emerge as the user continues breathing
+            let notes;
+            
+            if (breathCycleCount < 3) {
+                // Simple ascending pattern for early cycles
+                notes = ["D4", "F#4", "A4"];
+            } else if (breathCycleCount < 6) {
+                // More complex patterns as cycles increase
+                notes = ["D4", "F#4", "A4", "C5"];
+            } else {
+                // Rich patterns for established breathing
+                notes = ["D4", "F#4", "A4", "C5", "E5"];
+            }
+            
+            // Filter notes based on intensity
+            const noteCount = Math.max(1, Math.floor(notes.length * intensity));
+            const selectedNotes = notes.slice(0, noteCount);
+            
+            // Play the notes with velocity based on breath power
+            const velocity = 0.3 + (intensity * 0.5);
+            inhaleSynth.triggerAttack(selectedNotes, undefined, velocity);
+            
+            // Schedule the release of the notes
+            setTimeout(() => {
+                inhaleSynth.triggerRelease(selectedNotes);
+            }, 1000 + (intensity * 2000));
+        }
+        
+        // Play a note for exhalation
+        function playExhaleNote() {
+            // Create resolving harmony for exhalation
+            const intensity = Math.min(breathPower * 1.5, 1);
+            
+            // Notes become more complex with more breath cycles
+            let notes;
+            
+            if (breathCycleCount < 3) {
+                notes = ["A3", "D4"];
+            } else if (breathCycleCount < 6) {
+                notes = ["A3", "D4", "F#4"];
+            } else {
+                // Add more complex harmonies as the experience develops
+                notes = ["G3", "B3", "D4", "F#4"];
+            }
+            
+            // Filter notes based on intensity
+            const noteCount = Math.max(1, Math.floor(notes.length * intensity));
+            const selectedNotes = notes.slice(0, noteCount);
+            
+            // Play the notes with velocity based on breath power
+            const velocity = 0.3 + (intensity * 0.5);
+            exhaleSynth.triggerAttack(selectedNotes, undefined, velocity);
+            
+            // Schedule the release of the notes
+            setTimeout(() => {
+                exhaleSynth.triggerRelease(selectedNotes);
+            }, 1500 + (intensity * 2500));
+        }
+        
+        // Update debug information display
+        function updateDebugDisplay() {
+            breathStatusEl.textContent = `Breath state: ${breathState}`;
+            breathPowerEl.textContent = `Power: ${breathPower.toFixed(3)}`;
+            breathCycleEl.textContent = `Breath cycle: ${breathCycleCount}`;
+        }
+        
+        // Animation loop for visual effects
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Only start showing visual feedback after a few breath cycles
+            if (breathCycleCount >= 2) {
+                // Calculate elapsed time for subtle animation
+                const elapsed = (Date.now() - startTime) / 1000;
+                
+                // Create subtle color shifts based on breathing
+                let hue, saturation, lightness;
+                
+                if (breathState === 'inhale') {
+                    // Cooler colors for inhale (subtle blues)
+                    hue = 210 + (breathPower * 20);
+                    saturation = 10 + (breathPower * 15);
+                    lightness = 94 + (breathPower * 2);
+                } else if (breathState === 'exhale') {
+                    // Warmer colors for exhale (subtle ambers)
+                    hue = 45 + (breathPower * 15);
+                    saturation = 8 + (breathPower * 12);
+                    lightness = 94 + (breathPower * 2);
+                } else {
+                    // Neutral for no breath
+                    hue = 0;
+                    saturation = 0;
+                    lightness = 100;
+                }
+                
+                // Apply background color with extremely subtle breathing influence
+                ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                ctx.fillRect(0, 0, width, height);
+                
+                // Draw extremely subtle visual elements after more breath cycles
+                if (breathCycleCount >= 4) {
+                    // Create a gentle radial gradient that pulses with breath
+                    const centerX = width / 2;
+                    const centerY = height / 2;
+                    
+                    // Gradient size responds to breath intensity
+                    const gradientSize = Math.min(width, height) * (0.4 + (breathPower * 0.1));
+                    
+                    const gradient = ctx.createRadialGradient(
+                        centerX, centerY, 0,
+                        centerX, centerY, gradientSize
+                    );
+                    
+                    // Almost imperceptible gradient
+                    gradient.addColorStop(0, `hsla(${hue}, ${saturation + 5}%, ${lightness + 2}%, ${0.05 + (breathPower * 0.1)})`);
+                    gradient.addColorStop(1, `hsla(${hue}, ${saturation}%, ${lightness}%, 0)`);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, width, height);
+                    
+                    // After even more breath cycles, add subtle luminosity variations
+                    if (breathCycleCount >= 6) {
+                        // Draw extremely subtle breath-responsive elements
+                        // Vary with sine waves for organic movement
+                        const wave = Math.sin(elapsed * 0.5) * 0.5 + 0.5;
+                        const waveAmplitude = 100 + (breathPower * 150);
+                        
+                        ctx.globalAlpha = 0.03 + (breathPower * 0.02);
+                        
+                        // Create flowing lines that respond to breathing
+                        ctx.beginPath();
+                        
+                        for (let x = 0; x < width; x += 50) {
+                            const y = centerY + Math.sin(x * 0.01 + elapsed * 0.5) * waveAmplitude;
+                            
+                            if (x === 0) {
+                                ctx.moveTo(x, y);
+                            } else {
+                                ctx.lineTo(x, y);
+                            }
+                        }
+                        
+                        ctx.strokeStyle = `hsla(${hue}, ${saturation + 10}%, ${lightness - 5}%, 0.1)`;
+                        ctx.lineWidth = 2 + (breathPower * 3);
+                        ctx.stroke();
+                        
+                        ctx.globalAlpha = 1;
+                    }
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+    </script>
+</body>
+</html>

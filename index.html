@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synesthetic Flux Console</title>
+    
+    <!-- Google Fonts: Inter for clear, friendly typography,
+         and a more abstract, "etched" font for the title if desired.
+         For this, I'll stick to Inter for consistency but use different weights. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* CSS Starts Here */
+
+        /* Variables for a "Soft-neon gradients blurring into infra-pastels" palette */
+        :root {
+            /* Infra-pastels / Soft-neons */
+            --color-flux-1: hsla(280, 50%, 85%, 0.9); /* Pale Lavender */
+            --color-flux-2: hsla(180, 50%, 80%, 0.9); /* Misty Aqua */
+            --color-flux-3: hsla(40, 50%, 80%, 0.9);  /* Soft Peach */
+            --color-flux-4: hsla(120, 30%, 75%, 0.9); /* Ghostly Green */
+            --color-flux-5: hsla(330, 50%, 85%, 0.9); /* Blush Pink */
+
+            /* Core UI colors */
+            --color-background-base: #F0F2F5; /* Very light cool grey for overall canvas */
+            --color-text-primary: #3B4045; /* Soft charcoal */
+            --color-text-secondary: #5A6168; /* Slightly lighter for descriptions */
+            --color-glass-base: rgba(255, 255, 255, 0.08); /* Slightly less transparent for calmness */
+            --color-glass-active: rgba(255, 255, 255, 0.12); /* For interactive elements */
+            --color-etch-shadow: rgba(0, 0, 0, 0.02);
+
+            /* Accents & Haptic feedback visual metaphor */
+            --color-accent-haptic: hsla(200, 70%, 70%, 0.7);
+            --color-accent-haptic-dark: hsla(200, 70%, 60%, 0.8);
+
+            --font-family-body: 'Inter', sans-serif;
+            --container-border-radius: 25px;
+        }
+
+        /* Basic Reset & Box-sizing */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%; /* Ensure full height for background effects */
+        }
+
+        /* Body & Base Typography */
+        body {
+            font-family: var(--font-family-body);
+            line-height: 1.6;
+            color: var(--color-text-primary);
+            background-color: var(--color-background-base);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow: hidden; /* Prevent scrollbars from dynamic backgrounds/jitter */
+            position: relative;
+        }
+
+        /* Chromaticity: Soft-neon gradients that blur into infra-pastels. */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(
+                from 0deg,
+                var(--color-flux-1) 0%,
+                var(--color-flux-2) 20%,
+                var(--color-flux-3) 40%,
+                var(--color-flux-4) 60%,
+                var(--color-flux-5) 80%,
+                var(--color-flux-1) 100%
+            );
+            filter: blur(150px); /* Increased blur for softer, calmer background */
+            opacity: 0.6; /* Slightly reduced opacity for calmness */
+            animation: colorFlux 80s linear infinite, subtleBreathing 25s ease-in-out infinite alternate;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        @keyframes colorFlux {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(0, 0) rotate(360deg); }
+        }
+
+        /* Motion: Slow-breathing expansions */
+        @keyframes subtleBreathing {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.015); opacity: 0.7; } /* Reduced scale for subtlety */
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+
+        /* Main Content Container - Materiality: Liquid glass + vapor-etched typography */
+        .container {
+            width: 100%;
+            max-width: 700px; /* Slightly wider for more content */
+            background-color: var(--color-glass-base);
+            padding: 40px 35px;
+            border-radius: var(--container-border-radius);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.05),
+                        inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(30px); /* Slightly increased blur */
+            -webkit-backdrop-filter: blur(30px);
+            animation: fadeIn 1.5s ease-out;
+            position: relative;
+            margin: 20px auto; /* Centering and some margin for viewport */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(40px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Header Styling */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.8em;
+            font-weight: 200;
+            color: var(--color-text-primary);
+            margin-bottom: 10px;
+            letter-spacing: -0.03em;
+            text-shadow: 0 1px 2px var(--color-etch-shadow);
+        }
+
+        header p.greeting {
+            font-size: 1.1em;
+            font-weight: 300;
+            color: var(--color-text-secondary);
+            opacity: 0.9;
+            text-shadow: 0 1px 1px var(--color-etch-shadow);
+        }
+
+        /* Navigation & Categories */
+        nav {
+            margin-top: 20px;
+        }
+
+        .category {
+            margin-bottom: 35px;
+        }
+
+        .category:last-child {
+            margin-bottom: 0;
+        }
+
+        .category h2 {
+            font-size: 1.6em;
+            font-weight: 300; /* Lighter for mystic feel */
+            color: var(--color-text-primary);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15); /* Softer, glassier separator */
+            text-align: left;
+            letter-spacing: 0.02em;
+        }
+
+        nav ul {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+
+        nav li {
+            background-color: var(--color-glass-active);
+            border-radius: 18px;
+            padding: 20px 25px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        nav li:hover {
+            transform: translateY(-5px) scale(1.02); /* Added subtle scale */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07); /* Enhanced hover shadow */
+        }
+
+        nav a {
+            display: block;
+            text-decoration: none;
+            color: var(--color-text-primary);
+            font-weight: 500; /* Clear and readable */
+            font-size: 1.2em; /* Slightly larger for emphasis */
+            letter-spacing: 0.01em;
+            margin-bottom: 8px; /* Space between title and description */
+            transition: color 0.3s ease;
+            filter: none; /* Removed initial blur for clarity */
+        }
+
+        nav a:hover {
+            color: var(--color-accent-haptic-dark);
+        }
+
+        .description {
+            font-size: 0.9em;
+            font-weight: 300;
+            color: var(--color-text-secondary);
+            opacity: 0.85;
+            line-height: 1.5;
+        }
+
+        /* Haptic Ghosting / Procedural Calligraphy (subtle underline effect) */
+        nav a::after {
+            content: '';
+            position: absolute;
+            left: 25px; /* Align with padding */
+            bottom: 15px; /* Adjust based on li padding */
+            width: 0;
+            height: 1px;
+            background-color: var(--color-accent-haptic);
+            transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); 
+        }
+        
+        nav li:hover a::after {
+            width: calc(100% - 50px); /* Span across, considering padding */
+        }
+
+        /* Media Queries for Mobile Friendliness */
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+                max-width: 95%;
+                border-radius: 20px;
+            }
+            header h1 {
+                font-size: 2.3em;
+            }
+            header p.greeting {
+                font-size: 1em;
+            }
+            .category h2 {
+                font-size: 1.4em;
+                margin-bottom: 15px;
+            }
+            nav ul {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            nav li {
+                padding: 18px 20px;
+                border-radius: 15px;
+            }
+            nav a {
+                font-size: 1.1em;
+            }
+            .description {
+                font-size: 0.85em;
+            }
+            nav a::after {
+                left: 20px;
+                bottom: 12px;
+            }
+            nav li:hover a::after {
+                width: calc(100% - 40px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 25px 15px;
+                border-radius: 15px;
+            }
+            header h1 {
+                font-size: 2em;
+            }
+            .category h2 {
+                font-size: 1.25em;
+            }
+            nav li {
+                padding: 15px;
+                border-radius: 12px;
+            }
+            nav a {
+                font-size: 1.05em;
+                font-weight: 500; /* Ensure readability */
+            }
+            .description {
+                font-size: 0.8em;
+            }
+             nav a::after {
+                left: 15px;
+                bottom: 10px;
+            }
+            nav li:hover a::after {
+                width: calc(100% - 30px);
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container" id="main-container">
+        <header>
+            <h1>Synesthetic Flux Console</h1>
+            <p class="greeting" id="greeting">Connecting to the ether...</p>
+        </header>
+
+        <nav>
+            <section class="category">
+                <h2>Core Transmissions</h2>
+                <ul>
+                    <li>
+                        <a href="superflux.html">Superflux Continuum</a>
+                        <p class="description">Navigate the ever-shifting currents of sensory data and emergent patterns. A voyage into the abstract heart of the flux.</p>
+                    </li>
+                    <li>
+                        <a href="field.html">Resonant Field</a>
+                        <p class="description">Tune into the subtle vibrations that connect all things. Explore an interactive landscape of interconnected energy nodes.</p>
+                    </li>
+                    <li>
+                        <a href="constellation.html">Stellar Cartographies</a>
+                        <p class="description">Chart unknown cosmic territories and map the architectures of light. A journey through generative celestial formations.</p>
+                    </li>
+                </ul>
+            </section>
+
+            <section class="category">
+                <h2>Botanical Explorations</h2>
+                <ul>
+                    <li>
+                        <a href="botanica-02.html">Botanica II: Emergent Flora</a>
+                        <p class="description">Witness the digital genesis of unique plant-like forms. Cultivate and observe algorithmic life in a serene audiovisual terrarium.</p>
+                    </li>
+                    <li>
+                        <a href="botanica-04.html">Botanica IV: Symbiotic Soundscapes</a>
+                        <p class="description">Delve deeper into the symbiosis of generative flora and evolving sound. An immersive experience in ecological algorithms.</p>
+                    </li>
+                </ul>
+            </section>
+        </nav>
+
+    </div>
+
+    <script>
+        // JavaScript Starts Here
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const greetingElement = document.getElementById('greeting');
+            const mainContainer = document.getElementById('main-container');
+
+            // Dynamic Greeting based on time
+            const updateGreeting = () => {
+                const now = new Date();
+                const hour = now.getHours();
+                let greeting;
+                if (hour >= 5 && hour < 12) {
+                    greeting = "Aetheric dawn.";
+                } else if (hour >= 12 && hour < 18) {
+                    greeting = "Resonance at midday.";
+                } else if (hour >= 18 && hour < 22) {
+                    greeting = "Nocturnal harmonics.";
+                } else {
+                    greeting = "Deep cycle calibration.";
+                }
+                greetingElement.textContent = greeting;
+            };
+
+            // Initial greeting update with a subtle fade-in
+            greetingElement.style.opacity = 0; // Start invisible
+            setTimeout(() => {
+                updateGreeting();
+                greetingElement.style.transition = 'opacity 0.8s ease-out';
+                greetingElement.style.opacity = 1; // Fade in
+            }, 800); // Delay for a more gentle appearance after the main page fade-in
+
+            // Motion: Sub-pixel jitter is driven by browser-reported network jitter
+            // (Simulated with a subtle random translation)
+            let lastTimestamp = 0;
+            const jitterAmount = 0.15; // Reduced jitter amount significantly
+            const maxOffset = 1; // Maximum pixel offset
+
+            function applyJitter(timestamp) {
+                if (!lastTimestamp) lastTimestamp = timestamp;
+                const deltaTime = timestamp - lastTimestamp;
+
+                // Apply jitter less frequently for a calmer effect
+                if (deltaTime > 100) { // Apply roughly every 100ms
+                    const offsetX = (Math.random() - 0.5) * 2 * jitterAmount;
+                    const offsetY = (Math.random() - 0.5) * 2 * jitterAmount;
+                    
+                    // Clamp the offset to avoid large jumps
+                    const clampedX = Math.max(-maxOffset, Math.min(maxOffset, offsetX));
+                    const clampedY = Math.max(-maxOffset, Math.min(maxOffset, offsetY));
+
+                    mainContainer.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
+                    lastTimestamp = timestamp;
+                }
+                requestAnimationFrame(applyJitter);
+            }
+            requestAnimationFrame(applyJitter);
+
+            // Additional subtle touch: if the window is resized, subtly re-center jitter
+            window.addEventListener('resize', () => {
+                // Reset jitter to ensure it's not off-screen or stuck
+                mainContainer.style.transform = `translate(0, 0)`;
+                lastTimestamp = 0; // Force immediate jitter update
+            });
+
+            // No further complex JS interactions needed to maintain the "subtle interactions" brief.
+        });
+
+        // End of JavaScript
+    </script>
+</body>
+</html>

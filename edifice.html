@@ -1,0 +1,1799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edifice: Architectural Music Sequencer</title>
+  <style>
+    :root {
+      --primary: #3498db; /* Blue */
+      --secondary: #2ecc71; /* Green */
+      --tertiary: #e74c3c; /* Red */
+      --success: #2ecc71; /* Green for success messages */
+      --selection: #f39c12; /* Orange for selection */
+      --placement-valid: rgba(46, 204, 113, 0.5); /* Green for valid placement */
+      --placement-invalid: rgba(231, 76, 60, 0.5); /* Red for invalid placement */
+      --success: #2ecc71; /* Green for success messages */
+      --accent: #f39c12; /* Orange */
+      --background: #f5f5f5;
+      --dark: #34495e; /* Dark Blue-Grey */
+      --text: #2c3e50; /* Darker Blue-Grey */
+      --light: #ecf0f1; /* Light Blue-Grey */
+      --wood-color: #d2b48c;
+      --stone-color: #a9a9a9;
+      --glass-color: #add8e6;
+      --metal-color: #c0c0c0;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: var(--background);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    .app-container {
+      display: grid;
+      grid-template-rows: 60px 1fr 160px;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .header {
+      background-color: var(--dark);
+      color: white;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      z-index: 2; /* Ensure header is above canvas */
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .main-controls {
+      display: flex;
+      gap: 16px;
+    }
+
+    .btn {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .btn-play {
+      background-color: var(--secondary);
+    }
+
+    .btn-stop {
+      background-color: var(--tertiary);
+    }
+
+    .btn-save {
+      background-color: var(--accent);
+    }
+
+    .main-workspace {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      height: 100%;
+      overflow: hidden;
+      position: relative; /* For z-index stacking context */
+      z-index: 1;
+    }
+
+    .component-palette {
+      background-color: var(--light);
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+      padding: 16px 8px;
+    }
+
+    .palette-section {
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--dark);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .component-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .component-item {
+      width: 80px;
+      height: 80px;
+      background-color: white;
+      border: 1px solid #ddd;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .component-item:hover {
+      border-color: var(--primary);
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .component-item.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent);
+      transform: scale(1.05);
+    }
+
+
+    .component-item.wood { background-color: var(--wood-color); }
+    .component-item.stone { background-color: var(--stone-color); }
+    .component-item.glass { background-color: var(--glass-color); opacity: 0.8; }
+    .component-item.metal { background-color: var(--metal-color); }
+
+    .component-icon {
+      font-size: 24px;
+      margin-bottom: 4px;
+      line-height: 1; /* Adjust for better alignment */
+    }
+
+    .component-name {
+      font-size: 10px;
+      text-align: center;
+      padding: 0 4px;
+    }
+
+    .canvas-container {
+      overflow: hidden;
+      position: relative;
+      height: 100%;
+      width: 100%;
+      background-color: #e0e0e0; /* Default canvas background */
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block; /* Remove extra space below canvas */
+    }
+
+    .canvas-controls {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      display: flex;
+      gap: 8px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 8px;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 1; /* Above canvas */
+    }
+
+    .view-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .view-btn:hover {
+      background-color: var(--primary);
+      color: white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+
+    .view-btn.active {
+      background-color: var(--primary);
+      color: white;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+    }
+
+    .controls-panel {
+      background-color: var(--light);
+      padding: 16px;
+      border-top: 1px solid #ddd;
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 16px;
+    }
+
+    .timeline {
+      background-color: white;
+      height: 100%;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      position: relative;
+      overflow-x: auto; /* Allow timeline to scroll */
+      overflow-y: hidden;
+      min-width: 300px; /* Prevent shrinking too much */
+    }
+
+    .timeline-markers {
+      display: flex;
+      height: 20px;
+      border-bottom: 1px solid #ddd;
+      position: sticky;
+      top: 0;
+      background-color: white; /* Stick to top */
+      z-index: 1;
+    }
+
+    .timeline-marker {
+      min-width: 50px; /* Each marker is 50px */
+      flex-shrink: 0;
+      text-align: center;
+      font-size: 10px;
+      color: #888;
+      border-right: 1px solid #eee;
+      line-height: 20px;
+    }
+
+    .timeline-content {
+      display: grid;
+      grid-auto-flow: column; /* Arrange tracks horizontally */
+      grid-auto-columns: minmax(50px, 1fr); /* Each track min 50px */
+      height: calc(100% - 20px);
+      min-width: max-content; /* Allow content to dictate width for scrolling */
+    }
+
+    .timeline-track {
+      position: relative;
+      border-right: 1px solid #eee;
+    }
+    .timeline-track-header {
+      font-size: 10px;
+      color: #666;
+      padding: 4px;
+      border-bottom: 1px solid #eee;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      position: sticky;
+      left: 0;
+      background-color: white;
+      z-index: 2;
+    }
+    .timeline-event {
+        position: absolute;
+        width: 100%;
+        height: 10px; /* Visual height for an event */
+        background-color: var(--primary);
+        border-radius: 2px;
+        opacity: 0.7;
+        transition: background-color 0.1s;
+    }
+
+
+    .properties-panel {
+      background-color: white;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      padding: 12px;
+      overflow-y: auto;
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--dark);
+    }
+
+    .property-group {
+      margin-bottom: 12px;
+    }
+
+    .property-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .property-control {
+      width: 100%;
+      padding: 6px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 12px;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    select.property-control {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='rgba(0,0,0,0.5)' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        background-size: 12px;
+        padding-right: 24px;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slider {
+      flex: 1;
+      height: 4px;
+      background: #eee;
+      border-radius: 2px;
+      outline: none;
+    }
+    .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        background: var(--primary);
+        border-radius: 50%;
+        cursor: pointer;
+    }
+    .slider::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        background: var(--primary);
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+    }
+
+
+    .slider-value {
+      width: 30px;
+      text-align: right;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+
+    .color-option {
+      height: 24px;
+      border-radius: 2px;
+      cursor: pointer;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .color-option.selected {
+        box-shadow: 0 0 0 2px var(--primary);
+    }
+
+
+    .isometric-grid {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      /* Can be an SVG overlay or canvas drawing */
+      z-index: 0;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6); /* Darker overlay */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100; /* Higher z-index */
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease-out;
+    }
+
+    .modal.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal-content {
+      background-color: white;
+      border-radius: 8px;
+      padding: 24px;
+      width: 600px;
+      max-width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      transform: translateY(20px); /* Slide in effect */
+      transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+    }
+    .modal.open .modal-content {
+        transform: translateY(0);
+    }
+
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #888;
+      line-height: 1;
+    }
+
+    .welcome-image {
+      width: 100%;
+      height: 160px; /* Reduced height */
+      background-color: var(--light);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #888;
+      font-size: 14px;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .welcome-image svg {
+        width: 120px; /* Adjust SVG size */
+        height: 120px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+
+    /* Toggle switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+      vertical-align: middle;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider-switch {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider-switch:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider-switch {
+      background-color: var(--primary);
+    }
+
+    input:checked + .slider-switch:before {
+      transform: translateX(20px);
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 101; /* Higher than modal */
+      opacity: 1;
+      transition: opacity 0.5s ease-out;
+      pointer-events: all;
+    }
+    .loading-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid var(--light);
+      border-top: 5px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-message {
+      font-size: 18px;
+      color: var(--dark);
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    
+    .component-counter {
+      font-size: 16px;
+      color: #555;
+      margin-left: 20px;
+      padding: 5px 10px;
+      background-color: rgba(255,255,255,0.7);
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .feedback-message {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: var(--success);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+      pointer-events: none;
+    }
+    
+    .placement-guide {
+      position: absolute;
+      pointer-events: none;
+      z-index: 10;
+      transition: transform 0.1s ease-out;
+    }
+    
+    .selection-indicator {
+      position: absolute;
+      border: 2px dashed var(--selection);
+      border-radius: 4px;
+      pointer-events: none;
+      animation: pulse 1.5s infinite;
+      z-index: 10;
+    }
+    
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(243, 156, 18, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-message">Loading Edifice...</div>
+  </div>
+  
+  <!-- Feedback message -->
+  <div class="feedback-message" id="feedbackMessage"></div>
+  
+  <!-- Welcome modal -->
+  <div class="modal" id="welcomeModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Welcome to Edifice</h2>
+        <button class="modal-close" id="closeWelcomeModal">×</button>
+      </div>
+      <div class="welcome-image">
+        <svg width="200" height="160" viewBox="0 0 200 160">
+          <polygon points="100,20 180,70 100,120 20,70" fill="#f1f1f1" stroke="#3498db" stroke-width="2"/>
+          <polygon points="100,20 180,70 180,90 100,40" fill="#2ecc71" fill-opacity="0.7" stroke="#2ecc71" stroke-width="1"/>
+          <polygon points="100,20 100,40 20,90 20,70" fill="#e74c3c" fill-opacity="0.7" stroke="#e74c3c" stroke-width="1"/>
+          <polygon points="100,120 180,70 180,90 100,140" fill="#f39c12" fill-opacity="0.7" stroke="#f39c12" stroke-width="1"/>
+          <polygon points="100,120 100,140 20,90 20,70" fill="#9b59b6" fill-opacity="0.7" stroke="#9b59b6" stroke-width="1"/>
+        </svg>
+      </div>
+      <p>Edifice is an architectural music sequencer that turns composition into construction. Build structures where:</p>
+      <ul style="margin: 16px 0 16px 24px; line-height: 1.5;">
+        <li>Building elements represent different sounds</li>
+        <li>Height corresponds to pitch</li>
+        <li>Room configurations create spatial audio environments</li>
+        <li>Structural relationships determine harmonic interactions</li>
+      </ul>
+      <p>Start by selecting components from the left palette and placing them in the isometric grid. Each material has unique sonic properties:</p>
+      <div style="display: flex; justify-content: space-between; margin: 16px 0;">
+        <div style="text-align: center;">
+          <div style="width: 40px; height: 40px; background-color: var(--wood-color); margin: 0 auto;"></div>
+          <p style="font-size: 12px; margin-top: 4px;">Wood (Warm)</p>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 40px; height: 40px; background-color: var(--stone-color); margin: 0 auto;"></div>
+          <p style="font-size: 12px; margin-top: 4px;">Stone (Solid)</p>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 40px; height: 40px; background-color: var(--glass-color); opacity: 0.8; margin: 0 auto;"></div>
+          <p style="font-size: 12px; margin-top: 4px;">Glass (Bright)</p>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 40px; height: 40px; background-color: var(--metal-color); margin: 0 auto;"></div>
+          <p style="font-size: 12px; margin-top: 4px;">Metal (Resonant)</p>
+        </div>
+      </div>
+      <button class="btn" id="startEdifice" style="width: 100%; margin-top: 16px;">Begin Creating</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <header class="header">
+      <div class="logo">Edifice</div>
+      <div class="component-counter">Components: <span id="componentCount">0</span></div>
+      <div class="main-controls">
+        <button class="btn btn-play" id="playBtn">
+          <span id="playIcon">▶ Play</span>
+        </button>
+        <button class="btn btn-stop" id="stopBtn">■ Stop</button>
+        <button class="btn" id="analyzeBtn">Analyze Structure</button>
+        <button class="btn btn-save">Export</button>
+        <button class="btn" id="helpBtn">Help</button>
+      </div>
+    </header>
+
+    <div class="main-workspace">
+      <div class="component-palette">
+        <div class="palette-section">
+          <h3 class="section-title">Foundations</h3>
+          <div class="component-list">
+            <div class="component-item stone" data-type="foundation" data-material="stone">
+              <div class="component-icon">◼</div>
+              <div class="component-name">Stone Base</div>
+            </div>
+            <div class="component-item wood" data-type="foundation" data-material="wood">
+              <div class="component-icon">◼</div>
+              <div class="component-name">Wood Base</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="palette-section">
+          <h3 class="section-title">Walls</h3>
+          <div class="component-list">
+            <div class="component-item stone" data-type="wall" data-material="stone">
+              <div class="component-icon">▌</div>
+              <div class="component-name">Stone Wall</div>
+            </div>
+            <div class="component-item wood" data-type="wall" data-material="wood">
+              <div class="component-icon">▌</div>
+              <div class="component-name">Wood Wall</div>
+            </div>
+            <div class="component-item glass" data-type="wall" data-material="glass">
+              <div class="component-icon">▌</div>
+              <div class="component-name">Glass Wall</div>
+            </div>
+            <div class="component-item metal" data-type="wall" data-material="metal">
+              <div class="component-icon">▌</div>
+              <div class="component-name">Metal Wall</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="palette-section">
+          <h3 class="section-title">Roofs</h3>
+          <div class="component-list">
+            <div class="component-item wood" data-type="roof" data-material="wood">
+              <div class="component-icon">▲</div>
+              <div class="component-name">Wood Roof</div>
+            </div>
+            <div class="component-item metal" data-type="roof" data-material="metal">
+              <div class="component-icon">▲</div>
+              <div class="component-name">Metal Roof</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="palette-section">
+          <h3 class="section-title">Resonators</h3>
+          <div class="component-list">
+            <div class="component-item metal" data-type="resonator" data-material="metal">
+              <div class="component-icon">◎</div>
+              <div class="component-name">Metal Chime</div>
+            </div>
+            <div class="component-item glass" data-type="resonator" data-material="glass">
+              <div class="component-icon">◎</div>
+              <div class="component-name">Glass Bell</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="palette-section">
+          <h3 class="section-title">Connectors</h3>
+          <div class="component-list">
+            <div class="component-item wood" data-type="connector" data-material="wood">
+              <div class="component-icon">◙</div>
+              <div class="component-name">Wood Beam</div>
+            </div>
+            <div class="component-item metal" data-type="connector" data-material="metal">
+              <div class="component-icon">◙</div>
+              <div class="component-name">Metal Beam</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-container" id="canvasContainer">
+        <canvas id="edificeCanvas"></canvas>
+        <div class="canvas-controls">
+          <div class="view-btn active" id="rotateView" title="Rotate View">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+            </svg>
+          </div>
+          <div class="view-btn" id="panView" title="Pan View">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
+              <path d="M21 8V5a2 2 0 0 0-2-2h-3"></path>
+              <path d="M3 16v3a2 2 0 0 0 2 2h3"></path>
+              <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+            </svg>
+          </div>
+          <div class="view-btn" id="walkView" title="Walk Through (WASD)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="5" r="3"></circle>
+              <path d="M12 8v13"></path>
+              <path d="m9 16 3 3 3-3"></path>
+            </svg>
+          </div>
+          <div class="view-btn" id="zoomIn" title="Zoom In">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="11" y1="8" x2="11" y2="14"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </div>
+          <div class="view-btn" id="zoomOut" title="Zoom Out">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </div>
+          <label class="switch" style="margin-left: 8px;" title="Toggle Day/Night Cycle">
+            <input type="checkbox" id="dayNightToggle">
+            <span class="slider-switch"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls-panel">
+      <div class="timeline">
+        <div class="timeline-track-header">Beat</div>
+        <div class="control-group">
+          <label for="tempoSlider">Tempo: <span id="tempoValue">120</span> BPM</label>
+          <input type="range" id="tempoSlider" min="60" max="180" value="120" step="1">
+        </div>
+        <div class="control-group">
+          <label for="reverbSlider">Reverb: <span id="reverbValue">30</span>%</label>
+          <input type="range" id="reverbSlider" min="0" max="100" value="30" step="1">
+        </div>
+        <div class="control-group">
+          <label for="swingSlider">Swing: <span id="swingValue">0</span>%</label>
+          <input type="range" id="swingSlider" min="0" max="100" value="0" step="1">
+        </div>
+        <div class="timeline-markers" id="timelineMarkers">
+          <!-- Markers will be generated by JS -->
+        </div>
+        <div class="timeline-content" id="timelineContent">
+          <!-- Tracks and events will be generated by JS -->
+        </div>
+        <div class="playhead" id="timelinePlayhead" style="position: absolute; top: 0; bottom: 0; width: 2px; background-color: var(--tertiary); left: 0; display: none;"></div>
+      </div>
+
+      <div class="properties-panel">
+        <h3 class="panel-title">Properties</h3>
+        <div id="noSelectionMessage">
+          Select a component to view its properties
+        </div>
+        <div id="componentProperties" style="display: none;">
+          <div class="property-group">
+            <div class="property-label">Component Type</div>
+            <select class="property-control" id="propertyComponentType" disabled>
+              <option value="foundation">Foundation</option>
+              <option value="wall">Wall</option>
+              <option value="roof">Roof</option>
+              <option value="resonator">Resonator</option>
+              <option value="connector">Connector</option>
+            </select>
+          </div>
+
+          <div class="property-group">
+            <div class="property-label">Material</div>
+            <select class="property-control" id="propertyComponentMaterial" disabled>
+              <option value="wood">Wood</option>
+              <option value="stone">Stone</option>
+              <option value="glass">Glass</option>
+              <option value="metal">Metal</option>
+            </select>
+          </div>
+
+          <div class="property-group">
+            <div class="property-label">Sound Properties</div>
+            <div class="slider-container">
+              <div class="property-label">Pitch</div>
+              <input type="range" class="slider property-control" id="pitchSlider" min="0" max="100" value="50">
+              <div class="slider-value" id="pitchValue">50</div>
+            </div>
+            <div class="slider-container">
+              <div class="property-label">Decay</div>
+              <input type="range" class="slider property-control" id="decaySlider" min="0" max="100" value="50">
+              <div class="slider-value" id="decayValue">50</div>
+            </div>
+            <div class="slider-container">
+              <div class="property-label">Volume</div>
+              <input type="range" class="slider property-control" id="volumeSlider" min="0" max="100" value="75">
+              <div class="slider-value" id="volumeValue">75</div>
+            </div>
+          </div>
+
+          <div class="property-group">
+            <div class="property-label">Structural Integrity</div>
+            <div class="slider-container">
+              <div class="property-label">Strength</div>
+              <input type="range" class="slider property-control" id="strengthSlider" min="0" max="100" value="80">
+              <div class="slider-value" id="strengthValue">80</div>
+            </div>
+            <div class="property-label">Auto-correct structure</div>
+            <label class="switch">
+              <input type="checkbox" id="autoCorrectToggle" checked>
+              <span class="slider-switch"></span>
+            </label>
+          </div>
+
+          <div class="property-group">
+            <div class="property-label">Color</div>
+            <div class="color-grid">
+              <div class="color-option" style="background-color: #1abc9c;" data-color="#1abc9c"></div>
+              <div class="color-option" style="background-color: #2ecc71;" data-color="#2ecc71"></div>
+              <div class="color-option" style="background-color: #3498db;" data-color="#3498db"></div>
+              <div class="color-option" style="background-color: #9b59b6;" data-color="#9b59b6"></div>
+              <div class="color-option" style="background-color: #f1c40f;" data-color="#f1c40f"></div>
+              <div class="color-option" style="background-color: #e67e22;" data-color="#e67e22"></div>
+              <div class="color-option" style="background-color: #e74c3c;" data-color="#e74c3c"></div>
+              <div class="color-option" style="background-color: #34495e;" data-color="#34495e"></div>
+            </div>
+          </div>
+          <button class="btn btn-clear" id="deleteComponentBtn" style="width: 100%; margin-top: 10px;">Delete Component</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script>
+    // --- Global State ---
+    let audioContext;
+    let masterGainNode;
+    let convolverNode; // For reverb
+    let isPlaying = false;
+    let componentCounter = 0; // Track number of components
+    let placementGuide = null; // Visual guide for placement
+    let selectionIndicator = null; // Visual indicator for selection
+    let playheadZ = 0; // Current Z-coordinate for playback
+    let currentBeat = 0; // Current beat in timeline
+    const BEATS_PER_LOOP = 16; // A 16-beat loop for the sequencer
+    let beatInterval = null; // Stores setInterval ID for playback
+    let tempo = 120; // BPM
+    let swing = 0; // Swing percentage
+    let dayNightCycle = false;
+
+    let selectedComponentType = null;
+    let selectedComponentMaterial = null;
+    let selected3DObject = null; // The currently selected THREE.Mesh object
+    let buildingGrid = new Map(); // Stores components at [x,y,z] coordinates
+
+    // --- DOM Elements ---
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const welcomeModal = document.getElementById('welcomeModal');
+    const closeWelcomeModalBtn = document.getElementById('closeWelcomeModal');
+    const startEdificeBtn = document.getElementById('startEdifice');
+    const edificeCanvas = document.getElementById('edificeCanvas');
+    const canvasContainer = document.getElementById('canvasContainer');
+    const componentPalette = document.querySelector('.component-palette');
+    const playBtn = document.getElementById('playBtn');
+    const playIcon = document.getElementById('playIcon');
+    const stopBtn = document.getElementById('stopBtn');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const helpBtn = document.getElementById('helpBtn');
+    const rotateViewBtn = document.getElementById('rotateView');
+    const panViewBtn = document.getElementById('panView');
+    const walkViewBtn = document.getElementById('walkView');
+    const zoomInBtn = document.getElementById('zoomIn');
+    const zoomOutBtn = document.getElementById('zoomOut');
+    const dayNightToggle = document.getElementById('dayNightToggle');
+
+    const timelineMarkersContainer = document.getElementById('timelineMarkers');
+    const timelineContent = document.getElementById('timelineContent');
+    const timelinePlayhead = document.getElementById('timelinePlayhead');
+
+    const propertiesPanel = document.getElementById('propertiesPanel');
+    const noSelectionMessage = document.getElementById('noSelectionMessage');
+    const componentPropertiesDiv = document.getElementById('componentProperties');
+    const propertyComponentType = document.getElementById('propertyComponentType');
+    const propertyComponentMaterial = document.getElementById('propertyComponentMaterial');
+    const pitchSlider = document.getElementById('pitchSlider');
+    const pitchValue = document.getElementById('pitchValue');
+    const decaySlider = document.getElementById('decaySlider');
+    const decayValue = document.getElementById('decayValue');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeValue = document.getElementById('volumeValue');
+    const strengthSlider = document.getElementById('strengthSlider');
+    const strengthValue = document.getElementById('strengthValue');
+    const autoCorrectToggle = document.getElementById('autoCorrectToggle');
+    const colorGrid = document.querySelector('.color-grid');
+    const deleteComponentBtn = document.getElementById('deleteComponentBtn');
+
+    const tempoSlider = document.getElementById('tempoSlider');
+    const tempoValue = document.getElementById('tempoValue');
+    const reverbSlider = document.getElementById('reverbSlider');
+    const reverbValue = document.getElementById('reverbValue');
+    const swingSlider = document.getElementById('swingSlider');
+    const swingValue = document.getElementById('swingValue');
+
+    // --- Three.js Variables ---
+    let scene, camera, renderer, controls;
+    let raycaster, mouse;
+    const GRID_SIZE = 16; // Number of units in X/Z plane
+    const CELL_SIZE = 1; // Size of a single unit (e.g., 1 meter)
+    const MAX_HEIGHT = 8; // Max units in Y
+    let currentViewMode = 'rotate'; // 'rotate', 'pan', 'walk'
+    let ambientLight, directionalLight;
+    let dayNightCycleTime = 0; // For day/night visuals
+
+    // --- Sound Definitions ---
+    const materialSounds = {
+      wood: { baseFrequency: 220, attack: 0.02, decay: 0.4, waveform: 'sine', type: 'percussive' }, // Percussive pluck
+      stone: { baseFrequency: 60, attack: 0.05, decay: 0.8, waveform: 'triangle', type: 'percussive-bass' }, // Deep thud
+      glass: { baseFrequency: 880, attack: 0.005, decay: 1.5, waveform: 'sine', type: 'bell' }, // Chimey
+      metal: { baseFrequency: 440, attack: 0.001, decay: 3.0, waveform: 'sawtooth', type: 'resonant-pad' } // Sustained metallic
+    };
+
+    const componentTypeModifiers = {
+      foundation: { pitchOffset: -12, volumeModifier: 1.2, decayModifier: 0.8 }, // Lower pitch, louder, shorter
+      wall: { pitchOffset: 0, volumeModifier: 1.0, decayModifier: 1.0 }, // Standard
+      roof: { pitchOffset: 12, volumeModifier: 0.8, decayModifier: 1.2 }, // Higher pitch, softer, longer
+      resonator: { pitchOffset: 24, volumeModifier: 1.5, decayModifier: 2.0 }, // Very high pitch, loud, sustained
+      connector: { pitchOffset: 6, volumeModifier: 0.9, decayModifier: 0.6 } // Mid pitch, softer, shorter
+    };
+
+    // Musical Scale for auto-correct
+    const majorScaleIntervals = [0, 2, 4, 5, 7, 9, 11]; // C Major
+    const baseMidiNote = 60; // C4
+
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+      // Get UI elements
+      const tempoSlider = document.getElementById('tempoSlider');
+      const tempoValue = document.getElementById('tempoValue');
+      const reverbSlider = document.getElementById('reverbSlider');
+      const reverbValue = document.getElementById('reverbValue');
+      const swingSlider = document.getElementById('swingSlider');
+      const swingValue = document.getElementById('swingValue');
+      const componentCountElement = document.getElementById('componentCount');
+      const feedbackMessage = document.getElementById('feedbackMessage');
+      
+      // Show loading overlay
+      loadingOverlay.classList.remove('hidden');
+
+      // Setup Three.js scene
+      init3D();
+      initAudio(); // Initialize audio context on first user interaction
+      setupEventListeners();
+      setupTimelineUI();
+
+      // Show welcome modal after a brief delay
+      setTimeout(() => {
+        loadingOverlay.classList.add('hidden');
+        welcomeModal.classList.add('open');
+      }, 1000); // Simulate loading time
+    });
+
+    // --- Audio Context Setup ---
+    function initAudio() {
+      if (!audioContext) {
+        try {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          masterGainNode = audioContext.createGain();
+          masterGainNode.gain.value = 0.7; // Global volume
+          masterGainNode.connect(audioContext.destination);
+
+          // Setup reverb
+          convolverNode = audioContext.createConvolver();
+          const reverbWetGain = audioContext.createGain();
+          const reverbSliderElement = document.getElementById('reverbSlider');
+          
+          if (reverbSliderElement) {
+            reverbWetGain.gain.value = parseFloat(reverbSliderElement.value) / 100; // Initial reverb wetness
+            
+            // Update reverb amount from slider
+            reverbSliderElement.addEventListener('input', (e) => {
+              reverbWetGain.gain.value = parseFloat(e.target.value) / 100;
+              document.getElementById('reverbValue').textContent = e.target.value;
+            });
+          } else {
+            reverbWetGain.gain.value = 0.3; // Default if slider not found
+            console.warn("Reverb slider not found, using default value");
+          }
+          
+          masterGainNode.connect(convolverNode);
+          convolverNode.connect(reverbWetGain);
+          reverbWetGain.connect(audioContext.destination);
+          masterGainNode.connect(audioContext.destination); // Dry signal also connects to destination
+
+          // Create and load a basic impulse response for reverb
+          createImpulseResponse().then(impulseBuffer => {
+            convolverNode.buffer = impulseBuffer;
+            console.log("Reverb impulse loaded.");
+          }).catch(e => console.error("Error loading impulse response:", e));
+
+          console.log("Web Audio API initialized.");
+        } catch (e) {
+          console.error("Web Audio API is not supported or failed to initialize:", e);
+        }
+      }
+    }
+
+    async function createImpulseResponse() {
+        const sr = audioContext.sampleRate;
+        const length = sr * 2; // 2 seconds
+        const impulse = audioContext.createBuffer(2, length, sr);
+        const L = impulse.getChannelData(0);
+        const R = impulse.getChannelData(1);
+
+        for (let i = 0; i < length; i++) {
+            const n = i / length;
+            // Simple decay curve
+            const t = Math.pow(1 - n, 2);
+            // Random noise for diffuse sound
+            L[i] = (Math.random() * 2 - 1) * t * 0.6;
+            R[i] = (Math.random() * 2 - 1) * t * 0.6;
+        }
+        return impulse;
+    }
+
+
+    // Play a sound based on component properties
+    function playComponentSound(componentProps, time) {
+      if (!audioContext) return;
+
+      const { type, material, position, pitch, decay, volume } = componentProps;
+      const materialSound = materialSounds[material];
+      const typeModifier = componentTypeModifiers[type];
+
+      let calculatedPitch = materialSound.baseFrequency;
+      if (pitch !== undefined) {
+          // Map slider value (0-100) to MIDI notes or frequency range
+          const mappedPitch = 40 + (pitch / 100) * 60; // MIDI range from ~F2 to ~C7
+          calculatedPitch = Math.pow(2, (mappedPitch - 69) / 12) * 440; // Convert MIDI to Hz
+      }
+      calculatedPitch += typeModifier.pitchOffset; // Apply type pitch offset
+
+
+      let calculatedDecay = materialSound.decay;
+      if (decay !== undefined) {
+          calculatedDecay = (decay / 100) * 2.0; // Decay from 0 to 2 seconds
+      }
+      calculatedDecay *= typeModifier.decayModifier; // Apply type decay modifier
+
+      let calculatedVolume = 0.5;
+      if (volume !== undefined) {
+          calculatedVolume = (volume / 100) * 0.8; // Volume from 0 to 0.8
+      }
+      calculatedVolume *= typeModifier.volumeModifier; // Apply type volume modifier
+
+      const now = audioContext.currentTime;
+
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      const filterNode = audioContext.createBiquadFilter();
+
+      oscillator.type = materialSound.waveform;
+      oscillator.frequency.setValueAtTime(calculatedPitch, time);
+      oscillator.frequency.exponentialRampToValueAtTime(calculatedPitch * 0.9, time + 0.1); // Slight pitch bend
+
+      filterNode.type = 'lowpass';
+      filterNode.frequency.setValueAtTime(calculatedPitch * 2 + 1000, time); // Filter brighter for higher notes
+      filterNode.Q.value = 5; // Resonant filter
+
+      gainNode.gain.setValueAtTime(0, time);
+      gainNode.gain.linearRampToValueAtTime(calculatedVolume, time + materialSound.attack);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, time + time + calculatedDecay); // Full decay
+
+
+      // Connect nodes
+      oscillator.connect(filterNode);
+      filterNode.connect(gainNode);
+      gainNode.connect(masterGainNode); // Connect to master output
+
+      // Start and stop
+      oscillator.start(time);
+      oscillator.stop(time + calculatedDecay + 0.1); // Stop slightly after decay
+    }
+
+
+    // --- Three.js Setup ---
+    function init3D() {
+      scene = new THREE.Scene();
+      //scene.background = new THREE.Color(0xf0f0f0); // Blueprint background
+
+      camera = new THREE.PerspectiveCamera(75, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 1000);
+      camera.position.set(GRID_SIZE * 0.7, GRID_SIZE * 0.7, GRID_SIZE * 0.7); // Initial isometric view
+      camera.lookAt(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({ canvas: edificeCanvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+
+      // Lights
+      ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+      directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(GRID_SIZE * 1.5, GRID_SIZE * 2, GRID_SIZE * 1.5);
+      directionalLight.castShadow = true;
+      scene.add(directionalLight);
+
+      // Grid helper (isometric-style grid)
+      const gridHelper = new THREE.GridHelper(GRID_SIZE * 2, GRID_SIZE * 2, 0x888888, 0xaaaaaa);
+      gridHelper.rotation.x = Math.PI / 2; // Rotate to lie on XZ plane
+      scene.add(gridHelper);
+
+      // OrbitControls for camera interaction
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.15;
+      controls.screenSpacePanning = false;
+      controls.maxPolarAngle = Math.PI / 2; // Prevent camera from going below ground
+
+      // Raycaster for object picking
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
+
+      // Handle resize
+      window.addEventListener('resize', onWindowResize, false);
+      onWindowResize(); // Initial resize
+
+      // Start animation loop
+      animate3D();
+    }
+
+    function animate3D() {
+      requestAnimationFrame(animate3D);
+      controls.update(); // Only required if controls.enableDamping or controls.autoRotate are set to true
+
+      // Day/Night Cycle
+      if (dayNightCycle) {
+        dayNightCycleTime += 0.001; // Speed of cycle
+        const brightness = Math.sin(dayNightCycleTime) * 0.5 + 0.5; // 0 to 1
+        ambientLight.intensity = 0.3 + brightness * 0.7; // Ambient light changes
+        directionalLight.intensity = 0.5 + brightness * 0.5; // Directional light changes
+        directionalLight.position.set(
+            Math.sin(dayNightCycleTime + Math.PI/2) * GRID_SIZE * 1.5,
+            Math.cos(dayNightCycleTime + Math.PI/2) * GRID_SIZE * 2,
+            Math.cos(dayNightCycleTime) * GRID_SIZE * 1.5
+        );
+        // Change background color for visual day/night
+        scene.background = new THREE.Color(0xf0f0f0 * brightness + 0x303030 * (1-brightness));
+      } else {
+        scene.background = new THREE.Color(0xf0f0f0); // Default day background
+      }
+
+
+      renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+      camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+    }
+
+    // --- Building Components ---
+    function createBuildingComponentMesh(type, material, color, x, y, z) {
+      let geometry;
+      const materialColor = new THREE.Color(color);
+      const meshMaterial = new THREE.MeshStandardMaterial({ color: materialColor });
+
+      switch (type) {
+        case 'foundation':
+          geometry = new THREE.BoxGeometry(CELL_SIZE, CELL_SIZE * 0.5, CELL_SIZE);
+          break;
+        case 'wall':
+          geometry = new THREE.BoxGeometry(CELL_SIZE, CELL_SIZE, CELL_SIZE * 0.1); // Thin wall
+          // For walls, might need to adjust based on orientation (e.g., along X or Z)
+          // For simplicity, let's make it a cube and assume it's just a "block" type wall
+          geometry = new THREE.BoxGeometry(CELL_SIZE, CELL_SIZE, CELL_SIZE);
+          break;
+        case 'roof':
+          geometry = new THREE.ConeGeometry(CELL_SIZE * 0.7, CELL_SIZE * 0.8, 4); // Pyramid-like roof
+          break;
+        case 'resonator':
+          geometry = new THREE.SphereGeometry(CELL_SIZE * 0.4, 16, 16);
+          break;
+        case 'connector':
+          geometry = new THREE.BoxGeometry(CELL_SIZE * 0.8, CELL_SIZE * 0.2, CELL_SIZE * 0.2); // Beam
+          break;
+        default:
+          geometry = new THREE.BoxGeometry(CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      }
+
+      const mesh = new THREE.Mesh(geometry, meshMaterial);
+      mesh.position.set(x * CELL_SIZE, y * CELL_SIZE + (geometry.parameters.height || CELL_SIZE)/2, z * CELL_SIZE);
+      mesh.userData = { type, material, x, y, z, pitch: 50, decay: 50, volume: 75, strength: 80, color }; // Store properties
+      scene.add(mesh);
+      return mesh;
+    }
+
+    // --- Interaction Logic ---
+    function handlePaletteSelection(event) {
+      const selectedItem = event.target.closest('.component-item');
+      if (!selectedItem) return;
+
+      document.querySelectorAll('.component-item.selected').forEach(item => item.classList.remove('selected'));
+      selectedItem.classList.add('selected');
+
+      selectedComponentType = selectedItem.dataset.type;
+      selectedComponentMaterial = selectedItem.dataset.material;
+      console.log(`Selected: Type - ${selectedComponentType}, Material - ${selectedComponentMaterial}`);
+    }
+
+    function handleCanvasClick(event) {
+      if (!audioContext) { // Auto-start audio context on first interaction
+          initAudio();
+          audioContext.resume();
+      }
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+
+      const intersects = raycaster.intersectObjects(scene.children);
+
+      if (intersects.length > 0) {
+        // A component was clicked
+        const clickedObject = intersects[0].object;
+        if (clickedObject.userData.type) { // Ensure it's one of our building components
+            selectComponent(clickedObject);
+        } else {
+            // Clicked a non-component object (e.g., grid helper), deselect
+            selectComponent(null);
+        }
+      } else {
+        // No component clicked, try to place new component
+        if (selectedComponentType && selectedComponentMaterial) {
+          // Determine grid position from raycast intersection with an invisible ground plane
+          const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); // Y=0 plane
+          const intersectPoint = new THREE.Vector3();
+          raycaster.ray.intersectPlane(groundPlane, intersectPoint);
+
+          // Snap to grid
+          const x = Math.round(intersectPoint.x / CELL_SIZE);
+          const y = 0; // Start at base level for placing, height will be built up
+          const z = Math.round(intersectPoint.z / CELL_SIZE);
+
+          // Check if position is occupied
+          const key = `${x},${y},${z}`; // Using Y=0 for ground snapping initially
+          if (buildingGrid.has(key)) {
+              console.log("Position already occupied, selecting existing component.");
+              selectComponent(buildingGrid.get(key).mesh); // Select existing if clicked on it
+              return;
+          }
+
+          // Placeholder color for now (can be made dynamic)
+          const defaultColor = '#3498db'; // Default primary color
+          let newComponentMesh = createBuildingComponentMesh(selectedComponentType, selectedComponentMaterial, defaultColor, x, y, z);
+          
+          // Store component data
+          buildingGrid.set(key, newComponentMesh.userData);
+          console.log(`Placed ${selectedComponentMaterial} ${selectedComponentType} at (${x},${y},${z})`);
+          selectComponent(newComponentMesh); // Select the newly placed component
+        } else {
+          selectComponent(null); // Deselect if nothing selected in palette
+        }
+      }
+    }
+
+    function selectComponent(mesh) {
+        if (selected3DObject) {
+            selected3DObject.material.emissive.setHex(0x000000); // Remove highlight
+        }
+        selected3DObject = mesh;
+        if (selected3DObject) {
+            selected3DObject.material.emissive.setHex(0x222200); // Add highlight
+            noSelectionMessage.style.display = 'none';
+            componentPropertiesDiv.style.display = 'block';
+            updatePropertiesPanel(selected3DObject.userData);
+        } else {
+            noSelectionMessage.style.display = 'block';
+            componentPropertiesDiv.style.display = 'none';
+        }
+    }
+
+    function deleteSelectedComponent() {
+        if (!selected3DObject) return;
+
+        const { x, y, z } = selected3DObject.userData;
+        const key = `${x},${y},${z}`;
+
+        scene.remove(selected3DObject);
+        buildingGrid.delete(key);
+        selectComponent(null); // Deselect after deletion
+        console.log(`Deleted component at (${x},${y},${z})`);
+        updateTimelineUI(); // Refresh timeline as component might be removed
+    }
+
+    function updatePropertiesPanel(userData) {
+        propertyComponentType.value = userData.type;
+        propertyComponentMaterial.value = userData.material;
+        pitchSlider.value = userData.pitch;
+        pitchValue.textContent = userData.pitch;
+        decaySlider.value = userData.decay;
+        decayValue.textContent = userData.decay;
+        volumeSlider.value = userData.volume;
+        volumeValue.textContent = userData.volume;
+        strengthSlider.value = userData.strength;
+        strengthValue.textContent = userData.strength;
+        autoCorrectToggle.checked = userData.autoCorrectStructure || true; // Default true
+
+        // Highlight selected color option
+        document.querySelectorAll('.color-option').forEach(opt => {
+            opt.classList.remove('selected');
+            if (opt.dataset.color === userData.color) {
+                opt.classList.add('selected');
+            }
+        });
+
+        // Add listeners for sliders and color options
+        const sliderIds = ['pitchSlider', 'decaySlider', 'volumeSlider', 'strengthSlider'];
+        sliderIds.forEach(id => {
+            const slider = document.getElementById(id);
+            const valueSpan = document.getElementById(`${id.replace('Slider', 'Value')}`);
+            slider.oninput = () => {
+                valueSpan.textContent = slider.value;
+                if (selected3DObject) {
+                    selected3DObject.userData[id.replace('Slider', '').toLowerCase()] = parseInt(slider.value);
+                    if (id === 'pitchSlider' && autoCorrectToggle.checked) {
+                        applyAutoCorrectPitch(selected3DObject.userData);
+                        slider.value = selected3DObject.userData.pitch; // Update slider to corrected pitch
+                        valueSpan.textContent = selected3DObject.userData.pitch;
+                    }
+                }
+            };
+        });
+
+        autoCorrectToggle.onchange = () => {
+            if (selected3DObject) {
+                selected3DObject.userData.autoCorrectStructure = autoCorrectToggle.checked;
+                if (autoCorrectToggle.checked) {
+                    applyAutoCorrectPitch(selected3DObject.userData);
+                    pitchSlider.value = selected3DObject.userData.pitch;
+                    pitchValue.textContent = selected3DObject.userData.pitch;
+                }
+            }
+        };
+
+        colorGrid.onclick = (e) => {
+            const colorOption = e.target.closest('.color-option');
+            if (colorOption && selected3DObject) {
+                const newColor = colorOption.dataset.color;
+                selected3DObject.material.color.set(newColor);
+                selected3DObject.userData.color = newColor;
+                document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+                colorOption.classList.add('selected');
+            }
+        };
+
+        deleteComponentBtn.onclick = deleteSelectedComponent;
+    }
+
+    function applyAutoCorrectPitch(userData) {
+        // Map pitch slider value to a MIDI note range (e.g., 40 to 100 MIDI notes)
+        let midiNote = Math.round(40 + (userData.pitch / 100) * 60);
+
+        // Find closest note in major scale
+        const closestScaleNote = findClosestNoteInScale(midiNote, majorScaleIntervals);
+        userData.pitch = Math.round(((closestScaleNote - 40) / 60) * 100); // Convert back to slider value
+
+        // Update visual (if needed, otherwise the slider update will handle it)
+        // selected3DObject.userData.pitch (already updated by slider in oninput)
+    }
+
+    function findClosestNoteInScale(midiNote, scaleIntervals) {
+        const base = Math.floor(midiNote / 12) * 12; // MIDI note for the C of current octave
+        let minDiff = Infinity;
+        let closestNote = midiNote;
+
+        scaleIntervals.forEach(interval => {
+            const noteInCurrentOctave = base + interval;
+            const diff = Math.abs(midiNote - noteInCurrentOctave);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestNote = noteInCurrentOctave;
+            }
+            // Check in next octave too
+            const noteInNextOctave = base + 12 + interval;
+            const diffNext = Math.abs(midiNote - noteInNextOctave);
+            if (diffNext < minDiff) {
+                minDiff = diffNext;
+                closestNote = noteInNextOctave;
+            }
+        });
+        return closestNote;
+    }
+
+
+    // --- Playback and Sequencing ---
+    function setupTimelineUI() {
+        timelineMarkersContainer.innerHTML = '';
+        timelineContent.innerHTML = '';
+
+        for (let i = 1; i <= BEATS_PER_LOOP; i++) {
+            const marker = document.createElement('div');
+            marker.classList.add('timeline-marker');
+            marker.textContent = i;
+            timelineMarkersContainer.appendChild(marker);
+        }
+
+        // Create tracks for different component types or materials
+        const trackTypes = ['foundation', 'wall', 'roof', 'resonator', 'connector'];
+        trackTypes.forEach(type => {
+            const track = document.createElement('div');
+            track.classList.add('timeline-track');
+            track.id = `timeline-track-${type}`;
+            const header = document.createElement('div');
+            header.classList.add('timeline-track-header');
+            header.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+            track.appendChild(header);
+            timelineContent.appendChild(track);
+        });
+    }
+
+    function updateTimelineUI() {
+        // Clear previous events
+        document.querySelectorAll('.timeline-event').forEach(el => el.remove());
+
+        // Place events on timeline
+        buildingGrid.forEach(component => {
+            const trackId = `timeline-track-${component.type}`;
+            const track = document.getElementById(trackId);
+            if (!track) return;
+
+            const eventEl = document.createElement('div');
+            eventEl.classList.add('timeline-event');
+            // Position based on component's Z (time) and Y (pitch/height)
+            const eventStartBeat = component.z % BEATS_PER_LOOP; // Loop Z position for beat
+            const eventHeight = (component.y / MAX_HEIGHT) * 100; // Map Y to percentage height of track
+
+            eventEl.style.left = `${(eventStartBeat / BEATS_PER_LOOP) * 100}%`;
+            eventEl.style.top = `${100 - eventHeight}%`; // Invert for higher pitch = higher on track
+            eventEl.style.width = `${(1 / BEATS_PER_LOOP) * 100}%`; // Each event lasts 1 beat
+            eventEl.style.backgroundColor = component.color; // Color by component
+
+            track.appendChild(eventEl);
+        });
+    }
+
+    function schedulePlayback() {
+        if (beatInterval) clearInterval(beatInterval);
+
+        const msPerBeat = 60000 / tempo;
+        const baseMsPer16th = msPerBeat / 4;
+
+        let swingFactor = swing / 100; // 0 to 0.8
+        swingFactor = swingFactor * 0.6; // Adjust swing scale for a more musical feel (max ~40% swing)
+
+
+        beatInterval = setInterval(() => {
+            const currentAudioTime = audioContext.currentTime;
+
+            // Trigger components at current beat (Z-slice)
+            buildingGrid.forEach(component => {
+                const componentBeat = component.z % BEATS_PER_LOOP;
+                if (componentBeat === currentBeat) {
+                    playComponentSound(component, currentAudioTime);
+                }
+            });
+
+            // Update playhead visual
+            const playheadPosition = (currentBeat / BEATS_PER_LOOP) * timelineContent.scrollWidth;
+            timelinePlayhead.style.transform = `translateX(${playheadPosition}px)`;
+            timelinePlayhead.style.display = 'block';
+
+            currentBeat++;
+            if (currentBeat >= BEATS_PER_LOOP) {
+                currentBeat = 0;
+            }
+
+            // Adjust next interval based on swing
+            let nextInterval = baseMsPer16th;
+            if (swing > 0) {
+                if (currentBeat % 2 !== 0) { // Odd beats (16th notes that could be swung)
+                    nextInterval = baseMsPer16th * (1 + swingFactor);
+                } else { // Even beats (16th notes that precede a swung one)
+                    nextInterval = baseMsPer16th * (1 - swingFactor);
+                }
+            }
+            // To make swing accurate across the loop, we'd need a more complex scheduler like Tone.js Transport
+            // For now, this simple `setInterval` swing can cause drift over time.
+            clearInterval(beatInterval);
+            beatInterval = setInterval(arguments.callee, nextInterval); // Recursive call for swing accuracy
+        }, baseMsPer16th); // Initial interval
+    }
+
+
+    function togglePlayback() {
+        if (!audioContext) initAudio(); // Ensure audio context is started by user gesture
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+
+        isPlaying = !isPlaying;
+        if (isPlaying) {
+            playIcon.style.display = 'none';
+            playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg><span style="margin-left: 8px;">Pause</span>';
+            currentBeat = 0; // Reset playhead
+            schedulePlayback();
+        } else {
+            playIcon.style.display = 'inline-block';
+            playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg><span style="margin-left: 8px;">Play</span>';
+            clearInterval(beatInterval);
+            timelinePlayhead.style.display = 'none';
+        }
+    }
+
+    function stopPlayback() {
+        if (isPlaying) togglePlayback(); // Toggle to stop
+        currentBeat = 0;
+        if (beatInterval) clearInterval(beatInterval);
+        timelinePlayhead.style.display = 'none';
+    }
+
+
+    // --- Event Listeners ---
+    function setupEventListeners() {
+      // Welcome Modal
+      closeWelcomeModalBtn.addEventListener('click', () => welcomeModal.classList.remove('open'));
+      startEdificeBtn.addEventListener('click', () => {
+        welcomeModal.classList.remove('open');
+        initAudio(); // Initialize audio context
+      });
+      helpBtn.addEventListener('click', () => welcomeModal.classList.add('open'));
+
+
+      // Component Palette
+      componentPalette.addEventListener('click', handlePaletteSelection);
+      // Canvas Interaction
+      edificeCanvas.addEventListener('click', handleCanvasClick);
+      // Properties Panel Sliders
+      document.querySelectorAll('.properties-panel .slider').forEach(slider => {
+          slider.addEventListener('input', (e) => {
+              const valueSpan = e.target.nextElementSibling;
+              valueSpan.textContent = e.target.value;
+          });
+      });
+
+
+      // Main Controls
+      playBtn.addEventListener('click', togglePlayback);
+      stopBtn.addEventListener('click', stopPlayback);
+      analyzeBtn.addEventListener('click', analyzeStructure);
+
+      // Canvas View Controls
+      rotateViewBtn.addEventListener('click', () => { currentViewMode = 'rotate'; updateViewButtons(); controls.enablePan = false; controls.enableRotate = true; });
+      panViewBtn.addEventListener('click', () => { currentViewMode = 'pan'; updateViewButtons(); controls.enablePan = true; controls.enableRotate = false; });
+      walkViewBtn.addEventListener('click', () => {
+          currentViewMode = 'walk';
+          updateViewButtons();
+          controls.enablePan = false;
+          controls.enableRotate = false;
+          // Implement basic WASD movement for walk mode
+          // This is a simplified placeholder. Full first-person controls are complex.
+          // For now, it just disables orbit controls.
+          alert("Walk mode activated! (WASD keys for movement not fully implemented in this demo - focus on visual movement instead)");
+      });
+      zoomInBtn.addEventListener('click', () => controls.dollyIn(1.2)); // Factor of zoom
+      zoomOutBtn.addEventListener('click', () => controls.dollyOut(1.2)); // Factor of zoom
+
+      // Day/Night Cycle
+      dayNightToggle.addEventListener('change', (e) => {
+          dayNightCycle = e.target.checked;
+          dayNightCycleTime = 0; // Reset cycle on toggle
+      });
+
+      // Global Tempo/Swing
+      const tempoSlider = document.getElementById('tempoSlider');
+      const tempoValue = document.getElementById('tempoValue');
+      if (tempoSlider && tempoValue) {
+        tempoSlider.addEventListener('input', (e) => {
+            tempo = parseInt(e.target.value);
+            tempoValue.textContent = tempo;
+            if (isPlaying) {
+                clearInterval(beatInterval);
+                schedulePlayback();
+            }
+        });
+      } else {
+        console.warn("Tempo slider or value element not found");
+      }
+      
+      const swingSlider = document.getElementById('swingSlider');
+      const swingValue = document.getElementById('swingValue');
+      if (swingSlider && swingValue) {
+        swingSlider.addEventListener('input', (e) => {
+            swing = parseInt(e.target.value);
+            swingValue.textContent = `${swing}%`;
+            if (isPlaying) {
+                clearInterval(beatInterval);
+                schedulePlayback();
+            }
+        });
+      } else {
+        console.warn("Swing slider or value element not found");
+      }
+    }
+
+    function updateViewButtons() {
+        document.querySelectorAll('.canvas-controls .view-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`${currentViewMode}View`).classList.add('active');
+    }
+
+    // --- Structural Analysis (Conceptual) ---
+    function analyzeStructure() {
+        let componentCount = buildingGrid.size;
+        let harmonicClashes = 0;
+        let pitchDistribution = {}; // Count components at each pitch level
+
+        // Calculate pitch distribution and basic harmonic clashes (simplified)
+        buildingGrid.forEach(comp => {
+            const pitchLevel = Math.round(comp.pitch); // Use rounded pitch for simplicity
+            pitchDistribution[pitchLevel] = (pitchDistribution[pitchLevel] || 0) + 1;
+            // Simplified clash: if two components at same pitch/Z but different type/material?
+            // More complex: check intervals formed by connected components
+        });
+
+        // Calculate density
+        const maxPossibleComponents = GRID_SIZE * GRID_SIZE * MAX_HEIGHT; // Max potential components
+        const currentDensity = (componentCount / maxPossibleComponents) * 100;
+
+        let suggestions = [];
+        if (componentCount === 0) {
+            suggestions.push("The canvas is empty. Begin by placing a 'Foundation' component!");
+        } else {
+            if (currentDensity < 10) suggestions.push("Consider adding more components to build a richer soundscape.");
+            if (currentDensity > 70) suggestions.push("Your structure is dense! Try thinning it out for more clarity or introducing different materials.");
+
+            // Check for isolated foundations (no walls/roofs above)
+            let isolatedFoundations = 0;
+            buildingGrid.forEach(comp => {
+                if (comp.type === 'foundation') {
+                    const hasStructureAbove = Array.from(buildingGrid.keys()).some(key => {
+                        const [x, y, z] = key.split(',').map(Number);
+                        return x === comp.x && z === comp.z && y > comp.y;
+                    });
+                    if (!hasStructureAbove) isolatedFoundations++;
+                }
+            });
+            if (isolatedFoundations > 0) suggestions.push(`You have ${isolatedFoundations} isolated foundations. Build upwards to create more complex rhythms!`);
+
+            // Check for dissonant intervals (very simplified)
+            // Example: look for adjacent components in Z-axis that are very close in pitch but not part of the scale
+            let dissonantPairs = 0;
+            // This would require iterating through the grid and checking neighbours, comparing their pitches.
+            // For now, let's just make a conceptual suggestion.
+             if (Math.random() < 0.3) { // Random chance to suggest harmonic changes
+                 suggestions.push("Listen closely for harmonic tensions. Adjust pitch properties or material types to create more cohesive sounds.");
+             }
+        }
+
+
+        // Display analysis
+        let analysisMessage = `Structure Analysis:\n`;
+        analysisMessage += `Components: ${componentCount}\n`;
+        analysisMessage += `Density: ${currentDensity.toFixed(1)}%\n`;
+        analysisMessage += `\nSuggestions:\n`;
+        if (suggestions.length === 0) {
+            analysisMessage += "Your structure is well-balanced and ready for sonic exploration!";
+        } else {
+            analysisMessage += suggestions.join('\n');
+        }
+
+        alert(analysisMessage);
+        console.log("Full Analysis:", { componentCount, currentDensity, pitchDistribution, suggestions });
+    }
+
+  </script>
+</body>
+</html>

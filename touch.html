@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Touch: A Biometric Sound Mirror</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #touchSurface {
+            flex-grow: 1;
+            width: 100%;
+            touch-action: none;
+            background: linear-gradient(145deg, #080808, #0a0a0a);
+            position: relative;
+            cursor: none;
+        }
+        
+        .touch-point {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            mix-blend-mode: screen;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.3s;
+        }
+        
+        #initialOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        #initialOverlay h1 {
+            font-weight: 300;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            opacity: 0.9;
+        }
+        
+        #initialOverlay p {
+            font-weight: 300;
+            font-size: 1rem;
+            opacity: 0.6;
+            max-width: 600px;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        
+        #startButton {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.8);
+            padding: 0.8rem 2rem;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        #startButton:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+        
+        .controls:hover {
+            opacity: 1;
+        }
+        
+        .control-button {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.8);
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .control-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="touchSurface"></div>
+    
+    <div class="controls">
+        <button class="control-button" id="resetButton">↺</button>
+        <button class="control-button" id="helpButton">?</button>
+    </div>
+    
+    <div id="initialOverlay">
+        <h1>Touch</h1>
+        <p>A blank canvas that responds to the quality of your touch. No interfaces. No controls. Only the connection between you and sound.</p>
+        <p>Place your fingers anywhere on the screen and listen to the unique sonic fingerprint that emerges from your touch.</p>
+        <button id="startButton">Begin Experience</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <script>
+        // Wait for the DOM to load
+        document.addEventListener('DOMContentLoaded', function() {
+            const touchSurface = document.getElementById('touchSurface');
+            const startButton = document.getElementById('startButton');
+            const resetButton = document.getElementById('resetButton');
+            const helpButton = document.getElementById('helpButton');
+            const initialOverlay = document.getElementById('initialOverlay');
+            
+            let activeTouches = {};
+            let touchHistory = {};
+            let personalFingerprint = null;
+            let isAudioInitialized = false;
+            
+            // Audio context and synths
+            let reverb;
+            let mainSynth;
+            let droneSynth;
+            let atmosSynth;
+            
+            // Colors for touch points
+            const colorPalette = [
+                'rgba(75, 207, 250, 0.4)',
+                'rgba(131, 56, 236, 0.4)',
+                'rgba(245, 90, 137, 0.4)',
+                'rgba(252, 176, 69, 0.4)',
+                'rgba(86, 204, 157, 0.4)'
+            ];
+            
+            // Initialize audio system
+            async function initAudio() {
+                try {
+                    await Tone.start();
+                    console.log('Audio is ready');
+                    
+                    // Create reverb
+                    reverb = new Tone.Reverb({
+                        decay: 8,
+                        wet: 0.6
+                    }).toDestination();
+                    
+                    // Main synthesizer for touch points
+                    mainSynth = new Tone.PolySynth(Tone.FMSynth).connect(reverb);
+                    mainSynth.set({
+                        harmonicity: 3.5,
+                        modulationIndex: 10,
+                        detune: 0,
+                        oscillator: {
+                            type: "sine"
+                        },
+                        envelope: {
+                            attack: 0.1,
+                            decay: 0.2,
+                            sustain: 0.9,
+                            release: 3
+                        },
+                        modulation: {
+                            type: "triangle"
+                        },
+                        modulationEnvelope: {
+                            attack: 0.5,
+                            decay: 0.01,
+                            sustain: 1,
+                            release: 0.5
+                        }
+                    });
+                    
+                    // Drone synth for background
+                    droneSynth = new Tone.PolySynth(Tone.AMSynth).connect(reverb);
+                    droneSynth.set({
+                        harmonicity: 2,
+                        detune: 0,
+                        oscillator: {
+                            type: "sine"
+                        },
+                        envelope: {
+                            attack: 1,
+                            decay: 2,
+                            sustain: 0.8,
+                            release: 8
+                        },
+                        modulation: {
+                            type: "square"
+                        },
+                        modulationEnvelope: {
+                            attack: 4,
+                            decay: 0.2,
+                            sustain: 0.5,
+                            release: 8
+                        }
+                    });
+                    droneSynth.volume.value = -15;
+                    
+                    // Atmospheric synth for micromovements
+                    atmosSynth = new Tone.PolySynth(Tone.MonoSynth).connect(reverb);
+                    atmosSynth.set({
+                        oscillator: {
+                            type: "sine8"
+                        },
+                        envelope: {
+                            attack: 0.8,
+                            decay: 1,
+                            sustain: 0.5,
+                            release: 8
+                        },
+                        filterEnvelope: {
+                            attack: 0.9,
+                            decay: 1,
+                            sustain: 0.8,
+                            release: 3,
+                            baseFrequency: 300,
+                            octaves: 4
+                        }
+                    });
+                    atmosSynth.volume.value = -20;
+                    
+                    isAudioInitialized = true;
+                    
+                    // Generate personal fingerprint
+                    generatePersonalFingerprint();
+                    
+                    // Add event listeners
+                    touchSurface.addEventListener('pointerdown', handleTouchStart);
+                    touchSurface.addEventListener('pointermove', handleTouchMove);
+                    touchSurface.addEventListener('pointerup', handleTouchEnd);
+                    touchSurface.addEventListener('pointercancel', handleTouchEnd);
+                    
+                    initialOverlay.style.display = 'none';
+                    
+                } catch (error) {
+                    console.error('Error initializing audio:', error);
+                }
+            }
+            
+            function generatePersonalFingerprint() {
+                // Create a unique sound profile based on timing and device information
+                // In a real biometric instrument, this would use actual biometric data
+                const now = Date.now();
+                const screenSize = window.innerWidth * window.innerHeight;
+                const pixelRatio = window.devicePixelRatio || 1;
+                
+                // Create a pseudo-unique value that will be different for different users
+                // This is just a simulation of what real biometric data would provide
+                const timingOffset = now % 1000 / 1000;
+                const deviceOffset = (screenSize * pixelRatio) % 1000 / 1000;
+                
+                personalFingerprint = {
+                    baseFrequency: 220 + (timingOffset * 220),
+                    harmonicRatio: 1.25 + (deviceOffset * 0.5),
+                    tremolo: 0.3 + (timingOffset * 0.7),
+                    baseNote: ["C", "D", "E", "F", "G", "A", "B"][Math.floor(timingOffset * 7)],
+                    scale: Math.random() > 0.5 ? "major" : "minor"
+                };
+                
+                // Create ambient drone based on personal fingerprint
+                createAmbientDrone();
+            }
+            
+            function createAmbientDrone() {
+                // Create a subtle drone that represents the user's "resting" state
+                const baseNote = personalFingerprint.baseNote + "2";
+                
+                // Create chord based on scale
+                let chord;
+                if (personalFingerprint.scale === "major") {
+                    chord = [baseNote, Tone.Frequency(baseNote).transpose(4).toNote(), Tone.Frequency(baseNote).transpose(7).toNote()];
+                } else {
+                    chord = [baseNote, Tone.Frequency(baseNote).transpose(3).toNote(), Tone.Frequency(baseNote).transpose(7).toNote()];
+                }
+                
+                // Play drone chord
+                droneSynth.triggerAttack(chord, Tone.now(), 0.1);
+                
+                // Schedule drone change in 8 seconds
+                Tone.Transport.scheduleOnce(() => {
+                    droneSynth.triggerRelease(chord);
+                    
+                    // Schedule next drone after release
+                    Tone.Transport.scheduleOnce(() => {
+                        createAmbientDrone();
+                    }, "+4");
+                    
+                }, "+8");
+            }
+            
+            // Handle touch start
+            function handleTouchStart(event) {
+                event.preventDefault();
+                
+                const pointerId = event.pointerId;
+                const touch = {
+                    id: pointerId,
+                    x: event.clientX,
+                    y: event.clientY,
+                    pressure: event.pressure || 0.5,
+                    startTime: Date.now(),
+                    lastUpdate: Date.now()
+                };
+                
+                activeTouches[pointerId] = touch;
+                touchHistory[pointerId] = [
+                    { x: touch.x, y: touch.y, pressure: touch.pressure, time: touch.startTime }
+                ];
+                
+                // Create visual element for touch
+                const touchElement = document.createElement('div');
+                touchElement.className = 'touch-point';
+                touchElement.id = `touch-${pointerId}`;
+                touchElement.style.left = `${touch.x}px`;
+                touchElement.style.top = `${touch.y}px`;
+                
+                // Get a color based on the touch (will be consistent for the same finger)
+                const colorIndex = pointerId % colorPalette.length;
+                const color = colorPalette[colorIndex];
+                touchElement.style.background = color;
+                
+                // Add to DOM
+                touchSurface.appendChild(touchElement);
+                
+                // Animate the touch point
+                setTimeout(() => {
+                    if (touchElement.parentNode) {
+                        touchElement.style.opacity = '0.7';
+                        touchElement.style.width = `${60 * touch.pressure}px`;
+                        touchElement.style.height = `${60 * touch.pressure}px`;
+                        touchElement.style.marginLeft = `-${30 * touch.pressure}px`;
+                        touchElement.style.marginTop = `-${30 * touch.pressure}px`;
+                    }
+                }, 10);
+                
+                // Create note based on touch location and personal fingerprint
+                createNoteFromTouch(touch);
+            }
+            
+            // Handle touch move
+            function handleTouchMove(event) {
+                event.preventDefault();
+                
+                const pointerId = event.pointerId;
+                const touch = activeTouches[pointerId];
+                
+                if (!touch) return;
+                
+                // Update touch data
+                const currentTime = Date.now();
+                const previousX = touch.x;
+                const previousY = touch.y;
+                const newX = event.clientX;
+                const newY = event.clientY;
+                const pressure = event.pressure || 0.5;
+                
+                // Calculate velocity and direction
+                const timeDelta = currentTime - touch.lastUpdate;
+                const xDelta = newX - previousX;
+                const yDelta = newY - previousY;
+                const distance = Math.sqrt(xDelta * xDelta + yDelta * yDelta);
+                const velocity = distance / timeDelta; // pixels per ms
+                
+                // Update touch info
+                touch.x = newX;
+                touch.y = newY;
+                touch.pressure = pressure;
+                touch.velocity = velocity;
+                touch.lastUpdate = currentTime;
+                
+                // Add to touch history
+                touchHistory[pointerId].push({
+                    x: newX,
+                    y: newY,
+                    pressure: pressure,
+                    time: currentTime,
+                    velocity: velocity
+                });
+                
+                // Keep history limited to avoid memory issues
+                if (touchHistory[pointerId].length > 100) {
+                    touchHistory[pointerId].shift();
+                }
+                
+                // Update visual element
+                const touchElement = document.getElementById(`touch-${pointerId}`);
+                if (touchElement) {
+                    touchElement.style.left = `${newX}px`;
+                    touchElement.style.top = `${newY}px`;
+                    touchElement.style.width = `${60 * pressure}px`;
+                    touchElement.style.height = `${60 * pressure}px`;
+                    touchElement.style.marginLeft = `-${30 * pressure}px`;
+                    touchElement.style.marginTop = `-${30 * pressure}px`;
+                    
+                    // Increase opacity with velocity
+                    const opacityBase = 0.4;
+                    const opacityVelocity = Math.min(velocity * 0.1, 0.5);
+                    touchElement.style.opacity = `${opacityBase + opacityVelocity}`;
+                }
+                
+                // Update sound based on movement
+                updateNoteFromMovement(touch, pointerId);
+            }
+            
+            // Handle touch end
+            function handleTouchEnd(event) {
+                const pointerId = event.pointerId;
+                const touch = activeTouches[pointerId];
+                
+                if (!touch) return;
+                
+                // Release the note
+                releaseNote(touch);
+                
+                // Remove visual element
+                const touchElement = document.getElementById(`touch-${pointerId}`);
+                if (touchElement) {
+                    touchElement.style.opacity = '0';
+                    touchElement.style.transform = 'scale(0.1)';
+                    
+                    // Remove element after animation completes
+                    setTimeout(() => {
+                        if (touchElement.parentNode) {
+                            touchElement.parentNode.removeChild(touchElement);
+                        }
+                    }, 500);
+                }
+                
+                // Remove from active touches
+                delete activeTouches[pointerId];
+            }
+            
+            // Create note from touch
+            function createNoteFromTouch(touch) {
+                if (!isAudioInitialized) return;
+                
+                // Map the touch position to musical parameters
+                const xPercent = touch.x / window.innerWidth;
+                const yPercent = touch.y / window.innerHeight;
+                
+                // Create a base note using the personal fingerprint
+                const baseFrequency = personalFingerprint.baseFrequency;
+                const baseNote = Tone.Frequency(baseFrequency).harmonize([0, 2, 4, 7, 9][Math.floor(xPercent * 5)]);
+                
+                // Calculate actual note frequency
+                // Apply a scale based on personal fingerprint
+                let scaleIntervals;
+                if (personalFingerprint.scale === "major") {
+                    scaleIntervals = [0, 2, 4, 5, 7, 9, 11];
+                } else {
+                    scaleIntervals = [0, 2, 3, 5, 7, 8, 10];
+                }
+                
+                // Get octave based on Y position (higher = higher octave)
+                const octave = Math.floor(3 + (1 - yPercent) * 4);
+                
+                // Get note in scale
+                const noteIndex = Math.floor(xPercent * scaleIntervals.length);
+                const interval = scaleIntervals[noteIndex];
+                
+                // Calculate final note
+                const note = Tone.Frequency(personalFingerprint.baseNote + octave).transpose(interval);
+                
+                // Play the note with a velocity based on pressure
+                const velocity = 0.3 + (touch.pressure * 0.7);
+                mainSynth.triggerAttack(note, undefined, velocity);
+                
+                // Store the note for later release
+                touch.note = note;
+                
+                // Add some atmospheric sound for variety
+                if (Object.keys(activeTouches).length <= 3) {
+                    const atmosNote = Tone.Frequency(note).transpose(-12);
+                    atmosSynth.triggerAttack(atmosNote, undefined, velocity * 0.5);
+                    touch.atmosNote = atmosNote;
+                }
+            }
+            
+            // Update note based on finger movement
+            function updateNoteFromMovement(touch, pointerId) {
+                if (!isAudioInitialized || !touch.note) return;
+                
+                // Analyze recent movement from history
+                const history = touchHistory[pointerId];
+                if (history.length < 2) return;
+                
+                // Get the last 5 points or all if less than 5
+                const recentPoints = history.slice(Math.max(0, history.length - 5));
+                
+                // Calculate average velocity
+                let totalVelocity = 0;
+                for (let i = 1; i < recentPoints.length; i++) {
+                    const current = recentPoints[i];
+                    const prev = recentPoints[i-1];
+                    const time = current.time - prev.time;
+                    if (time > 0) {
+                        const dist = Math.sqrt(
+                            Math.pow(current.x - prev.x, 2) + 
+                            Math.pow(current.y - prev.y, 2)
+                        );
+                        totalVelocity += dist / time;
+                    }
+                }
+                const avgVelocity = totalVelocity / (recentPoints.length - 1);
+                
+                // Detect "tremor" or micro-movements (changes in direction)
+                let directionChanges = 0;
+                let lastXDir = 0;
+                let lastYDir = 0;
+                
+                for (let i = 1; i < recentPoints.length; i++) {
+                    const current = recentPoints[i];
+                    const prev = recentPoints[i-1];
+                    
+                    const xDir = Math.sign(current.x - prev.x);
+                    const yDir = Math.sign(current.y - prev.y);
+                    
+                    if (i > 1 && (xDir !== 0 && xDir !== lastXDir || yDir !== 0 && yDir !== lastYDir)) {
+                        directionChanges++;
+                    }
+                    
+                    lastXDir = xDir !== 0 ? xDir : lastXDir;
+                    lastYDir = yDir !== 0 ? yDir : lastYDir;
+                }
+                
+                // Factor in pressure changes
+                let pressureChange = 0;
+                for (let i = 1; i < recentPoints.length; i++) {
+                    pressureChange += Math.abs(recentPoints[i].pressure - recentPoints[i-1].pressure);
+                }
+                
+                // Now use these "biometric" measurements to modify the sound
+                
+                // 1. Tremor (direction changes) - affects vibrato
+                const normalizedTremor = Math.min(directionChanges / 3, 1);
+                const vibratoAmount = personalFingerprint.tremolo * normalizedTremor;
+                
+                // 2. Velocity - affects filter
+                const normalizedVelocity = Math.min(avgVelocity * 0.1, 1);
+                
+                // 3. Pressure changes - affects harmonic content
+                const normalizedPressure = Math.min(pressureChange * 5, 1);
+                
+                // Apply sound changes
+                if (mainSynth.get().oscillator) {
+                    // Update main synth
+                    mainSynth.set({
+                        vibratoAmount: vibratoAmount,
+                        vibratoRate: 5 + (normalizedTremor * 10),
+                        harmonicity: personalFingerprint.harmonicRatio + (normalizedPressure * 2),
+                        modulationIndex: 3 + (normalizedVelocity * 15)
+                    });
+                }
+                
+                // Update atmospheric synth
+                if (touch.atmosNote && atmosSynth.get().oscillator) {
+                    atmosSynth.set({
+                        filterEnvelope: {
+                            baseFrequency: 100 + (normalizedVelocity * 2000),
+                            octaves: 2 + (normalizedTremor * 6)
+                        }
+                    });
+                }
+            }
+            
+            // Release note
+            function releaseNote(touch) {
+                if (!isAudioInitialized) return;
+                
+                if (touch.note) {
+                    mainSynth.triggerRelease(touch.note);
+                }
+                
+                if (touch.atmosNote) {
+                    atmosSynth.triggerRelease(touch.atmosNote);
+                }
+            }
+            
+            // Reset function
+            function resetInstrument() {
+                if (!isAudioInitialized) return;
+                
+                // Stop all sounds
+                mainSynth.releaseAll();
+                atmosSynth.releaseAll();
+                droneSynth.releaseAll();
+                
+                // Remove all touch points
+                const touchPoints = document.querySelectorAll('.touch-point');
+                touchPoints.forEach(point => {
+                    point.parentNode.removeChild(point);
+                });
+                
+                // Clear touch data
+                activeTouches = {};
+                touchHistory = {};
+                
+                // Regenerate personal fingerprint
+                generatePersonalFingerprint();
+            }
+            
+            // Show help overlay
+            function showHelp() {
+                initialOverlay.style.display = 'flex';
+            }
+            
+            // Event listeners for buttons
+            startButton.addEventListener('click', initAudio);
+            resetButton.addEventListener('click', resetInstrument);
+            helpButton.addEventListener('click', showHelp);
+            
+            // Start Tone.js Transport
+            Tone.Transport.start();
+        });
+    </script>
+</body>
+</html>

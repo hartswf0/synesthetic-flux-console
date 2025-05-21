@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weft: A Loom-Inspired Music Sequencer</title>
+    <style>
+        :root {
+            --natural-cream: #f5f1e6;
+            --indigo: #394989;
+            --madder-red: #a23e48;
+            --ochre: #e6b34c;
+            --weld-yellow: #f3cc5c;
+            --woad-blue: #5d7599;
+            --walnut-brown: #6e4c36;
+            --light-green: #a2c4a2;
+            --thread-color: #826651;
+            --thread-highlight: #b28d6d;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Helvetica Neue', sans-serif;
+            background-color: var(--natural-cream);
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        h1 {
+            font-weight: 300;
+            margin: 0;
+            color: var(--indigo);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background-color: var(--indigo);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #4a5eb3;
+        }
+
+        button.active {
+            background-color: var(--madder-red);
+        }
+
+        .transport {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .transport-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .tempo-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 20px;
+        }
+
+        .tempo-label {
+            font-size: 14px;
+            color: #555;
+        }
+
+        .tempo-value {
+            font-size: 16px;
+            font-weight: 500;
+            min-width: 40px;
+        }
+
+        .loom-container {
+            position: relative;
+            background-color: #f0e8d8;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .loom-frame {
+            position: relative;
+            height: 480px;
+            border: 12px solid var(--walnut-brown);
+            border-radius: 6px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .warp-threads {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: space-between; /* This might need adjustment for alignment with cells */
+            padding-left: 100px; /* Offset for labels */
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
+        .warp-thread {
+            width: 1px;
+            height: 100%;
+            background-color: rgba(130, 102, 81, 0.3);
+            flex-grow: 1; /* Distribute space, but fixed width cells are better */
+        }
+        .warp-thread:first-child {
+            margin-left: calc(100% / var(--columns) / 2); /* Center first thread over first cell */
+        }
+
+
+        .warp-thread.emphasized {
+            background-color: rgba(130, 102, 81, 0.5);
+            width: 2px;
+        }
+
+        .weft-rows {
+            position: relative;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .weft-row {
+            height: 40px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .weft-label {
+            position: absolute;
+            left: 10px;
+            width: 80px;
+            font-size: 14px;
+            color: var(--indigo);
+            font-weight: 500;
+            z-index: 10;
+            background-color: rgba(240,232,216,0.7);
+            padding: 4px;
+            border-radius: 4px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .weft-thread {
+            position: absolute;
+            height: 8px;
+            background-color: var(--thread-color);
+            left: 0;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1;
+            transition: transform 0.1s ease-out; /* For tension animation */
+        }
+
+        .weft-cells {
+            display: flex;
+            width: calc(100% - 100px); /* Adjust for label */
+            margin-left: 100px;
+            height: 100%;
+        }
+
+        .weft-cell {
+            height: 36px;
+            flex: 1;
+            margin: 2px 1px; /* Small margin for separation and centering */
+            background-color: transparent;
+            border: 1px solid rgba(130, 102, 81, 0.2);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+            z-index: 2;
+            transition: background-color 0.1s, box-shadow 0.1s;
+        }
+
+        .weft-cell:hover {
+            background-color: rgba(130, 102, 81, 0.1);
+        }
+
+        .weft-cell.active {
+            background-color: var(--thread-color);
+            box-shadow: 0 0 0 1px var(--thread-highlight);
+        }
+
+        .weft-cell.active.accented {
+            background-color: var(--madder-red);
+            position: relative;
+        }
+
+        .weft-cell.active.accented::after {
+            content: "⋅";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .weft-cell.playing {
+            border-color: var(--woad-blue);
+            border-width: 2px;
+            box-shadow: 0 0 5px var(--woad-blue);
+        }
+
+        .tension-control { /* This element was not in the HTML, but style exists */
+            width: 80px;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tension-control input { /* This element was not in the HTML, but style exists */
+            width: 60px;
+        }
+
+        .playhead {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: var(--madder-red);
+            z-index: 5;
+            pointer-events: none;
+            box-shadow: 0 0 10px rgba(162, 62, 72, 0.5);
+            left: 100px; /* Initial offset for labels */
+            transition: left 0.05s linear; /* Smooth movement */
+        }
+
+        .pattern-library {
+            margin-top: 30px;
+        }
+
+        .pattern-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .pattern-heading h2 {
+            font-weight: 500;
+            margin: 0;
+            color: var(--indigo);
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .pattern-card {
+            background-color: white;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .pattern-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+        }
+
+        .pattern-preview {
+            height: 60px;
+            background-size: cover;
+            background-position: center;
+            display: flex; /* For generated previews */
+            flex-wrap: wrap; /* For generated previews */
+            padding: 2px; /* For generated previews */
+            box-sizing: border-box; /* For generated previews */
+        }
+        .pattern-preview-dot { /* For generated previews */
+            width: 5px; height: 5px; border-radius: 50%; margin: 1px;
+            background-color: var(--thread-color);
+        }
+        .pattern-preview-dot.active { background-color: var(--madder-red); }
+
+
+        .pattern-info {
+            padding: 8px;
+        }
+
+        .pattern-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin: 0 0 4px 0;
+            color: var(--indigo);
+        }
+
+        .pattern-origin {
+            font-size: 12px;
+            color: #777;
+            margin: 0;
+        }
+
+        .panel-section {
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: var(--indigo);
+        }
+
+        .sound-palettes {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .palette-button {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .palette-button:hover {
+            border-color: var(--indigo);
+        }
+
+        .palette-button.active {
+            background-color: var(--indigo);
+            color: white;
+            border-color: var(--indigo);
+        }
+
+        .shuttle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .shuttle {
+            width: 60px;
+            height: 30px;
+            background-color: var(--ochre);
+            border-radius: 15px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+            transition: transform 0.2s, background-color 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .shuttle:hover {
+            transform: scale(1.05);
+        }
+
+        .shuttle.active {
+            background-color: var(--madder-red);
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+        }
+
+        .side-panel {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .controls-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .panel-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-label {
+            font-size: 14px;
+            color: #555;
+            min-width: 80px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .value-display {
+            font-size: 14px;
+            color: var(--indigo);
+            font-weight: 500;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .panel-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tooltip {
+            position: fixed;
+            background-color: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 100;
+            transition: opacity 0.1s, transform 0.1s;
+            opacity: 0;
+            transform: translate(-50%, -100%); /* Position above cursor */
+        }
+
+        .visual-patterns { /* Not in HTML, keeping style for potential future use */
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .visual-pattern { /* Not in HTML, keeping style for potential future use */
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+            background-size: cover;
+            background-position: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .visual-pattern:hover { /* Not in HTML, keeping style for potential future use */
+            transform: scale(1.05);
+        }
+
+        .visual-pattern.active { /* Not in HTML, keeping style for potential future use */
+            box-shadow: 0 0 0 2px var(--madder-red);
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(245, 241, 230, 0.9); /* Slightly more opaque */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease-out;
+        }
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(57, 73, 137, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--indigo);
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-size: 18px;
+            color: var(--indigo);
+        }
+
+        /* Animations for thread movement */
+        @keyframes threadTension {
+            0% { transform: translateY(-50%) scaleY(1); }
+            50% { transform: translateY(-50%) scaleY(1.2); }
+            100% { transform: translateY(-50%) scaleY(1); }
+        }
+        .weft-thread.playing-sound {
+            animation: threadTension 0.15s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Weaving Sonic Threads...</div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Weft: A Loom-Inspired Music Sequencer</h1>
+            <div class="controls">
+                <button id="exportAudio" title="Export sequence as WAV (future)">Export Audio</button>
+                <button id="exportPattern" title="Save current loom state as JSON">Export Pattern</button>
+                <label for="importPatternFile" title="Load loom state from JSON" style="cursor:pointer;">
+                    <span style="background-color: var(--indigo); color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: 500; transition: background-color 0.2s; display: inline-block;">Import Pattern</span>
+                </label>
+                <input type="file" id="importPatternFile" accept=".json" style="display:none;">
+            </div>
+        </header>
+
+        <div class="transport">
+            <div class="transport-controls">
+                <button id="playButton" title="Play/Pause Sequence (Spacebar)">Play</button>
+                <button id="stopButton" title="Stop Sequence and Reset Playhead">Stop</button>
+                <button id="clearButton" title="Clear all active cells on the loom">Clear Loom</button>
+            </div>
+            <div class="tempo-control">
+                <span class="tempo-label">Speed:</span>
+                <input type="range" id="tempoSlider" min="40" max="240" value="120" step="1" title="Adjust Tempo (BPM)">
+                <span class="tempo-value" id="tempoValue">120 BPM</span>
+            </div>
+        </div>
+
+        <div class="two-column">
+            <div class="loom-container">
+                <div class="loom-frame" id="loomFrame">
+                    <div class="warp-threads" id="warpThreads"></div>
+                    <div class="weft-rows" id="weftRows"></div>
+                    <div class="playhead" id="playhead"></div>
+                </div>
+
+                <div class="shuttle-container">
+                    <div class="shuttle" data-shuttle="1" title="Select Shuttle 1 (Velocity: ppp)">1</div>
+                    <div class="shuttle" data-shuttle="2" title="Select Shuttle 2 (Velocity: mp)">2</div>
+                    <div class="shuttle" data-shuttle="3" title="Select Shuttle 3 (Velocity: f)">3</div>
+                    <div class="shuttle active" data-shuttle="4" title="Select Shuttle 4 (Accent / Velocity: ff)">4</div>
+                </div>
+            </div>
+
+            <div class="side-panel">
+                <div class="panel-section">
+                    <div class="panel-title">Weaving Technique</div>
+                    <div class="panel-buttons">
+                        <button class="weaving-technique active" data-technique="plain" title="Plain weave: standard note trigger">Plain</button>
+                        <button class="weaving-technique" data-technique="twill" title="Twill weave: creates a slightly delayed or flam effect">Twill</button>
+                        <button class="weaving-technique" data-technique="satin" title="Satin weave: sustains notes longer or adds release">Satin</button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="panel-title">Sound Palette</div>
+                    <div class="sound-palettes">
+                        <button class="palette-button active" data-palette="indigo" title="Deep, resonant tones">Indigo</button>
+                        <button class="palette-button" data-palette="silk" title="Smooth, flowing sounds">Silk Road</button>
+                        <button class="palette-button" data-palette="ikat" title="Textured, percussive elements">Ikat</button>
+                        <button class="palette-button" data-palette="tartan" title="Rich, layered harmonies">Tartan</button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="panel-title">Thread Tension (Effects)</div>
+                    <div class="controls-panel">
+                        <div class="panel-row">
+                            <span class="panel-label">Filter:</span>
+                            <input type="range" id="globalTension" min="0" max="100" value="50" title="Global Filter Cutoff">
+                            <span class="value-display" id="globalTensionValue">50%</span>
+                        </div>
+                         <div class="panel-row">
+                            <span class="panel-label">Delay:</span>
+                            <input type="range" id="delayAmount" min="0" max="100" value="10" title="Delay Wet/Dry Mix">
+                            <span class="value-display" id="delayValue">10%</span>
+                        </div>
+                        <div class="panel-row">
+                            <span class="panel-label">Reverb:</span>
+                            <input type="range" id="reverbAmount" min="0" max="100" value="20" title="Reverb Wet/Dry Mix">
+                            <span class="value-display" id="reverbValue">20%</span>
+                        </div>
+                    </div>
+                </div>
+
+                 <div class="panel-section">
+                    <div class="panel-title">Texture Controls (Swing/Groove)</div>
+                    <div class="controls-panel">
+                        <div class="panel-row">
+                            <span class="panel-label">Swing:</span>
+                            <input type="range" id="textureDensity" min="0" max="100" value="0" title="Swing Amount">
+                            <span class="value-display" id="densityValue">0%</span>
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <div class="panel-section">
+                    <div class="panel-buttons">
+                        <button id="unravelButton" title="Randomly remove some active cells">Unravel Pattern</button>
+                        <button id="knotButton" title="Randomly add active cells (knots)">Add Knots</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pattern-library">
+            <div class="pattern-heading">
+                <h2>Pattern Library</h2>
+                <button id="savePattern" title="Save the current loom pattern to the library">Save Current Pattern</button>
+            </div>
+            <div class="pattern-grid" id="patternGrid">
+                <!-- Pattern cards will be dynamically generated here -->
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            // Don't start Tone.js here - wait for user interaction
+
+            // Configuration
+            const config = {
+                columns: 16,
+                rows: 8,
+                currentTechnique: 'plain',
+                currentPalette: 'indigo',
+                globalFilterCutoff: 50, // Renamed from globalTension for clarity
+                delayAmount: 10,
+                reverbAmount: 20,
+                swingAmount: 0, // Renamed from textureDensity
+                currentShuttle: 4, // 1-4, 4 is accent
+                tempo: 120,
+            };
+
+            let synths = [];
+            let masterVolume, filter, delay, reverb;
+            let sequence;
+            let isPlaying = false;
+            let currentStep = 0;
+            let patternData = Array(config.rows).fill(null).map(() => Array(config.columns).fill(0)); // 0: off, 1: on, 2: accented
+            let savedPatterns = loadPatternsFromStorage();
+
+            const soundPalettes = {
+                indigo: {
+                    names: ['Indigo Bass', 'Indigo Pad', 'Indigo Chime', 'Indigo Bell', 'Indigo Pluck', 'Thread Perc', 'Shuttle Hit', 'Loom Hum'],
+                    pitchMap: ['C2', 'C3', 'G4', 'C5', 'E4', 'F#2', 'A#2', 'D3'], // Example pitches
+                    synthTypes: [Tone.MonoSynth, Tone.PolySynth, Tone.MetalSynth, Tone.MembraneSynth, Tone.PluckSynth, Tone.NoiseSynth, Tone.MembraneSynth, Tone.AMSynth]
+                },
+                silk: {
+                    names: ['Silk Drone', 'Silk String', 'Silk Flute', 'Silk Pluck', 'Silk Chime', 'Silk Drum', 'Silk Rattle', 'Silk Cymbal'],
+                    pitchMap: ['A1', 'E3', 'A4', 'D5', 'G4', 'C2', 'G#2', 'B2'],
+                    synthTypes: [Tone.AMSynth, Tone.PolySynth, Tone.Synth, Tone.PluckSynth, Tone.MetalSynth, Tone.MembraneSynth, Tone.NoiseSynth, Tone.MetalSynth]
+                },
+                ikat: {
+                    names: ['Ikat Bass', 'Ikat Pluck', 'Ikat Texture', 'Ikat Resonator', 'Ikat Bell', 'Ikat Wood', 'Ikat Metal', 'Ikat Shaker'],
+                    pitchMap: ['F1', 'C3', 'F3', 'A#3', 'D#4', 'G2', 'C#2', 'E2'],
+                    synthTypes: [Tone.FMSynth, Tone.PluckSynth, Tone.NoiseSynth, Tone.MetalSynth, Tone.Synth, Tone.MembraneSynth, Tone.MetalSynth, Tone.NoiseSynth]
+
+                },
+                tartan: {
+                    names: ['Tartan Bass', 'Tartan String', 'Tartan Reed', 'Tartan Pipe', 'Tartan Pluck', 'Tartan Drum', 'Tartan Rattle', 'Tartan Frame'],
+                    pitchMap: ['D2', 'A2', 'D3', 'G3', 'A3', 'D1', 'F#1', 'A1'],
+                    synthTypes: [Tone.DuoSynth, Tone.PolySynth, Tone.MonoSynth, Tone.Synth, Tone.PluckSynth, Tone.MembraneSynth, Tone.NoiseSynth, Tone.MembraneSynth]
+                }
+            };
+             const defaultSynthOptions = {
+                MonoSynth: { oscillator: { type: "sawtooth" }, envelope: { attack: 0.01, decay: 0.3, sustain: 0.2, release: 0.5 } },
+                PolySynth: { oscillator: { type: "triangle" }, envelope: { attack: 0.05, decay: 0.5, sustain: 0.3, release: 1 } },
+                MetalSynth: { frequency: 200, envelope: { attack: 0.001, decay: 1, release: 0.2 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 },
+                MembraneSynth: { pitchDecay: 0.05, octaves: 10, oscillator: { type: "sine" }, envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4 } },
+                PluckSynth: { attackNoise: 1, dampening: 4000, resonance: 0.7 },
+                NoiseSynth: { noise: { type: "white" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 } },
+                AMSynth: { harmonicity: 3, detune: 0, oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.01, sustain: 1, release: 0.5 }, modulation: { type: "square" }, modulationEnvelope: { attack: 0.5, decay: 0, sustain: 1, release: 0.5 } },
+                FMSynth: { harmonicity: 3, modulationIndex: 10, detune: 0, oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.01, sustain: 1, release: 0.5 }, modulation: { type: "square" }, modulationEnvelope: { attack: 0.5, decay: 0, sustain: 1, release: 0.5 } },
+                DuoSynth: { vibratoAmount: 0.5, vibratoRate: 5, harmonicity: 1.5, voice0: { volume: -10, portamento: 0, oscillator: { type: "sine" }, filterEnvelope: { attack: 0.01, decay: 0, sustain: 1, release: 0.5 }, envelope: { attack: 0.01, decay: 0, sustain: 1, release: 0.5 } }, voice1: { volume: -10, portamento: 0, oscillator: { type: "sine" }, filterEnvelope: { attack: 0.01, decay: 0, sustain: 1, release: 0.5 }, envelope: { attack: 0.01, decay: 0, sustain: 1, release: 0.5 } } }
+            };
+
+
+            const patternTemplates = { /* Kept from your HTML for reference if needed */ };
+
+            // DOM Elements
+            const loomFrame = document.getElementById('loomFrame');
+            const warpThreadsContainer = document.getElementById('warpThreads');
+            const weftRowsContainer = document.getElementById('weftRows');
+            const playhead = document.getElementById('playhead');
+            const playButton = document.getElementById('playButton');
+            const stopButton = document.getElementById('stopButton');
+            const clearButton = document.getElementById('clearButton');
+            const tempoSlider = document.getElementById('tempoSlider');
+            const tempoValueDisplay = document.getElementById('tempoValue');
+            const globalTensionSlider = document.getElementById('globalTension'); // Filter
+            const globalTensionValueDisplay = document.getElementById('globalTensionValue');
+            const delaySlider = document.getElementById('delayAmount');
+            const delayValueDisplay = document.getElementById('delayValue');
+            const reverbSlider = document.getElementById('reverbAmount');
+            const reverbValueDisplay = document.getElementById('reverbValue');
+            const swingSlider = document.getElementById('textureDensity'); // Swing
+            const swingValueDisplay = document.getElementById('densityValue');
+            const shuttleContainer = document.querySelector('.shuttle-container');
+            const techniqueButtons = document.querySelectorAll('.weaving-technique');
+            const paletteButtons = document.querySelectorAll('.palette-button');
+            const patternGrid = document.getElementById('patternGrid');
+            const savePatternButton = document.getElementById('savePattern');
+            const exportAudioButton = document.getElementById('exportAudio');
+            const exportPatternButton = document.getElementById('exportPattern');
+            const importPatternFile = document.getElementById('importPatternFile');
+            const unravelButton = document.getElementById('unravelButton');
+            const knotButton = document.getElementById('knotButton');
+            const tooltip = document.getElementById('tooltip');
+
+
+            // Initialize
+            function init() {
+                // Setup visuals and UI first
+                createWarpThreadsVisual();
+                createWeftRowsVisual();
+                setupEventListeners();
+                updatePlayheadPosition();
+                renderPatternLibrary();
+                
+                // Add a start button to the loading overlay to ensure user gesture
+                const startButton = document.createElement('button');
+                startButton.textContent = 'Start Sequencer';
+                startButton.style.marginTop = '20px';
+                startButton.style.padding = '10px 20px';
+                startButton.style.backgroundColor = 'var(--indigo)';
+                startButton.style.color = 'white';
+                startButton.style.border = 'none';
+                startButton.style.borderRadius = '4px';
+                startButton.style.cursor = 'pointer';
+                startButton.style.fontWeight = '500';
+                
+                startButton.addEventListener('click', async () => {
+                    try {
+                        // Start Tone.js with user gesture
+                        await Tone.start();
+                        // Now setup audio engine
+                        await setupAudioEngine();
+                        
+                        // Hide loading overlay
+                        loadingOverlay.classList.add('hidden');
+                        setTimeout(() => {
+                            if (loadingOverlay.parentElement) {
+                                loadingOverlay.parentElement.removeChild(loadingOverlay);
+                            }
+                        }, 500);
+                    } catch (e) {
+                        console.error('Error starting audio:', e);
+                        loadingOverlay.querySelector('.loading-text').textContent = 'Error starting audio. Please refresh and try again.';
+                    }
+                });
+                
+                loadingOverlay.appendChild(startButton);
+            }
+
+            async function setupAudioEngine() {
+                try {
+                    // Create audio components but don't start them yet
+                    masterVolume = new Tone.Volume(-6).toDestination();
+                    filter = new Tone.Filter(20000, "lowpass").connect(masterVolume);
+                    delay = new Tone.FeedbackDelay("8n", 0.1).connect(filter); // time, feedback
+                    reverb = new Tone.Reverb(1.5).connect(delay); // decay time
+
+                    // Apply initial effect values
+                    filter.frequency.value = Tone.Frequency("C8").valueOf() * (config.globalFilterCutoff / 100);
+                    delay.wet.value = config.delayAmount / 100;
+                    reverb.wet.value = config.reverbAmount / 100;
+                    Tone.Transport.swing = config.swingAmount / 100;
+
+                    loadSynthsForPalette();
+                } catch (e) {
+                    console.error('Error setting up audio engine:', e);
+                }
+            }
+
+            function loadSynthsForPalette() {
+                synths.forEach(synth => synth.dispose());
+                synths = [];
+                const palette = soundPalettes[config.currentPalette];
+                for (let i = 0; i < config.rows; i++) {
+                    const SynthConstructor = palette.synthTypes[i] || Tone.Synth; // Fallback to Tone.Synth
+                    const options = defaultSynthOptions[SynthConstructor.name] || {};
+                    const synth = new SynthConstructor(options).connect(reverb);
+                    synths.push(synth);
+                }
+                updateWeftRowLabels();
+            }
+
+            function createWarpThreadsVisual() {
+                warpThreadsContainer.innerHTML = '';
+                warpThreadsContainer.style.setProperty('--columns', config.columns); // For CSS if needed
+                const cellWidth = (loomFrame.clientWidth - 100) / config.columns; // 100px is label width
+
+                for (let i = 0; i < config.columns; i++) {
+                    const warpThread = document.createElement('div');
+                    warpThread.className = 'warp-thread';
+                    if (i % 4 === 0) warpThread.classList.add('emphasized');
+                    // Position warp threads in the center of each cell
+                    warpThread.style.position = 'absolute';
+                    warpThread.style.left = `${100 + (i * cellWidth) + (cellWidth / 2) - (i === 0 ? 0 : 0.5)}px`; // -0.5 for 1px width thread
+                    warpThread.style.width = (i % 4 === 0) ? '2px' : '1px'; // emphasized width
+                    warpThread.style.marginLeft = (i % 4 === 0) ? '-1px' : '-0.5px'; // center emphasized thread
+                    warpThreadsContainer.appendChild(warpThread);
+                }
+            }
+
+
+            function createWeftRowsVisual() {
+                weftRowsContainer.innerHTML = '';
+                const palette = soundPalettes[config.currentPalette];
+                for (let i = 0; i < config.rows; i++) {
+                    const weftRow = document.createElement('div');
+                    weftRow.className = 'weft-row';
+                    weftRow.dataset.row = i;
+
+                    const weftLabel = document.createElement('div');
+                    weftLabel.className = 'weft-label';
+                    weftLabel.textContent = palette.names[i] || `Track ${i + 1}`;
+                    weftLabel.title = weftLabel.textContent;
+                    weftRow.appendChild(weftLabel);
+
+                    const weftThreadEl = document.createElement('div');
+                    weftThreadEl.className = 'weft-thread';
+                    weftRow.appendChild(weftThreadEl);
+
+                    const weftCells = document.createElement('div');
+                    weftCells.className = 'weft-cells';
+
+                    for (let j = 0; j < config.columns; j++) {
+                        const weftCell = document.createElement('div');
+                        weftCell.className = 'weft-cell';
+                        weftCell.dataset.row = i;
+                        weftCell.dataset.col = j;
+                        if (patternData[i][j] === 1) weftCell.classList.add('active');
+                        if (patternData[i][j] === 2) weftCell.classList.add('active', 'accented');
+                        weftCells.appendChild(weftCell);
+                    }
+                    weftRow.appendChild(weftCells);
+                    weftRowsContainer.appendChild(weftRow);
+                }
+            }
+            function updateWeftRowLabels() {
+                const rows = document.querySelectorAll('.weft-row');
+                const palette = soundPalettes[config.currentPalette];
+                rows.forEach((rowEl, i) => {
+                    const label = rowEl.querySelector('.weft-label');
+                    if (label) {
+                        label.textContent = palette.names[i] || `Track ${i + 1}`;
+                        label.title = label.textContent;
+                    }
+                });
+            }
+
+
+            function setupEventListeners() {
+                playButton.addEventListener('click', togglePlay);
+                document.body.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' && e.target === document.body) { // Prevent spacebar on inputs/buttons
+                        e.preventDefault();
+                        togglePlay();
+                    }
+                });
+                stopButton.addEventListener('click', stopPlayback);
+                clearButton.addEventListener('click', clearLoom);
+
+                tempoSlider.addEventListener('input', e => {
+                    config.tempo = parseInt(e.target.value);
+                    tempoValueDisplay.textContent = `${config.tempo} BPM`;
+                    if (isPlaying) {
+                        Tone.Transport.bpm.value = config.tempo;
+                    }
+                });
+
+                globalTensionSlider.addEventListener('input', e => { // Filter
+                    config.globalFilterCutoff = parseInt(e.target.value);
+                    globalTensionValueDisplay.textContent = `${config.globalFilterCutoff}%`;
+                    if (filter) filter.frequency.value = Tone.Frequency("C8").valueOf() * (config.globalFilterCutoff / 100);
+                });
+                delaySlider.addEventListener('input', e => {
+                    config.delayAmount = parseInt(e.target.value);
+                    delayValueDisplay.textContent = `${config.delayAmount}%`;
+                    if (delay) delay.wet.value = config.delayAmount / 100;
+                });
+
+                reverbSlider.addEventListener('input', e => {
+                    config.reverbAmount = parseInt(e.target.value);
+                    reverbValueDisplay.textContent = `${config.reverbAmount}%`;
+                    if (reverb) reverb.wet.value = config.reverbAmount / 100;
+                });
+                swingSlider.addEventListener('input', e => { // Swing
+                    config.swingAmount = parseInt(e.target.value);
+                    swingValueDisplay.textContent = `${config.swingAmount}%`;
+                    if (Tone.Transport) Tone.Transport.swing = config.swingAmount / 100;
+                });
+
+
+                weftRowsContainer.addEventListener('click', handleCellClick);
+                shuttleContainer.addEventListener('click', handleShuttleClick);
+                techniqueButtons.forEach(btn => btn.addEventListener('click', handleTechniqueChange));
+                paletteButtons.forEach(btn => btn.addEventListener('click', handlePaletteChange));
+
+                patternGrid.addEventListener('click', handlePatternCardClick);
+                savePatternButton.addEventListener('click', saveCurrentPatternToLibrary);
+
+                exportAudioButton.addEventListener('click', () => showTooltip('Audio export coming soon!', exportAudioButton));
+                exportPatternButton.addEventListener('click', exportPatternJSON);
+                importPatternFile.addEventListener('change', importPatternJSON);
+
+                unravelButton.addEventListener('click', unravelPattern);
+                knotButton.addEventListener('click', addKnots);
+
+                // Tooltip listeners for all buttons and inputs with titles
+                document.querySelectorAll('[title]').forEach(el => {
+                    el.addEventListener('mouseenter', (e) => showTooltip(el.title, el));
+                    el.addEventListener('mouseleave', hideTooltip);
+                    el.addEventListener('mousemove', (e) => updateTooltipPosition(e.clientX, e.clientY));
+                });
+            }
+
+            function handleCellClick(event) {
+                const cell = event.target.closest('.weft-cell');
+                if (!cell) return;
+
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+
+                if (config.currentShuttle === 4) { // Shuttle 4 is for accent
+                    if (patternData[row][col] === 2) { // If already accented, turn off
+                        patternData[row][col] = 0;
+                        cell.classList.remove('active', 'accented');
+                    } else { // Otherwise, make it accented
+                        patternData[row][col] = 2;
+                        cell.classList.add('active', 'accented');
+                    }
+                } else { // Shuttles 1, 2, 3 for regular notes (velocity implied by shuttle)
+                    if (patternData[row][col] > 0) { // If active (regular or accented), turn off
+                        patternData[row][col] = 0;
+                        cell.classList.remove('active', 'accented');
+                    } else { // Otherwise, make it regular active
+                        patternData[row][col] = 1; // Store as regular active, actual velocity handled by shuttle during playback
+                        cell.classList.add('active');
+                        cell.classList.remove('accented'); // Ensure not accented
+                    }
+                }
+            }
+
+
+            function handleShuttleClick(event) {
+                const shuttleEl = event.target.closest('.shuttle');
+                if (!shuttleEl) return;
+                document.querySelectorAll('.shuttle.active').forEach(s => s.classList.remove('active'));
+                shuttleEl.classList.add('active');
+                config.currentShuttle = parseInt(shuttleEl.dataset.shuttle);
+            }
+
+            function handleTechniqueChange(event) {
+                document.querySelectorAll('.weaving-technique.active').forEach(btn => btn.classList.remove('active'));
+                event.target.classList.add('active');
+                config.currentTechnique = event.target.dataset.technique;
+            }
+
+            function handlePaletteChange(event) {
+                document.querySelectorAll('.palette-button.active').forEach(btn => btn.classList.remove('active'));
+                event.target.classList.add('active');
+                config.currentPalette = event.target.dataset.palette;
+                loadSynthsForPalette();
+            }
+
+            async function togglePlay() {
+                try {
+                    if (Tone.context.state !== 'running') {
+                        await Tone.start(); // Ensure Tone.js is started
+                    }
+                    if (isPlaying) pausePlayback(); else startPlayback();
+                } catch (e) {
+                    console.error('Error toggling playback:', e);
+                    alert('Could not start audio. Please try again.');
+                }
+            }
+
+            function startPlayback() {
+                isPlaying = true;
+                playButton.textContent = 'Pause';
+                playButton.classList.add('active');
+                Tone.Transport.bpm.value = config.tempo;
+                Tone.Transport.swing = config.swingAmount / 100;
+
+                sequence = new Tone.Sequence((time, step) => {
+                    currentStep = step;
+                    updatePlayheadPosition();
+                    highlightPlayingCells(step);
+
+                    patternData.forEach((rowData, rowIndex) => {
+                        const cellState = rowData[step];
+                        if (cellState > 0) { // Cell is active (1 for regular, 2 for accented)
+                            const synth = synths[rowIndex];
+                            const palette = soundPalettes[config.currentPalette];
+                            const pitch = palette.pitchMap[rowIndex] || 'C4';
+                            let velocity;
+                            // Velocity logic: shuttle 4 is max, others are proportional
+                            if (cellState === 2) { // Accented, always max velocity
+                                velocity = 1.0;
+                            } else { // Regular note, velocity based on last used shuttle (or default if not explicit)
+                                // This interpretation might need refinement. Let's assume current shuttle sets velocity for *new* notes.
+                                // For *existing* notes, we might need to store shuttle with the note, or have a default.
+                                // For now, let's make regular notes have a fixed medium velocity, and shuttle changes accent.
+                                velocity = 0.7; // Shuttle 4 will override this to 1.0 for accented notes
+                            }
+                             // Let's refine velocity: shuttle dictates velocity of notes *placed* by it or overall playback.
+                             // For simplicity, let's use a mapping for playback now.
+                            switch(config.currentShuttle) { // This applies to ALL notes played while this shuttle is active
+                                case 1: velocity = 0.3; break; // ppp
+                                case 2: velocity = 0.6; break; // mp
+                                case 3: velocity = 0.85; break; // f
+                                case 4: velocity = (cellState === 2) ? 1.0 : 0.85; break; // ff for accent, f for regular
+                                default: velocity = 0.7;
+                            }
+
+
+                            let duration = "16n";
+                            // Apply weaving technique
+                            if (config.currentTechnique === 'twill' && synth.triggerAttackRelease) {
+                                synth.triggerAttackRelease(pitch, duration, time, velocity * 0.8);
+                                synth.triggerAttackRelease(pitch, duration, time + Tone.Time("32n").toSeconds(), velocity); // Slight delay for flam
+                            } else if (config.currentTechnique === 'satin' && synth.triggerAttackRelease) {
+                                duration = "8n"; // Longer duration for satin
+                                synth.triggerAttackRelease(pitch, duration, time, velocity);
+                            } else if (synth.triggerAttackRelease) { // Plain
+                                synth.triggerAttackRelease(pitch, duration, time, velocity);
+                            }
+                            // Visual feedback for thread playing
+                            const rowEl = weftRowsContainer.children[rowIndex];
+                            if(rowEl) {
+                                const threadEl = rowEl.querySelector('.weft-thread');
+                                if(threadEl) {
+                                    threadEl.classList.add('playing-sound');
+                                    setTimeout(() => threadEl.classList.remove('playing-sound'), 150);
+                                }
+                            }
+                        }
+                    });
+                }, Array.from(Array(config.columns).keys()), "16n").start(0);
+
+                Tone.Transport.start();
+            }
+
+            function pausePlayback() {
+                isPlaying = false;
+                playButton.textContent = 'Play';
+                playButton.classList.remove('active');
+                if (sequence) sequence.stop(0); // Stop the sequence
+                Tone.Transport.pause(); // Pause transport to maintain position
+                clearPlayingHighlights();
+            }
+
+            function stopPlayback() {
+                isPlaying = false;
+                playButton.textContent = 'Play';
+                playButton.classList.remove('active');
+                if (sequence) {
+                    sequence.stop(0);
+                    sequence.dispose(); // Important to dispose to avoid multiple sequences
+                    sequence = null;
+                }
+                Tone.Transport.stop();
+                currentStep = 0;
+                updatePlayheadPosition();
+                clearPlayingHighlights();
+            }
+
+            function clearLoom() {
+                stopPlayback();
+                patternData = Array(config.rows).fill(null).map(() => Array(config.columns).fill(0));
+                createWeftRowsVisual(); // Redraws cells based on empty patternData
+            }
+
+            function updatePlayheadPosition() {
+                const cellWidth = (loomFrame.clientWidth - 100) / config.columns;
+                const playheadOffset = 100 + (currentStep * cellWidth);
+                playhead.style.left = `${playheadOffset}px`;
+            }
+            function highlightPlayingCells(step) {
+                clearPlayingHighlights();
+                const cells = document.querySelectorAll(`.weft-cell[data-col="${step}"]`);
+                cells.forEach(cell => cell.classList.add('playing'));
+            }
+            function clearPlayingHighlights() {
+                document.querySelectorAll('.weft-cell.playing').forEach(cell => cell.classList.remove('playing'));
+            }
+
+            // Pattern Library
+            function renderPatternLibrary() {
+                patternGrid.innerHTML = ''; // Clear existing
+                Object.entries(savedPatterns).forEach(([name, data]) => {
+                    const card = createPatternCard(name, data.origin || "User Saved", data.pattern);
+                    patternGrid.appendChild(card);
+                });
+                 // Add built-in patterns
+                const builtIn = {
+                    plainweave: {pattern: [[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],[0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0],[0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],[1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0],[0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1]], origin: "Traditional"},
+                    ikat: {pattern: [[1,0,1,0,0,0,1,0,1,0,0,0,1,0,1,0],[0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0],[0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,1],[1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0],[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],[1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0],[0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1]], origin: "Indonesia"},
+                    kente: {pattern: [[1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0],[0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],[1,1,1,0,0,0,0,0,1,1,1,0,0,0,0,0],[0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0],[0,0,0,0,0,1,1,1,0,0,0,0,0,1,1,1],[1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1]], origin: "Ghana"}
+                };
+                Object.entries(builtIn).forEach(([name, data]) => {
+                    if (!savedPatterns[name]) { // Avoid duplicates if user saved one with same name
+                        const card = createPatternCard(name, data.origin, data.pattern);
+                        patternGrid.appendChild(card);
+                    }
+                });
+
+            }
+            function createPatternCard(name, origin, pData) {
+                const card = document.createElement('div');
+                card.className = 'pattern-card';
+                card.dataset.patternName = name;
+
+                const preview = document.createElement('div');
+                preview.className = 'pattern-preview';
+                // Generate a simple visual preview
+                if (pData && pData.length > 0 && pData[0].length > 0) {
+                    const rowsToDisplay = Math.min(pData.length, 8); // Max 8 rows in preview
+                    const colsToDisplay = Math.min(pData[0].length, 16); // Max 16 cols
+                    preview.style.gridTemplateRows = `repeat(${rowsToDisplay}, 1fr)`;
+                    preview.style.gridTemplateColumns = `repeat(${colsToDisplay}, 1fr)`;
+                    preview.style.display = 'grid';
+                    preview.style.gap = '1px';
+
+
+                    for(let r=0; r < rowsToDisplay; r++) {
+                        for(let c=0; c < colsToDisplay; c++) {
+                            const dot = document.createElement('div');
+                            dot.className = 'pattern-preview-dot';
+                            if (pData[r] && pData[r][c] > 0) dot.classList.add('active');
+                            preview.appendChild(dot);
+                        }
+                    }
+                } else {
+                    preview.style.backgroundImage = `url('https://picsum.photos/seed/${name}/120/60')`; // Fallback
+                }
+
+
+                const info = document.createElement('div');
+                info.className = 'pattern-info';
+                const nameEl = document.createElement('h3');
+                nameEl.className = 'pattern-name';
+                nameEl.textContent = name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()); // Format name
+                const originEl = document.createElement('p');
+                originEl.className = 'pattern-origin';
+                originEl.textContent = origin;
+
+                info.appendChild(nameEl);
+                info.appendChild(originEl);
+                card.appendChild(preview);
+                card.appendChild(info);
+                return card;
+            }
+            function handlePatternCardClick(event) {
+                const card = event.target.closest('.pattern-card');
+                if (!card) return;
+                const patternName = card.dataset.patternName;
+                let patternToLoad = savedPatterns[patternName]?.pattern;
+
+                if(!patternToLoad) { // Check built-in if not in saved
+                     const builtIn = {
+                        plainweave: {pattern: [[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],[0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0],[0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],[1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0],[0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1]], origin: "Traditional"},
+                        ikat: {pattern: [[1,0,1,0,0,0,1,0,1,0,0,0,1,0,1,0],[0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0],[0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,1],[1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0],[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],[1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0],[0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1]], origin: "Indonesia"},
+                        kente: {pattern: [[1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0],[0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],[1,1,1,0,0,0,0,0,1,1,1,0,0,0,0,0],[0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0],[0,0,0,0,0,1,1,1,0,0,0,0,0,1,1,1],[1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1]], origin: "Ghana"}
+                    };
+                    patternToLoad = builtIn[patternName]?.pattern;
+                }
+
+                if (patternToLoad) {
+                    // Ensure patternToLoad has the correct structure
+                    patternData = Array(config.rows).fill(null).map((_, r) =>
+                        Array(config.columns).fill(0).map((__, c) =>
+                            (patternToLoad[r] && patternToLoad[r][c] !== undefined) ? patternToLoad[r][c] : 0
+                        )
+                    );
+                    createWeftRowsVisual(); // Redraw loom with new pattern
+                }
+            }
+
+            function saveCurrentPatternToLibrary() {
+                let patternName = prompt("Enter pattern name:", `Custom Pattern ${Object.keys(savedPatterns).length + 1}`);
+                if (!patternName) return; // User cancelled
+                patternName = patternName.replace(/\s+/g, '_').toLowerCase(); // Sanitize
+
+                savedPatterns[patternName] = {
+                    pattern: JSON.parse(JSON.stringify(patternData)), // Deep copy
+                    origin: "User Saved",
+                    config: JSON.parse(JSON.stringify(config)) // Save current config with pattern
+                };
+                localStorage.setItem('weftPatterns', JSON.stringify(savedPatterns));
+                renderPatternLibrary();
+            }
+            function loadPatternsFromStorage() {
+                const stored = localStorage.getItem('weftPatterns');
+                return stored ? JSON.parse(stored) : {};
+            }
+
+            function exportPatternJSON() {
+                const dataToExport = {
+                    pattern: patternData,
+                    config: config
+                };
+                const jsonString = JSON.stringify(dataToExport, null, 2);
+                const blob = new Blob([jsonString], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `weft_pattern_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showTooltip('Pattern Exported!', exportPatternButton);
+            }
+
+            function importPatternJSON(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        if (imported.pattern && imported.config) {
+                            patternData = imported.pattern;
+                            // Apply relevant config settings
+                            config.tempo = imported.config.tempo || 120;
+                            config.currentPalette = imported.config.currentPalette || 'indigo';
+                            // ... apply other config settings
+                            tempoSlider.value = config.tempo;
+                            tempoValueDisplay.textContent = `${config.tempo} BPM`;
+                            document.querySelector(`.palette-button[data-palette="${config.currentPalette}"]`)?.click();
+                            
+                            // Resize patternData if imported dimensions differ from current config
+                            const importedRows = patternData.length;
+                            const importedCols = patternData[0] ? patternData[0].length : 0;
+
+                            const newPatternData = Array(config.rows).fill(null).map((_, r) =>
+                                Array(config.columns).fill(0).map((__, c) => {
+                                    if (r < importedRows && c < importedCols) {
+                                        return patternData[r][c];
+                                    }
+                                    return 0;
+                                })
+                            );
+                            patternData = newPatternData;
+                            createWeftRowsVisual();
+                            showTooltip('Pattern Imported!', importPatternFile.previousElementSibling);
+                        } else {
+                            alert('Invalid pattern file format.');
+                        }
+                    } catch (err) {
+                        alert('Error reading pattern file: ' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+                importPatternFile.value = ''; // Reset file input
+            }
+
+            function unravelPattern() {
+                for (let r = 0; r < config.rows; r++) {
+                    for (let c = 0; c < config.columns; c++) {
+                        if (patternData[r][c] > 0 && Math.random() < 0.3) { // 30% chance to unravel
+                            patternData[r][c] = 0;
+                        }
+                    }
+                }
+                createWeftRowsVisual();
+            }
+            function addKnots() {
+                const knotsToAdd = Math.floor(config.rows * config.columns * 0.05); // Add 5% knots
+                for (let i = 0; i < knotsToAdd; i++) {
+                    const r = Math.floor(Math.random() * config.rows);
+                    const c = Math.floor(Math.random() * config.columns);
+                    patternData[r][c] = (Math.random() < 0.2) ? 2 : 1; // 20% chance of accent
+                }
+                createWeftRowsVisual();
+            }
+
+            // Tooltip
+            function showTooltip(text, element) {
+                tooltip.textContent = text;
+                tooltip.style.opacity = '1';
+                const rect = element.getBoundingClientRect();
+                updateTooltipPosition(rect.left + rect.width / 2, rect.top);
+            }
+            function hideTooltip() {
+                tooltip.style.opacity = '0';
+            }
+            function updateTooltipPosition(x, y) {
+                 // Position tooltip above the element, centered horizontally
+                tooltip.style.left = `${x}px`;
+                tooltip.style.top = `${y - 10}px`; // 10px above
+                tooltip.style.transform = 'translate(-50%, -100%)';
+            }
+
+
+            // Initial call
+            init();
+            window.addEventListener('resize', () => {
+                createWarpThreadsVisual();
+                updatePlayheadPosition(); // Recalculate playhead based on new width
+            });
+
+        });
+    </script>
+</body>
+</html>

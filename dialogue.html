@@ -1,0 +1,3333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dialogue - Conversational Rhythm Sequencer</title>
+  <style>
+    :root {
+      --color-bg: #f8ffef; /* Slightly warmer off-white */
+      --color-text: #222;
+      --color-voice1: #ff7e5f; /* Assertive - fiery orange */
+      --color-voice2: #48b5c4; /* Inquiring - cool blue */
+      --color-voice3: #a162e8; /* Hesitant - thoughtful purple */
+      --color-voice4: #6bd968; /* Supportive - calm green */
+      --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    body {
+      font-family: var(--font-main);
+      margin: 0;
+      padding: 0;
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      overflow: hidden;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+    }
+    
+    .header {
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .title {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .transport {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    
+    .transport-divider {
+      height: 20px;
+      width: 1px;
+      background-color: #ddd;
+      margin: 0 0.5rem;
+    }
+    
+    .btn {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .btn:hover {
+      background: #f0f0f0;
+    }
+    
+    .btn.active {
+      background: #e0e0e0;
+      box-shadow: inset 0 0 0 2px var(--color-text);
+    }
+    
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    .sidebar {
+      width: 250px;
+      border-right: 1px solid #ddd;
+      padding: 1rem;
+      overflow-y: auto;
+      background-color: #fcfcfc; /* Slightly different sidebar background */
+    }
+    
+    .voices {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .voice {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid #eee; /* Add a subtle border */
+    }
+    
+    .voice:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .voice.active {
+      box-shadow: 0 0 0 2px currentColor; /* Uses voice color for active state */
+    }
+    
+    .voice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    
+    .voice-title {
+      font-weight: bold;
+    }
+    
+    .voice-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    
+    .voice-icon {
+      width: 24px; /* Larger hit area */
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    
+    .voice-icon:hover {
+        background: #f0f0f0;
+    }
+
+    .voice-icon.muted svg {
+        opacity: 0.4;
+        stroke: #999;
+    }
+
+    .voice-icon.soloed {
+        background-color: rgba(0,0,0,0.1);
+        box-shadow: inset 0 0 0 1px currentColor; /* Use voice color for solo outline */
+    }
+    
+    .voice-params {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    
+    .param {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    
+    .param-label {
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+    
+    .param-value {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .param-slider {
+      flex: 1;
+    }
+    
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: #ddd;
+      border-radius: 5px;
+      outline: none;
+      opacity: 0.7;
+      transition: opacity .2s;
+    }
+    
+    input[type="range"]:hover {
+      opacity: 1;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--color-text);
+      cursor: pointer;
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--color-text);
+      cursor: pointer;
+    }
+
+    .select {
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: white;
+      font-family: var(--font-main);
+      color: var(--color-text);
+      cursor: pointer;
+    }
+    
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background-color: var(--color-bg); /* Match body background */
+      min-height: 400px; /* Ensure minimum height */
+      min-width: 800px; /* Ensure minimum width */
+      border: 1px solid #ddd; /* Add border for visibility */
+      cursor: pointer; /* Show pointer cursor to indicate interactivity */
+    }
+    
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      /* Remove width/height here; handled by JS resizeCanvas */
+    }
+    
+    .tools {
+      position: absolute;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 0.8rem;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 50px;
+      padding: 0.8rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.2);
+      z-index: 100;
+    }
+    
+    .tool {
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative; /* For tooltip positioning */
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+      overflow: hidden;
+    }
+    
+    /* Tool-specific colors */
+    .tool[data-tool="draw"] {
+      background: linear-gradient(to bottom, rgba(85, 255, 85, 0.3), rgba(85, 255, 85, 0.1));
+      border: 2px solid rgba(85, 255, 85, 0.5);
+    }
+    
+    .tool[data-tool="respond"] {
+      background: linear-gradient(to bottom, rgba(85, 85, 255, 0.3), rgba(85, 85, 255, 0.1));
+      border: 2px solid rgba(85, 85, 255, 0.5);
+    }
+    
+    .tool[data-tool="interrupt"] {
+      background: linear-gradient(to bottom, rgba(255, 85, 0, 0.3), rgba(255, 85, 0, 0.1));
+      border: 2px solid rgba(255, 85, 0, 0.5);
+    }
+    
+    .tool[data-tool="misunderstand"] {
+      background: linear-gradient(to bottom, rgba(170, 85, 170, 0.3), rgba(170, 85, 170, 0.1));
+      border: 2px solid rgba(170, 85, 170, 0.5);
+    }
+    
+    .tool[data-tool="monologue"] {
+      background: linear-gradient(to bottom, rgba(85, 170, 85, 0.3), rgba(85, 170, 85, 0.1));
+      border: 2px solid rgba(85, 170, 85, 0.5);
+    }
+    
+    .tool:hover {
+      transform: scale(1.1);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    
+    .tool.active {
+      transform: scale(1.15);
+      box-shadow: 0 0 15px rgba(255,255,255,0.5);
+    }
+    
+    /* Active state for each tool */
+    .tool[data-tool="draw"].active {
+      background: linear-gradient(to bottom, rgba(85, 255, 85, 0.8), rgba(85, 255, 85, 0.6));
+      border: 2px solid rgba(255, 255, 255, 0.8);
+    }
+    
+    .tool[data-tool="respond"].active {
+      background: linear-gradient(to bottom, rgba(85, 85, 255, 0.8), rgba(85, 85, 255, 0.6));
+      border: 2px solid rgba(255, 255, 255, 0.8);
+    }
+    
+    .tool[data-tool="interrupt"].active {
+      background: linear-gradient(to bottom, rgba(255, 85, 0, 0.8), rgba(255, 85, 0, 0.6));
+      border: 2px solid rgba(255, 255, 255, 0.8);
+    }
+    
+    .tool[data-tool="misunderstand"].active {
+      background: linear-gradient(to bottom, rgba(170, 85, 170, 0.8), rgba(170, 85, 170, 0.6));
+      border: 2px solid rgba(255, 255, 255, 0.8);
+    }
+    
+    .tool[data-tool="monologue"].active {
+      background: linear-gradient(to bottom, rgba(85, 170, 85, 0.8), rgba(85, 170, 85, 0.6));
+      border: 2px solid rgba(255, 255, 255, 0.8);
+    }
+    
+    .tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+      pointer-events: none;
+      margin-bottom: 5px;
+    }
+    
+    .tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+    }
+    
+    .tool:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .context-menu {
+      position: absolute;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 0.5rem;
+      z-index: 10;
+      display: none;
+      border: 1px solid #eee;
+    }
+    
+    .context-menu-item {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      white-space: nowrap;
+      border-radius: 4px;
+    }
+    
+    .context-menu-item:hover {
+      background: #f0f0f0;
+    }
+    
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      display: none;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      width: 400px;
+      max-width: 90vw;
+      border: 1px solid #eee;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+    
+    .modal-close {
+      cursor: pointer;
+      opacity: 0.7;
+    }
+    
+    .modal-close:hover {
+      opacity: 1;
+    }
+    
+    .modal-body {
+      margin-bottom: 1rem;
+    }
+    
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    /* Onboarding Overlay Styles */
+    .onboarding-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .onboarding-content {
+      background-color: white;
+      border-radius: 8px;
+      padding: 2rem;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .onboarding-step {
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .onboarding-step:last-child {
+      border-bottom: none;
+    }
+    
+    .onboarding-step h3 {
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+    
+    .onboarding-step ul {
+      padding-left: 1.5rem;
+    }
+    
+    .onboarding-step li {
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Feedback Toast Styles */
+    .feedback-toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      font-size: 1rem;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+      z-index: 1000;
+      pointer-events: none;
+      max-width: 80%;
+      text-align: center;
+    }
+    
+    .feedback-toast.success {
+      background-color: rgba(46, 204, 113, 0.9);
+    }
+    
+    .feedback-toast.error {
+      background-color: rgba(231, 76, 60, 0.9);
+    }
+    
+    .feedback-toast.visible {
+      opacity: 1;
+    }
+    
+    /* OS-1 Inspired Onboarding Overlay */
+    .os1-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      opacity: 1;
+      transition: opacity 0.5s ease-in-out;
+      pointer-events: auto;
+    }
+    
+    .os1-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .os1-container {
+      max-width: 600px;
+      padding: 2rem;
+      color: white;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+    }
+    
+    .os1-logo {
+      font-size: 3rem;
+      font-weight: 200;
+      letter-spacing: 0.2rem;
+      margin-bottom: 1rem;
+      color: #fff;
+      opacity: 0.9;
+    }
+    
+    .os1-welcome {
+      font-size: 1.2rem;
+      line-height: 1.6;
+      font-weight: 300;
+      opacity: 0.9;
+    }
+    
+    .os1-instructions {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 500px;
+    }
+    
+    .os1-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      text-align: left;
+    }
+    
+    .os1-step-number {
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      flex-shrink: 0;
+      margin-top: 0.5rem;
+    }
+    
+    .os1-step-content h3 {
+      margin: 0 0 0.5rem 0;
+      font-weight: 400;
+      font-size: 1.2rem;
+    }
+    
+    .os1-step-content p {
+      margin: 0;
+      opacity: 0.8;
+      font-weight: 300;
+    }
+    
+    .os1-highlight {
+      color: #3498db;
+      font-weight: 400;
+    }
+    
+    .os1-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .os1-button {
+      background-color: rgba(52, 152, 219, 0.8);
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      font-size: 1rem;
+      border-radius: 2rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 300;
+      letter-spacing: 0.05rem;
+      min-width: 120px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+    
+    .os1-button:hover {
+      background-color: rgba(52, 152, 219, 1);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .os1-button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    
+    .os1-button-secondary {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .os1-button-secondary:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Highlight for active elements */
+    .highlight-pulse {
+      animation: pulse 1s ease-in-out;
+      outline: 2px solid #ff7e5f;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    
+    @keyframes pulse {
+      0% { outline-color: rgba(255, 126, 95, 0.5); }
+      50% { outline-color: rgba(255, 126, 95, 1); }
+      100% { outline-color: rgba(255, 126, 95, 0.5); }
+    }
+    
+    /* Voice-specific colors (for text and active states in sidebar) */
+    .voice-1 { color: var(--color-voice1); }
+    .voice-2 { color: var(--color-voice2); }
+    .voice-3 { color: var(--color-voice3); }
+    .voice-4 { color: var(--color-voice4); }
+    
+    /* Settings panel */
+    .settings-panel {
+      position: absolute;
+      right: 0;
+      top: 0;
+      height: 100%;
+      width: 300px;
+      background: white;
+      border-left: 1px solid #ddd;
+      padding: 1rem;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      overflow-y: auto;
+      box-shadow: -2px 0 8px rgba(0,0,0,0.05);
+    }
+    
+    .settings-panel.active {
+      transform: translateX(0);
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .settings-section {
+      margin-bottom: 1.5rem;
+    }
+    
+    .settings-title {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .range-with-value {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .range-with-value input {
+        flex: 1;
+    }
+
+    /* Pattern Editor Grid */
+    .pattern-editor {
+        overflow-x: auto;
+        padding-bottom: 10px; /* Space for scrollbar */
+    }
+
+    .pattern-grid {
+        display: grid;
+        grid-template-columns: repeat(16, 25px); /* Default to 16 steps, will be overridden */
+        grid-auto-rows: 25px;
+        border: 1px solid #eee;
+        background-color: #fcfcfc;
+        width: fit-content; /* Allow content to dictate width for overflow */
+        min-width: 100%; /* Ensure it takes at least 100% of parent width */
+    }
+
+    .pattern-cell {
+        width: 25px;
+        height: 25px;
+        border: 1px solid #eee;
+        box-sizing: border-box;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #fff;
+        transition: background-color 0.1s ease;
+    }
+
+    .pattern-cell:hover {
+        background-color: #f0f0f0;
+    }
+
+    .pattern-cell.active {
+        background-color: var(--cell-color, #ccc); /* Uses voice color */
+        border-color: var(--cell-color, #ccc);
+        filter: brightness(0.9); /* Slightly darker for active state */
+    }
+
+    #load-file-input {
+      display: none; /* Hide the default file input */
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">Dialogue</div>
+      <div class="transport">
+        <button class="btn" id="btn-settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+        <button class="btn" id="btn-play">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        </button>
+        <button class="btn" id="btn-stop">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="6" y="6" width="12" height="12"></rect>
+          </svg>
+        </button>
+        <button class="btn" id="btn-save">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+        </button>
+        <button class="btn" id="btn-load">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </button>
+        <input type="file" id="load-file-input" accept=".json">
+        
+        <!-- Divider -->
+        <div class="transport-divider"></div>
+        
+        <!-- Clear Grid Button -->
+        <button class="btn" id="btn-clear" title="Clear all patterns">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+        </button>
+        
+        <!-- Regenerate Patterns Button -->
+        <button class="btn" id="btn-regenerate" title="Generate new patterns">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="main">
+      <div class="sidebar">
+        <div class="voices">
+          <div class="voice voice-1 active" data-voice="1">
+            <div class="voice-header">
+              <div class="voice-title">Assertive</div>
+              <div class="voice-controls">
+                <div class="voice-icon" data-action="mute">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                </div>
+                <div class="voice-icon" data-action="solo">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18V5l12 7-12 7z"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="voice-params">
+              <div class="param">
+                <div class="param-label">Assertiveness</div>
+                <div class="param-value">
+                  <input type="range" class="param-slider" min="0" max="100" value="80" data-param="assertiveness">
+                  <span>80%</span>
+                </div>
+              </div>
+              <div class="param">
+                <div class="param-label">Interruption</div>
+                <div class="param-value">
+                  <input type="range" class="param-slider" min="0" max="100" value="75" data-param="interruption">
+                  <span>75%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="voice voice-2" data-voice="2">
+            <div class="voice-header">
+              <div class="voice-title">Inquiring</div>
+              <div class="voice-controls">
+                <div class="voice-icon" data-action="mute">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                </div>
+                <div class="voice-icon" data-action="solo">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18V5l12 7-12 7z"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="voice-params">
+              <div class="param">
+                <div class="param-label">Curiosity</div>
+                <div class="param-value">
+                  <input type="range" class="param-slider" min="0" max="100" value="90" data-param="curiosity">
+                  <span>90%</span>
+                </div>
+              </div>
+              <div class="param">
+                <div class="param-label">Response Rate</div>
+                <div class="param-value">
+                  <input type="range" class="param-slider" min="0" max="100" value="60" data-param="responseRate">
+                  <span>60%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="voice voice-3" data-voice="3">
+            <div class="voice-header">
+              <div class="voice-title">Hesitant</div>
+              <div class="voice-controls">
+                <div class="voice-icon" data-action="mute">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                </div>
+                <div class="voice-icon" data-action="solo">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18V5l12 7-12 7z"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="voice-params">
+              <div class="param">
+                <div class="param-label">Hesitation</div>
+                <div class="param-value">
+                  <input type="range" class="param-slider" min="0" max="100" value="75" data-param="hesitation">
+                  <span>75%</span>
+                </div>
+              </div>
+              <div class="param">
+                <div class="param-label">Variability</div>
+                <div class="param-value">
+                  <input type="range" class="param-slider" min="0" max="100" value="40" data-param="variability">
+                  <span>40%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="voice voice-4" data-voice="4">
+            <div class="voice-header">
+              <div class="voice-title">Supportive</div>
+              <div class="voice-controls">
+                <div class="voice-icon" data-action="mute">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                </div>
+                <div class="voice-icon" data-action="solo">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18V5l12 7-12 7z"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="voice-params">
+              <div class="param">
+                <div class="param-label">Support Level</div>
+                <div class="param-value">
+                  <input type="range" class="param-slider" min="0" max="100" value="85" data-param="supportLevel">
+                  <span>85%</span>
+                </div>
+              </div>
+              <div class="param">
+                <div class="param-label">Harmony</div>
+                <div class="param-value">
+                  <input type="range" class="param-slider" min="0" max="100" value="70" data-param="harmony">
+                  <span>70%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="canvas-container">
+        <canvas id="canvas-bg"></canvas>
+        <canvas id="canvas-main"></canvas>
+        <canvas id="canvas-ui"></canvas>
+        
+        <div class="tools">
+          <div class="tool active" data-tool="draw" title="Draw Tool: Create basic patterns">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+              <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+              <path d="M2 2l7.586 7.586"></path>
+              <circle cx="11" cy="11" r="2"></circle>
+            </svg>
+            <span class="tooltip">Draw</span>
+          </div>
+          <div class="tool" data-tool="respond" title="Response Tool: Create a pattern that responds to another">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+            <span class="tooltip">Respond</span>
+          </div>
+          <div class="tool" data-tool="interrupt" title="Interrupt Tool: Create a pattern that interrupts another">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            <span class="tooltip">Interrupt</span>
+          </div>
+          <div class="tool" data-tool="misunderstand" title="Misunderstand Tool: Create a pattern that misinterprets another">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span class="tooltip">Misunderstand</span>
+          </div>
+          <div class="tool" data-tool="monologue" title="Monologue Tool: Create a longer, uninterrupted pattern">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="tooltip">Monologue</span>
+          </div>
+        </div>
+        
+        <div class="context-menu" id="context-menu">
+          <div class="context-menu-item" data-action="edit">Edit Pattern</div>
+          <div class="context-menu-item" data-action="duplicate">Duplicate</div>
+          <div class="context-menu-item" data-action="delete">Delete</div>
+          <div class="context-menu-item" data-action="change-voice">Change Voice</div>
+        </div>
+        
+        <!-- Onboarding placeholder - using OS-1 style instead -->
+        <div id="onboarding-placeholder"></div>
+        
+        <!-- Feedback Toast -->
+        <div class="feedback-toast" id="feedback-toast"></div>
+        
+        <!-- OS-1 Inspired Onboarding Overlay -->
+        <div class="os1-overlay" id="os1-overlay">
+          <div class="os1-container">
+            <div class="os1-logo">Dialogue</div>
+            <div class="os1-welcome">
+              <p>Hello, I'm <span class="os1-highlight">Dialogue</span>, a conversational rhythm sequencer.</p>
+              <p>I create musical dialogues between different voices.</p>
+            </div>
+            <div class="os1-instructions">
+              <div class="os1-step">
+                <div class="os1-step-number">1</div>
+                <div class="os1-step-content">
+                  <h3>Select a Tool</h3>
+                  <p>Use the toolbar at the bottom to choose how voices interact.</p>
+                </div>
+              </div>
+              <div class="os1-step">
+                <div class="os1-step-number">2</div>
+                <div class="os1-step-content">
+                  <h3>Create Patterns</h3>
+                  <p>Click on the grid to place patterns for each voice.</p>
+                </div>
+              </div>
+              <div class="os1-step">
+                <div class="os1-step-number">3</div>
+                <div class="os1-step-content">
+                  <h3>Play & Modify</h3>
+                  <p>Press play to hear your conversation, then modify as desired.</p>
+                </div>
+              </div>
+              <div class="os1-step">
+                <div class="os1-step-number">4</div>
+                <div class="os1-step-content">
+                  <h3>Clear & Regenerate</h3>
+                  <p>Use the clear and regenerate buttons to reset or create new patterns.</p>
+                </div>
+              </div>
+            </div>
+            <div class="os1-actions">
+              <button id="os1-start-button" class="os1-button">Begin</button>
+              <button id="os1-skip-button" class="os1-button os1-button-secondary">Skip Tutorial</button>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+      
+      <div class="settings-panel" id="settings-panel">
+        <div class="settings-header">
+          <div class="settings-title">Settings</div>
+          <button class="btn" id="btn-close-settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="settings-section">
+          <div class="settings-title">Conversation Topic</div>
+          <select id="conversation-topic" class="select">
+            <option value="casual">Casual Chat</option>
+            <option value="debate">Heated Debate</option>
+            <option value="storytelling">Storytelling</option>
+            <option value="poetry">Poetry Reading</option>
+          </select>
+        </div>
+        
+        <div class="settings-section">
+          <div class="settings-title">Room Ambience</div>
+          <input type="range" min="0" max="100" value="30" id="room-ambience">
+        </div>
+        
+        <div class="settings-section">
+          <div class="settings-title">Tempo</div>
+          <div class="range-with-value">
+            <input type="range" min="60" max="180" value="120" id="tempo">
+            <span id="tempo-value">120 BPM</span>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <div class="settings-title">Rhythmic Grid</div>
+          <select id="grid-resolution" class="select">
+            <option value="4">1/4 Note</option>
+            <option value="8" selected>1/8 Note</option>
+            <option value="16">1/16 Note</option>
+            <option value="32">1/32 Note</option>
+          </select>
+        </div>
+        
+        <div class="settings-section">
+          <div class="settings-title">Misunderstanding Rate</div>
+          <input type="range" min="0" max="100" value="20" id="misunderstanding-rate">
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="modal" id="modal-pattern">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Edit Pattern</div>
+        <div class="modal-close" id="modal-pattern-close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="pattern-editor">
+          <div class="pattern-grid" id="pattern-grid">
+            <!-- Grid cells will be generated dynamically -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="btn-cancel">Cancel</button>
+        <button class="btn" id="btn-save-pattern">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Main application state
+    const app = {
+      isPlaying: false,
+      activeTool: 'draw',
+      activeVoice: 1, // ID of the currently selected voice
+      contextMenuOpen: false,
+      contextMenuPosition: { x: 0, y: 0 },
+      contextMenuTarget: null, // The pattern object that was right-clicked
+      
+      tempo: 120, // BPM
+      gridResolution: 8, // 1/8th note grid
+      misunderstandingRate: 20, // %
+      roomAmbience: 30, // %
+      conversationTopic: 'casual',
+      
+      // Sequencer loop variables
+      lastScheduleTime: 0,
+      nextNoteTime: 0,
+      lookahead: 0.1, // Seconds, how far ahead to schedule audio (100ms)
+      scheduleInterval: 25, // How frequently to call scheduling function (25ms)
+      currentBeat: 0, // Current beat position in the sequence loop
+      sequenceLengthBeats: 16, // Total length of the sequence in beats (e.g., 4 measures of 4 beats)
+      
+      patterns: [], // Stores pattern objects {id, voiceId, startTime, duration, type, notes[]}
+      // Keep track of active pattern visuals for highlighting
+      activePatternVisuals: new Map(), // Map<patternId, Date.now() of last playback>
+
+      voices: [
+        {
+          id: 1,
+          name: 'Assertive',
+          color: '#ff7e5f', // Actual hex value
+          muted: false,
+          soloed: false,
+          params: {
+            assertiveness: 80, // Affects volume/duration/filter Q
+            interruption: 75 // Likelihood to interrupt/cut off
+          }
+        },
+        {
+          id: 2,
+          name: 'Inquiring',
+          color: '#48b5c4',
+          muted: false,
+          soloed: false,
+          params: {
+            curiosity: 90, // Affects pitch/filter freq
+            responseRate: 60 // Likelihood to respond/delay
+          }
+        },
+        {
+          id: 3,
+          name: 'Hesitant',
+          color: '#a162e8',
+          muted: false,
+          soloed: false,
+          params: {
+            hesitation: 75, // Affects start delay/duration
+            variability: 40 // Affects randomness in timing/pitch
+          }
+        },
+        {
+          id: 4,
+          name: 'Supportive',
+          color: '#6bd968',
+          muted: false,
+          soloed: false,
+          params: {
+            supportLevel: 85, // Affects sustain/harmony
+            harmony: 70 // Affects pitch choice (more consonant)
+          }
+        }
+      ],
+      
+      // Diagnostic reference
+      diagnostics: {
+        steps: [],
+        errors: [],
+        log: function(step, status = 'success') {
+          const timestamp = new Date().toISOString();
+          this.steps.push({ step, status, timestamp });
+          console.log(`%c Diagnostic: ${step}`, `color: ${status === 'success' ? '#2ecc71' : '#e74c3c'}`);
+        },
+        error: function(step, error) {
+          const timestamp = new Date().toISOString();
+          this.errors.push({ step, error, timestamp });
+          this.log(step, 'error');
+          console.error(`Diagnostic Error in ${step}:`, error);
+        },
+        summary: function() {
+          console.group('Dialogue Sequencer Diagnostic Summary');
+          console.log(`Total steps: ${this.steps.length}`);
+          console.log(`Successful steps: ${this.steps.filter(s => s.status === 'success').length}`);
+          console.log(`Failed steps: ${this.errors.length}`);
+          if (this.errors.length > 0) {
+            console.group('Errors');
+            this.errors.forEach(e => console.error(`${e.step}: ${e.error}`));
+            console.groupEnd();
+          }
+          console.groupEnd();
+        }
+      },
+      
+      // Audio objects
+      audioContext: null,
+      masterGain: null,
+      reverbNode: null, // For room ambience
+      voiceNodes: new Map(), // Map<voiceId, GainNode> for global voice volume
+      
+      // Canvas objects
+      canvasBg: null,
+      canvasMain: null,
+      canvasUI: null,
+      ctxBg: null,
+      ctxMain: null,
+      ctxUI: null,
+      
+      // Canvas dimensions
+      canvasWidth: 0,
+      canvasHeight: 0,
+      voiceLaneHeight: 0, // Height of each voice's lane
+      beatsPerView: 8, // Number of beats visible on screen horizontally
+      pxPerBeat: 0, // Pixels per beat
+      
+      // Animation
+      animationFrameId: null,
+      
+      // Mouse interaction state
+      isDragging: false,
+      dragStartX: 0,
+      dragStartY: 0,
+      
+      init() {
+        try {
+          this.diagnostics.log('Starting initialization');
+          this.initDOM();
+          this.diagnostics.log('DOM initialized');
+          this.initCanvas();
+          this.diagnostics.log('Canvas initialized');
+          this.setupAudioContext();
+          this.diagnostics.log('Audio context setup complete');
+          this.initEventHandlers();
+          this.diagnostics.log('Event handlers initialized');
+          this.generateInitialPatterns();
+          this.diagnostics.log('Initial patterns generated');
+          this.draw();
+          this.diagnostics.log('Initial draw complete');
+          this.diagnostics.summary();
+        } catch (error) {
+          this.diagnostics.error('Initialization failed', error);
+          throw error; // Re-throw to be caught by the DOM ready handler
+        }
+      },
+      
+      initDOM() {
+        // Transport controls
+        document.getElementById('btn-play').addEventListener('click', () => this.startPlayback());
+        document.getElementById('btn-stop').addEventListener('click', () => this.stopPlayback());
+        document.getElementById('btn-save').addEventListener('click', () => this.saveProject());
+        document.getElementById('btn-load').addEventListener('click', () => document.getElementById('load-file-input').click());
+        document.getElementById('load-file-input').addEventListener('change', (e) => this.handleFileLoad(e));
+        
+        // Settings panel
+        const settingsPanel = document.getElementById('settings-panel');
+        document.getElementById('btn-settings').addEventListener('click', () => settingsPanel.classList.add('active'));
+        document.getElementById('btn-close-settings').addEventListener('click', () => settingsPanel.classList.remove('active'));
+        
+        // Tool selection with improved feedback
+        document.querySelectorAll('.tool').forEach(tool => {
+          tool.addEventListener('click', () => {
+            // Remove active class from all tools
+            document.querySelectorAll('.tool').forEach(t => t.classList.remove('active'));
+            
+            // Add active class to the clicked tool
+            tool.classList.add('active');
+            
+            // Update the active tool
+            const toolName = tool.dataset.tool;
+            this.activeTool = toolName;
+            
+            // Show feedback toast
+            this.showFeedbackToast(`Selected ${toolName} tool`, 'success');
+            this.diagnostics.log(`Tool selected: ${toolName}`);
+            
+            // Add a visual highlight effect to the tool
+            tool.classList.add('highlight-pulse');
+            setTimeout(() => {
+              tool.classList.remove('highlight-pulse');
+            }, 1000);
+            
+            // Redraw UI to reflect active tool if needed
+            this.drawUI();
+          });
+          
+          // Add tooltips to tools
+          const tooltipText = {
+            'draw': 'Create basic patterns',
+            'respond': 'Create a pattern that responds to another',
+            'interrupt': 'Create a pattern that interrupts another',
+            'misunderstand': 'Create a pattern that misinterprets another',
+            'monologue': 'Create a longer, uninterrupted pattern'
+          };
+          
+          if (tooltipText[tool.dataset.tool]) {
+            tool.title = tooltipText[tool.dataset.tool];
+          }
+        });
+        
+        // Set default active tool
+        const defaultTool = document.querySelector('.tool[data-tool="draw"]');
+        if (defaultTool && !this.activeTool) {
+          defaultTool.classList.add('active');
+          this.activeTool = 'draw';
+        }
+
+        // Voice selection and controls
+        document.querySelectorAll('.voice').forEach(voiceEl => {
+          const voiceId = parseInt(voiceEl.dataset.voice);
+          voiceEl.addEventListener('click', () => this.setActiveVoice(voiceId));
+
+          voiceEl.querySelectorAll('.voice-icon').forEach(icon => {
+              icon.addEventListener('click', (e) => {
+                  e.stopPropagation(); // Prevent voice selection on icon click
+                  const action = icon.dataset.action;
+                  if (action === 'mute') this.toggleMuteVoice(voiceId);
+                  else if (action === 'solo') this.toggleSoloVoice(voiceId);
+              });
+          });
+
+          // Voice parameter sliders
+          voiceEl.querySelectorAll('.param-slider').forEach(slider => {
+              const paramName = slider.dataset.param;
+              const valueSpan = slider.nextElementSibling;
+              slider.addEventListener('input', (e) => {
+                  const voice = this.voices.find(v => v.id === voiceId);
+                  if (voice && voice.params) {
+                      voice.params[paramName] = parseInt(e.target.value);
+                      valueSpan.textContent = `${e.target.value}%`;
+                  }
+              });
+          });
+        });
+
+        // Global settings
+        document.getElementById('conversation-topic').addEventListener('change', (e) => {
+            this.conversationTopic = e.target.value;
+        });
+        document.getElementById('room-ambience').addEventListener('input', (e) => {
+            this.roomAmbience = parseInt(e.target.value);
+            if (this.reverbNode) {
+                // Adjust reverb wet/dry mix based on ambience
+                this.reverbNode.gain.value = this.roomAmbience / 100;
+            }
+        });
+        const tempoSlider = document.getElementById('tempo');
+        const tempoValueSpan = document.getElementById('tempo-value');
+        tempoSlider.addEventListener('input', (e) => {
+            this.tempo = parseInt(e.target.value);
+            tempoValueSpan.textContent = `${this.tempo} BPM`;
+        });
+        document.getElementById('grid-resolution').addEventListener('change', (e) => {
+            this.gridResolution = parseInt(e.target.value);
+            this.drawGrid(); // Redraw grid with new resolution
+        });
+        document.getElementById('misunderstanding-rate').addEventListener('input', (e) => {
+            this.misunderstandingRate = parseInt(e.target.value);
+        });
+
+        // Context menu
+        const contextMenu = document.getElementById('context-menu');
+        contextMenu.addEventListener('click', (e) => {
+            const action = e.target.dataset.action;
+            if (action && this.contextMenuTarget) {
+                this.performContextMenuAction(action, this.contextMenuTarget);
+            }
+            this.hideContextMenu();
+        });
+        // Hide on any click outside or right click on non-pattern area
+        document.addEventListener('click', () => this.hideContextMenu()); 
+        document.addEventListener('contextmenu', (e) => { // Only hide if no pattern is clicked
+            const { x, y } = this.getCanvasCoordinates(e);
+            const { voiceId, beat } = this.getGridPosition(x, y);
+            if (!this.findPatternAt(voiceId, beat)) {
+                this.hideContextMenu();
+            }
+        });
+        document.addEventListener('scroll', () => this.hideContextMenu()); // Hide on scroll
+
+        // Pattern Modal
+        document.getElementById('modal-pattern-close').addEventListener('click', () => this.closePatternModal());
+        document.getElementById('btn-cancel').addEventListener('click', () => this.closePatternModal());
+        document.getElementById('btn-save-pattern').addEventListener('click', () => this.savePatternModal());
+      },
+      
+      initCanvas() {
+        try {
+          this.diagnostics.log('Initializing canvas');
+          
+          // Get canvas elements
+          this.canvasBg = document.getElementById('canvas-bg');
+          this.canvasMain = document.getElementById('canvas-main');
+          
+          // Try to get UI canvas, but don't require it
+          this.canvasUI = document.getElementById('canvas-ui');
+          
+          // Check required canvases
+          if (!this.canvasBg) {
+            throw new Error('Canvas background element not found (canvas-bg)');
+          }
+          
+          if (!this.canvasMain) {
+            throw new Error('Canvas main element not found (canvas-main)');
+          }
+          
+          // Get contexts for available canvases
+          this.ctxBg = this.canvasBg.getContext('2d');
+          this.ctxMain = this.canvasMain.getContext('2d');
+          
+          if (this.canvasUI) {
+            this.ctxUI = this.canvasUI.getContext('2d');
+            this.diagnostics.log('UI canvas found and initialized');
+          } else {
+            this.diagnostics.log('UI canvas not found, continuing without it');
+          }
+          
+          if (!this.ctxBg || !this.ctxMain) {
+            throw new Error('Failed to get required canvas contexts');
+          }
+          
+          this.diagnostics.log('Canvas contexts created');
+          
+          // Set up canvas dimensions
+          this.resizeCanvas();
+          window.addEventListener('resize', () => this.resizeCanvas());
+          
+          // Setup canvas interaction
+          this.canvasMain.addEventListener('mousedown', (e) => this.onCanvasMouseDown(e));
+          this.canvasMain.addEventListener('mousemove', (e) => this.onCanvasMouseMove(e));
+          this.canvasMain.addEventListener('mouseup', (e) => this.onCanvasMouseUp(e));
+          this.canvasMain.addEventListener('mouseout', (e) => this.onCanvasMouseOut(e));
+          this.canvasMain.addEventListener('contextmenu', (e) => this.onCanvasContextMenu(e));
+          document.addEventListener('click', (e) => {
+            if (!e.target.closest('.context-menu')) {
+              this.hideContextMenu();
+            }
+          });
+          
+          this.diagnostics.log('Canvas event listeners attached');
+        } catch (error) {
+          this.diagnostics.error('Canvas initialization failed', error);
+          throw error;
+        }
+      },
+      
+      resizeCanvas() {
+        try {
+          const container = document.querySelector('.canvas-container');
+          if (!container) {
+            throw new Error('Canvas container element not found');
+          }
+          
+          // Set minimum dimensions to ensure the canvas is visible and interactive
+          const minWidth = 800;
+          const minHeight = 400;
+          
+          this.canvasWidth = Math.max(container.clientWidth, minWidth);
+          this.canvasHeight = Math.max(container.clientHeight, minHeight);
+          
+          this.diagnostics.log(`Resizing canvas to ${this.canvasWidth}x${this.canvasHeight}`);
+          
+          // Set dimensions for background canvas
+          if (this.canvasBg) {
+            this.canvasBg.width = this.canvasWidth;
+            this.canvasBg.height = this.canvasHeight;
+          }
+          
+          // Set dimensions for main canvas
+          if (this.canvasMain) {
+            this.canvasMain.width = this.canvasWidth;
+            this.canvasMain.height = this.canvasHeight;
+          }
+          
+          // Only set UI canvas if it exists
+          if (this.canvasUI) {
+            this.canvasUI.width = this.canvasWidth;
+            this.canvasUI.height = this.canvasHeight;
+          }
+          
+          // Ensure we have a valid number of voices before calculating lane height
+          if (this.voices && this.voices.length > 0) {
+            this.voiceLaneHeight = this.canvasHeight / this.voices.length;
+          } else {
+            this.voiceLaneHeight = this.canvasHeight / 4; // Default to 4 voices if none defined
+          }
+          
+          // Calculate pixels per beat
+          this.pxPerBeat = this.canvasWidth / this.beatsPerView;
+          
+          this.diagnostics.log(`Voice lane height: ${this.voiceLaneHeight}, Pixels per beat: ${this.pxPerBeat}`);
+          
+          // Only draw if canvases are properly initialized
+          if (this.canvasBg && this.canvasMain) {
+            this.drawGrid();
+            this.drawPatterns();
+            this.drawUI();
+          }
+        } catch (error) {
+          this.diagnostics.error('Canvas resize failed', error);
+        }
+      },
+      
+      async setupAudioContext() {
+        try {
+          this.diagnostics.log('Setting up AudioContext');
+          this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          this.diagnostics.log('AudioContext created');
+          
+          // Check if AudioContext is in suspended state (common in browsers requiring user interaction)
+          if (this.audioContext.state === 'suspended') {
+            console.warn('AudioContext is suspended. Audio will not play until user interaction.');
+            
+            // Add a button to resume AudioContext
+            const resumeButton = document.createElement('button');
+            resumeButton.textContent = 'Click to Enable Audio';
+            resumeButton.style.position = 'fixed';
+            resumeButton.style.top = '10px';
+            resumeButton.style.right = '10px';
+            resumeButton.style.zIndex = '1000';
+            resumeButton.style.padding = '10px';
+            resumeButton.style.backgroundColor = '#ff7e5f';
+            resumeButton.style.color = 'white';
+            resumeButton.style.border = 'none';
+            resumeButton.style.borderRadius = '4px';
+            resumeButton.style.cursor = 'pointer';
+            
+            resumeButton.addEventListener('click', () => {
+              this.audioContext.resume().then(() => {
+                console.log('AudioContext resumed successfully');
+                resumeButton.remove();
+              });
+            });
+            
+            document.body.appendChild(resumeButton);
+          }
+          
+          this.masterGain = this.audioContext.createGain();
+          this.masterGain.gain.value = 0.7;
+          this.masterGain.connect(this.audioContext.destination);
+          this.diagnostics.log('Master gain created');
+          
+          // Effects chain
+          this.reverbNode = this.audioContext.createConvolver();
+          this.delayNode = this.audioContext.createDelay(2.0);
+          this.delayNode.delayTime.value = 0.25;
+          
+          const delayFeedback = this.audioContext.createGain();
+          delayFeedback.gain.value = 0.3;
+          
+          this.delayNode.connect(delayFeedback);
+          delayFeedback.connect(this.delayNode);
+          this.diagnostics.log('Delay effects created');
+          
+          // Create impulse response for reverb
+          try {
+            const impulseLength = this.audioContext.sampleRate * 2; // 2 seconds
+            const impulse = this.audioContext.createBuffer(2, impulseLength, this.audioContext.sampleRate);
+            const impulseL = impulse.getChannelData(0);
+            const impulseR = impulse.getChannelData(1);
+            
+            for (let i = 0; i < impulseLength; i++) {
+              impulseL[i] = (Math.random() * 2 - 1) * Math.exp(-i / (impulseLength / 6));
+              impulseR[i] = (Math.random() * 2 - 1) * Math.exp(-i / (impulseLength / 6));
+            }
+            
+            this.reverbNode.buffer = impulse;
+            this.diagnostics.log('Reverb impulse created');
+          } catch (error) {
+            this.diagnostics.error('Failed to create reverb impulse', error);
+            // Continue without reverb
+          }
+          
+          // Connect effects
+          this.reverbNode.connect(this.masterGain);
+          this.delayNode.connect(this.masterGain);
+          
+          // Create voice audio nodes
+          this.voiceNodes = new Map(); // Initialize as a Map for voice gain nodes
+          for (let i = 1; i <= 4; i++) {
+            this.createVoiceAudioNode(i);
+          }
+          this.diagnostics.log('Voice audio nodes created');
+        } catch (error) {
+          this.diagnostics.error('Audio context setup failed', error);
+          throw error;
+        }
+      },
+      
+      createVoiceAudioNode(voiceId) {
+        const voice = this.voices.find(v => v.id === voiceId);
+        if (!voice) return;
+
+        // Create a gain node for the voice
+        const voiceGain = this.audioContext.createGain();
+        // Connect voice gain to both master (dry) and convolver (wet)
+        voiceGain.connect(this.masterGain);
+        voiceGain.connect(this.reverbNode); // Send a copy to the reverb
+        this.voiceNodes.set(voiceId, voiceGain);
+        
+        // Update gain based on initial mute/solo state
+        this.updateVoiceAudioNodes(voiceId);
+      },
+
+      updateVoiceAudioNodes(voiceId) {
+          const voice = this.voices.find(v => v.id === voiceId);
+          if (!voice) return;
+
+          const voiceGain = this.voiceNodes.get(voiceId);
+          if (voiceGain) {
+              // Logic for mute/solo: if any voice is soloed, others are muted unless they are also soloed.
+              const anyVoiceSoloed = this.voices.some(v => v.soloed);
+              let targetGain = 1;
+
+              if (voice.muted) {
+                  targetGain = 0;
+              } else if (anyVoiceSoloed && !voice.soloed) {
+                  targetGain = 0;
+              }
+              // Smooth transition for gain changes
+              voiceGain.gain.cancelScheduledValues(this.audioContext.currentTime);
+              voiceGain.gain.linearRampToValueAtTime(targetGain, this.audioContext.currentTime + 0.05);
+          }
+      },
+      
+      initEventHandlers() {
+        // No additional global event handlers needed beyond what's in initDOM for now.
+      },
+      
+      draw() {
+        // Main drawing loop
+        this.animationFrameId = requestAnimationFrame(() => this.draw());
+        
+        this.ctxMain.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+        this.ctxUI.clearRect(0, 0, this.canvasWidth, this.canvasHeight); // Clear UI for playhead/overlays
+        
+        this.drawPatterns();
+        this.drawUI();
+      },
+
+      drawGrid() {
+        if (!this.ctxBg) {
+          this.diagnostics.error('Background canvas context not available');
+          return;
+        }
+        
+        this.ctxBg.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+        
+        // Draw a subtle gradient background
+        const bgGradient = this.ctxBg.createLinearGradient(0, 0, 0, this.canvasHeight);
+        bgGradient.addColorStop(0, 'rgba(30, 30, 30, 0.3)');
+        bgGradient.addColorStop(1, 'rgba(10, 10, 10, 0.3)');
+        this.ctxBg.fillStyle = bgGradient;
+        this.ctxBg.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        
+        // Draw voice lanes with enhanced visibility
+        const voiceColors = [
+          'rgba(255, 165, 0, 0.15)', // Orange (Assertive)
+          'rgba(0, 127, 255, 0.15)', // Blue (Inquiring)
+          'rgba(128, 0, 128, 0.15)', // Purple (Hesitant)
+          'rgba(0, 128, 0, 0.15)'    // Green (Supportive)
+        ];
+        
+        for (let i = 0; i < this.voices.length; i++) {
+          const y = i * this.voiceLaneHeight;
+          
+          // Fill lane with voice-specific color
+          this.ctxBg.fillStyle = voiceColors[i % voiceColors.length];
+          this.ctxBg.fillRect(0, y, this.canvasWidth, this.voiceLaneHeight);
+          
+          // Draw lane separator with improved visibility
+          this.ctxBg.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+          this.ctxBg.lineWidth = 1;
+          this.ctxBg.beginPath();
+          this.ctxBg.moveTo(0, y);
+          this.ctxBg.lineTo(this.canvasWidth, y);
+          this.ctxBg.stroke();
+
+          // Voice label with enhanced visibility
+          const voice = this.voices[i];
+          this.ctxBg.font = 'bold 12px var(--font-main)';
+          this.ctxBg.fillStyle = voice.color;
+          
+          // Add text shadow for better readability
+          this.ctxBg.shadowColor = 'rgba(0, 0, 0, 0.7)';
+          this.ctxBg.shadowBlur = 3;
+          this.ctxBg.shadowOffsetX = 1;
+          this.ctxBg.shadowOffsetY = 1;
+          
+          this.ctxBg.fillText(voice.name, 10, y + 20);
+          
+          // Reset shadow
+          this.ctxBg.shadowColor = 'transparent';
+          this.ctxBg.shadowBlur = 0;
+          this.ctxBg.shadowOffsetX = 0;
+          this.ctxBg.shadowOffsetY = 0;
+        }
+
+        // Draw vertical beat lines with improved visibility
+        const beatsInView = this.beatsPerView;
+        const beatWidth = this.pxPerBeat;
+        
+        for (let i = 0; i <= beatsInView; i++) {
+          const x = i * beatWidth;
+          
+          // Highlight measures (every 4 beats) more prominently
+          if (i % 4 === 0) {
+            // Draw measure number
+            this.ctxBg.font = '10px var(--font-main)';
+            this.ctxBg.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            this.ctxBg.fillText((i / 4) + 1, x + 3, 12); // Show measure number (1-based)
+            
+            this.ctxBg.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            this.ctxBg.lineWidth = 1.5;
+          } else {
+            this.ctxBg.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            this.ctxBg.lineWidth = 0.5;
+          }
+          
+          this.ctxBg.beginPath();
+          this.ctxBg.moveTo(x, 0);
+          this.ctxBg.lineTo(x, this.canvasHeight);
+          this.ctxBg.stroke();
+        }
+        
+        // Draw current beat position indicator if playing
+        if (this.isPlaying && this.currentBeat !== undefined) {
+          const playheadX = (this.currentBeat % this.sequenceLengthBeats) * this.pxPerBeat;
+          this.ctxBg.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+          this.ctxBg.lineWidth = 2;
+          this.ctxBg.beginPath();
+          this.ctxBg.moveTo(playheadX, 0);
+          this.ctxBg.lineTo(playheadX, this.canvasHeight);
+          this.ctxBg.stroke();
+        }
+      },
+      
+      drawPatterns() {
+        // Clear the canvas first
+        this.ctxMain.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+        const now = Date.now();
+        const highlightDuration = 300; // ms for highlight fade out (increased for better visibility)
+        
+        // Draw grid lines first for better visibility
+        this.drawGrid();
+        
+        // Draw all patterns
+        this.patterns.forEach(pattern => {
+          const voice = this.voices.find(v => v.id === pattern.voiceId);
+          if (!voice) return;
+
+          const voiceIndex = this.voices.indexOf(voice);
+          const y = voiceIndex * this.voiceLaneHeight;
+
+          // Calculate pattern width based on its duration in beats and pxPerBeat
+          const patternWidth = pattern.duration * this.pxPerBeat;
+          const x = pattern.startTime * this.pxPerBeat;
+
+          const paddingY = 5;
+          const rectHeight = this.voiceLaneHeight - paddingY * 2;
+          const borderRadius = 8;
+
+          // Calculate highlight alpha
+          let highlightAlpha = 0;
+          if (this.activePatternVisuals.has(pattern.id)) {
+              const lastPlayTime = this.activePatternVisuals.get(pattern.id);
+              const elapsed = now - lastPlayTime;
+              if (elapsed < highlightDuration) {
+                  highlightAlpha = 1 - (elapsed / highlightDuration);
+              } else {
+                  this.activePatternVisuals.delete(pattern.id); // Remove if faded
+              }
+          }
+
+          // Draw the main pattern shape with enhanced visual feedback
+          // Add a subtle animation based on the pattern type
+          let wobbleAmount = 2;
+          if (pattern.type === 'respond') wobbleAmount = 3;
+          if (pattern.type === 'interrupt') wobbleAmount = 4;
+          if (pattern.type === 'misunderstand') wobbleAmount = 5;
+          if (pattern.type === 'monologue') wobbleAmount = 1;
+          
+          const wobble = Math.sin(now / 500 + pattern.id.charCodeAt(0)) * wobbleAmount; 
+          
+          // Draw a subtle shadow for depth
+          this.ctxMain.shadowColor = 'rgba(0, 0, 0, 0.3)';
+          this.ctxMain.shadowBlur = 5;
+          this.ctxMain.shadowOffsetX = 2;
+          this.ctxMain.shadowOffsetY = 2;
+          
+          this.ctxMain.beginPath();
+          this.ctxMain.roundRect(x, y + paddingY + wobble, patternWidth, rectHeight, borderRadius);
+          
+          // Create a more vibrant gradient for better visibility
+          const gradient = this.ctxMain.createLinearGradient(x, y + paddingY, x + patternWidth, y + paddingY + rectHeight);
+          gradient.addColorStop(0, voice.color + 'cc'); // More opaque
+          gradient.addColorStop(1, voice.color + 'ff'); // Fully opaque at end
+
+          this.ctxMain.fillStyle = gradient;
+          this.ctxMain.fill();
+          this.ctxMain.strokeStyle = voice.color;
+          this.ctxMain.lineWidth = 2;
+          this.ctxMain.stroke();
+
+          // Draw highlight overlay
+          if (highlightAlpha > 0) {
+              this.ctxMain.fillStyle = `rgba(255, 255, 255, ${highlightAlpha * 0.5})`; // White flash
+              this.ctxMain.beginPath();
+              this.ctxMain.roundRect(x, y + paddingY + wobble, patternWidth, rectHeight, borderRadius);
+              this.ctxMain.fill();
+          }
+
+          // For speech-like elements, draw internal segments based on 'notes'
+          const noteWidth = patternWidth / pattern.notes.length;
+          const innerPadding = 3; // Padding for internal notes
+          pattern.notes.forEach((active, i) => {
+            if (active) {
+                const noteX = x + i * noteWidth;
+                const noteY = y + paddingY + innerPadding + wobble;
+                const noteHeight = rectHeight - innerPadding * 2;
+                const noteRadius = 3;
+
+                this.ctxMain.beginPath();
+                this.ctxMain.roundRect(noteX, noteY, noteWidth - 2, noteHeight, noteRadius);
+                this.ctxMain.fillStyle = `rgba(255,255,255,0.7)`; // White internal segments
+                this.ctxMain.fill();
+            }
+          });
+        });
+      },
+
+      drawUI() {
+          // Skip UI drawing if UI canvas/context is not available
+          if (!this.canvasUI || !this.ctxUI) {
+              this.diagnostics.log('UI canvas not available, skipping UI drawing');
+              return;
+          }
+          
+          try {
+              this.ctxUI.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+    
+              // Draw playhead
+              if (this.isPlaying && this.audioContext) {
+                  // Interpolate playhead position smoothly
+                  const currentAudioTime = this.audioContext.currentTime;
+                  const timeSinceLastBeat = currentAudioTime - this.lastScheduleTime;
+                  const beatDuration = 60 / this.tempo; // Duration of one beat in seconds
+                  const interpolatedBeat = this.currentBeat + (timeSinceLastBeat / beatDuration);
+                  
+                  const playheadX = (interpolatedBeat % this.sequenceLengthBeats) * this.pxPerBeat;
+                  this.ctxUI.strokeStyle = 'rgba(0,0,0,0.5)';
+                  this.ctxUI.lineWidth = 3;
+                  this.ctxUI.beginPath();
+                  this.ctxUI.moveTo(playheadX, 0);
+                  this.ctxUI.lineTo(playheadX, this.canvasHeight);
+                  this.ctxUI.stroke();
+              }
+          } catch (error) {
+              this.diagnostics.error('Error drawing UI', error);
+          }
+
+          // Visual feedback for drawing tool (e.g., hover highlight)
+          if (this.activeTool === 'draw' && this.isDragging) {
+              // Draw a rectangle representing the current drag selection
+              const x = Math.min(this.dragStartX, this.lastMouseX);
+              const y = Math.min(this.dragStartY, this.lastMouseY);
+              const width = Math.abs(this.dragStartX - this.lastMouseX);
+              const height = Math.abs(this.dragStartY - this.lastMouseY);
+
+              this.ctxUI.fillStyle = 'rgba(0,0,0,0.1)';
+              this.ctxUI.fillRect(x, y, width, height);
+              this.ctxUI.strokeStyle = 'rgba(0,0,0,0.5)';
+              this.ctxUI.lineWidth = 1;
+              this.ctxUI.strokeRect(x, y, width, height);
+          }
+      },
+
+      // --- Canvas Interaction Logic ---
+      getCanvasCoordinates(e) {
+        const rect = this.canvasMain.getBoundingClientRect();
+        return {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
+      },
+
+      getGridPosition(x, y) {
+        const voiceIndex = Math.floor(y / this.voiceLaneHeight);
+        const voiceId = this.voices[voiceIndex] ? this.voices[voiceIndex].id : null;
+        const beat = x / this.pxPerBeat; // Floating point beat position
+        
+        // Quantize to grid resolution (e.g., for 1/8th note, quantize to 0.5 beat steps)
+        const quantizeValue = 4 / this.gridResolution; 
+        const quantizedBeat = Math.round(beat / quantizeValue) * quantizeValue; // Round to nearest grid step
+
+        return { voiceId, beat: quantizedBeat, voiceIndex };
+      },
+
+      onCanvasMouseDown(e) {
+        try {
+            if (e.button === 2) { // Right-click
+                this.onCanvasContextMenu(e);
+                return;
+            }
+    
+            this.isDragging = true;
+            const { x, y } = this.getCanvasCoordinates(e);
+            this.diagnostics.log(`Canvas coordinates: ${x}, ${y}`);
+            
+            this.dragStartX = x;
+            this.dragStartY = y;
+            this.lastMouseX = x;
+            this.lastMouseY = y;
+            this.hideContextMenu(); // Hide context menu if clicked on canvas
+    
+            const { voiceId, beat, voiceIndex } = this.getGridPosition(x, y);
+            this.diagnostics.log(`Grid position: voiceId=${voiceId}, beat=${beat}, voiceIndex=${voiceIndex}`);
+            this.diagnostics.log(`Active tool: ${this.activeTool}`);
+            
+            // Force a default tool if none is active
+            if (!this.activeTool) {
+                this.activeTool = 'draw';
+                this.diagnostics.log('No active tool, defaulting to draw');
+                
+                // Update UI to reflect the active tool
+                document.querySelectorAll('.tool').forEach(t => t.classList.remove('active'));
+                const drawTool = document.querySelector('.tool[data-tool="draw"]');
+                if (drawTool) drawTool.classList.add('active');
+                
+                this.showFeedbackToast('Using draw tool', 'info');
+            }
+            
+            if (voiceId) {
+                // Draw a prominent highlight at the clicked position
+                this.showGridHighlightAnimated(voiceId, beat, voiceIndex);
+                
+                const targetPattern = this.findPatternAt(voiceId, beat);
+                this.diagnostics.log(`Target pattern at position: ${targetPattern ? targetPattern.id : 'none'}`);
+                
+                // Create a visual indicator showing what will happen
+                let actionText = '';
+                let actionColor = '';
+                
+                // Handle different tools with enhanced visual feedback
+                if (this.activeTool === 'draw') {
+                    this.diagnostics.log('Using draw tool to toggle pattern');
+                    actionText = targetPattern ? 'Remove' : 'Add';
+                    actionColor = targetPattern ? '#ff5555' : '#55ff55';
+                    
+                    // Show visual indicator before toggling
+                    this.showActionIndicator(beat * this.pxPerBeat, voiceIndex * this.voiceLaneHeight, actionText, actionColor);
+                    
+                    // Add a small delay for visual feedback before toggling
+                    setTimeout(() => {
+                        this.togglePatternAt(voiceId, beat);
+                    }, 100);
+                    
+                } else if (this.activeTool === 'respond') {
+                    if (targetPattern) {
+                        actionText = 'Respond';
+                        actionColor = '#5555ff';
+                        this.showActionIndicator(beat * this.pxPerBeat, voiceIndex * this.voiceLaneHeight, actionText, actionColor);
+                        
+                        setTimeout(() => {
+                            this.addResponsePattern(targetPattern);
+                            this.showFeedbackToast('Added response pattern', 'success');
+                        }, 100);
+                    } else {
+                        this.showActionIndicator(beat * this.pxPerBeat, voiceIndex * this.voiceLaneHeight, 'Need pattern', '#ff5555');
+                        this.showFeedbackToast('Select an existing pattern to respond to', 'error');
+                    }
+                } else if (this.activeTool === 'interrupt') {
+                    if (targetPattern) {
+                        actionText = 'Interrupt';
+                        actionColor = '#ff5500';
+                        this.showActionIndicator(beat * this.pxPerBeat, voiceIndex * this.voiceLaneHeight, actionText, actionColor);
+                        
+                        setTimeout(() => {
+                            this.addInterruptPattern(targetPattern);
+                            this.showFeedbackToast('Added interrupt pattern', 'success');
+                        }, 100);
+                    } else {
+                        this.showActionIndicator(beat * this.pxPerBeat, voiceIndex * this.voiceLaneHeight, 'Need pattern', '#ff5555');
+                        this.showFeedbackToast('Select an existing pattern to interrupt', 'error');
+                    }
+                } else if (this.activeTool === 'misunderstand') {
+                    if (targetPattern) {
+                        actionText = 'Misunderstand';
+                        actionColor = '#aa55aa';
+                        this.showActionIndicator(beat * this.pxPerBeat, voiceIndex * this.voiceLaneHeight, actionText, actionColor);
+                        
+                        setTimeout(() => {
+                            this.misunderstandPattern(targetPattern);
+                            this.showFeedbackToast('Added misunderstand pattern', 'success');
+                        }, 100);
+                    } else {
+                        this.showActionIndicator(beat * this.pxPerBeat, voiceIndex * this.voiceLaneHeight, 'Need pattern', '#ff5555');
+                        this.showFeedbackToast('Select an existing pattern to misunderstand', 'error');
+                    }
+                } else if (this.activeTool === 'monologue') {
+                    actionText = 'Monologue';
+                    actionColor = '#55aa55';
+                    this.showActionIndicator(beat * this.pxPerBeat, voiceIndex * this.voiceLaneHeight, actionText, actionColor);
+                    
+                    setTimeout(() => {
+                        this.addMonologuePattern(voiceId, beat);
+                        this.showFeedbackToast('Added monologue pattern', 'success');
+                    }, 100);
+                } else {
+                    // Default to draw tool if the active tool is not recognized
+                    actionText = targetPattern ? 'Remove' : 'Add';
+                    actionColor = targetPattern ? '#ff5555' : '#55ff55';
+                    this.showActionIndicator(beat * this.pxPerBeat, voiceIndex * this.voiceLaneHeight, actionText, actionColor);
+                    
+                    setTimeout(() => {
+                        this.togglePatternAt(voiceId, beat);
+                        this.showFeedbackToast('Using default draw tool', 'info');
+                    }, 100);
+                }
+            } else {
+                this.diagnostics.log('Click outside valid voice lanes');
+                this.showFeedbackToast('Click on a voice lane to add patterns', 'info');
+            }
+        } catch (error) {
+            this.diagnostics.error('Error in canvas mouse down handler', error);
+            this.showFeedbackToast('Error handling mouse click', 'error');
+        }
+      },
+
+      onCanvasMouseMove(e) {
+        if (!this.isDragging) return;
+        const { x, y } = this.getCanvasCoordinates(e);
+        this.lastMouseX = x;
+        this.lastMouseY = y;
+        
+        // Redraw UI to show drag selection for 'draw' tool
+        if (this.activeTool === 'draw') {
+            this.drawUI();
+        }
+      },
+
+      onCanvasMouseUp(e) {
+        this.isDragging = false;
+        this.drawPatterns(); // Redraw once after interaction
+        this.drawUI(); // Clear any drawing tool overlays
+      },
+
+      onCanvasMouseOut(e) {
+          // If dragging and mouse leaves canvas, stop dragging
+          if (this.isDragging) {
+              this.isDragging = false;
+              this.drawPatterns();
+              this.drawUI();
+          }
+      },
+
+      onCanvasContextMenu(e) {
+        e.preventDefault(); // Prevent default browser context menu
+        const { x, y } = this.getCanvasCoordinates(e);
+        const { voiceId, beat } = this.getGridPosition(x, y);
+        
+        this.contextMenuTarget = this.findPatternAt(voiceId, beat);
+
+        if (this.contextMenuTarget) {
+            const contextMenu = document.getElementById('context-menu');
+            contextMenu.style.left = `${e.clientX}px`;
+            contextMenu.style.top = `${e.clientY}px`;
+            contextMenu.style.display = 'block';
+            this.contextMenuOpen = true;
+        } else {
+            this.hideContextMenu();
+        }
+      },
+
+      hideContextMenu() {
+        document.getElementById('context-menu').style.display = 'none';
+        this.contextMenuOpen = false;
+        this.contextMenuTarget = null;
+      },
+
+      performContextMenuAction(action, pattern) {
+          if (!pattern) return;
+
+          switch (action) {
+              case 'edit':
+                  this.openPatternModal(pattern);
+                  break;
+              case 'duplicate':
+                  this.duplicatePattern(pattern);
+                  break;
+              case 'delete':
+                  this.deletePattern(pattern.id);
+                  break;
+              case 'change-voice':
+                  const currentVoiceIndex = this.voices.findIndex(v => v.id === pattern.voiceId);
+                  const nextVoiceIndex = (currentVoiceIndex + 1) % this.voices.length;
+                  pattern.voiceId = this.voices[nextVoiceIndex].id;
+                  this.drawPatterns();
+                  console.log(`Changed voice for pattern ${pattern.id} to ${this.voices[nextVoiceIndex].name}`);
+                  break;
+          }
+      },
+      
+      // --- Pattern Management ---
+      generatePatternId() {
+          return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+      },
+
+      addPatternAt(voiceId, startTime, duration = 1, type = 'draw', numSteps = 4, notes = null) {
+        // Default notes: if not provided, all true.
+        const defaultNotes = Array(numSteps).fill(true);
+        const finalNotes = notes || defaultNotes;
+
+        const newPattern = {
+          id: this.generatePatternId(),
+          voiceId: voiceId,
+          startTime: startTime,
+          duration: duration, // Duration in beats
+          type: type, // Type of pattern (draw, respond, interrupt, etc.)
+          notes: finalNotes, // Array of booleans for internal subdivisions
+        };
+        this.patterns.push(newPattern);
+        this.patterns.sort((a, b) => a.startTime - b.startTime); // Keep sorted
+        this.drawPatterns();
+        return newPattern;
+      },
+
+      // Show a visual feedback toast message
+      showFeedbackToast(message, type = 'success') {
+          // Create toast element if it doesn't exist
+          let toast = document.getElementById('feedback-toast');
+          if (!toast) {
+              toast = document.createElement('div');
+              toast.id = 'feedback-toast';
+              toast.className = 'feedback-toast';
+              document.body.appendChild(toast);
+          }
+          
+          // Set message and show toast
+          toast.textContent = message;
+          toast.className = `feedback-toast ${type} visible`;
+          
+          // Hide after 2 seconds
+          setTimeout(() => {
+              toast.className = 'feedback-toast';
+          }, 2000);
+      },
+      
+      // Show a visual highlight at a specific grid position
+      showGridHighlight(voiceId, beat) {
+        try {
+          const voiceIndex = this.voices.findIndex(v => v.id === voiceId);
+          if (voiceIndex === -1) return;
+          
+          const x = beat * this.pxPerBeat;
+          const y = voiceIndex * this.voiceLaneHeight;
+          const width = this.pxPerBeat;
+          const height = this.voiceLaneHeight;
+          
+          this.ctxUI.fillStyle = 'rgba(255, 255, 255, 0.3)';
+          this.ctxUI.fillRect(x, y, width, height);
+          
+          // Draw border
+          this.ctxUI.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+          this.ctxUI.lineWidth = 2;
+          this.ctxUI.strokeRect(x, y, width, height);
+          
+          // Fade out after a moment
+          setTimeout(() => this.drawUI(), 300);
+        } catch (error) {
+          this.diagnostics.error('Error showing grid highlight', error);
+        }
+      },
+      
+      // Enhanced animated grid highlight with pulse effect
+      showGridHighlightAnimated(voiceId, beat, voiceIndex) {
+        try {
+          if (voiceIndex === undefined) {
+            voiceIndex = this.voices.findIndex(v => v.id === voiceId);
+          }
+          if (voiceIndex === -1) return;
+          
+          const x = beat * this.pxPerBeat;
+          const y = voiceIndex * this.voiceLaneHeight;
+          
+          // Create a pulsing highlight effect
+          const animateHighlight = (frame) => {
+            if (frame >= 10) return; // Stop after 10 frames
+            
+            const alpha = 0.5 - (frame * 0.05); // Fade from 0.5 to 0
+            
+            this.ctxUI.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+            this.ctxUI.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            
+            // Draw a slightly larger rectangle for each frame
+            const expandX = x - (frame * 2);
+            const expandY = y - (frame * 2);
+            const expandWidth = this.pxPerBeat + (frame * 4);
+            const expandHeight = this.voiceLaneHeight + (frame * 4);
+            
+            this.ctxUI.fillRect(expandX, expandY, expandWidth, expandHeight);
+            
+            // Continue animation
+            setTimeout(() => animateHighlight(frame + 1), 30);
+          };
+          
+          // Start the animation
+          animateHighlight(0);
+        } catch (error) {
+          this.diagnostics.error('Error showing animated grid highlight', error);
+        }
+      },
+      
+      // Show a text indicator for the action being performed
+      showActionIndicator(x, y, text, color) {
+        try {
+          this.ctxUI.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+          
+          // Draw a semi-transparent background
+          this.ctxUI.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          this.ctxUI.fillRect(x, y, this.pxPerBeat, this.voiceLaneHeight);
+          
+          // Draw the action text
+          this.ctxUI.font = 'bold 14px var(--font-main)';
+          this.ctxUI.fillStyle = color || '#ffffff';
+          this.ctxUI.textAlign = 'center';
+          this.ctxUI.textBaseline = 'middle';
+          
+          // Position text in the center of the cell
+          const textX = x + (this.pxPerBeat / 2);
+          const textY = y + (this.voiceLaneHeight / 2);
+          
+          // Add text shadow for better visibility
+          this.ctxUI.shadowColor = 'rgba(0, 0, 0, 0.8)';
+          this.ctxUI.shadowBlur = 4;
+          this.ctxUI.shadowOffsetX = 1;
+          this.ctxUI.shadowOffsetY = 1;
+          
+          this.ctxUI.fillText(text, textX, textY);
+          
+          // Reset shadow
+          this.ctxUI.shadowColor = 'transparent';
+          this.ctxUI.shadowBlur = 0;
+          this.ctxUI.shadowOffsetX = 0;
+          this.ctxUI.shadowOffsetY = 0;
+          
+          // Clear the indicator after a delay
+          setTimeout(() => this.drawUI(), 500);
+        } catch (error) {
+          this.diagnostics.error('Error showing action indicator', error);
+        }
+      },
+      
+      togglePatternAt(voiceId, beat) {
+          try {
+              const pattern = this.findPatternAt(voiceId, beat);
+              const voiceIndex = this.voices.findIndex(v => v.id === voiceId);
+              
+              if (pattern) {
+                  // Delete existing pattern with visual feedback
+                  this.ctxUI.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+                  
+                  // Show a "removing" animation
+                  const x = beat * this.pxPerBeat;
+                  const y = voiceIndex * this.voiceLaneHeight;
+                  const width = this.pxPerBeat;
+                  const height = this.voiceLaneHeight;
+                  
+                  // Draw a red X over the pattern
+                  this.ctxUI.strokeStyle = '#ff5555';
+                  this.ctxUI.lineWidth = 3;
+                  this.ctxUI.beginPath();
+                  this.ctxUI.moveTo(x + 5, y + 5);
+                  this.ctxUI.lineTo(x + width - 5, y + height - 5);
+                  this.ctxUI.moveTo(x + width - 5, y + 5);
+                  this.ctxUI.lineTo(x + 5, y + height - 5);
+                  this.ctxUI.stroke();
+                  
+                  // Delete the pattern after a short delay for visual feedback
+                  setTimeout(() => {
+                      this.deletePattern(pattern.id);
+                      this.showFeedbackToast('Pattern removed', 'info');
+                      this.drawUI(); // Clear the UI overlay
+                      this.diagnostics.log(`Pattern ${pattern.id} deleted at voice ${voiceId}, beat ${beat}`);
+                  }, 200);
+              } else {
+                  // Add new pattern with visual feedback
+                  this.ctxUI.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+                  
+                  // Show an "adding" animation
+                  const x = beat * this.pxPerBeat;
+                  const y = voiceIndex * this.voiceLaneHeight;
+                  const width = this.pxPerBeat;
+                  const height = this.voiceLaneHeight;
+                  
+                  // Draw a green plus over the position
+                  this.ctxUI.strokeStyle = '#55ff55';
+                  this.ctxUI.lineWidth = 3;
+                  this.ctxUI.beginPath();
+                  const centerX = x + width / 2;
+                  const centerY = y + height / 2;
+                  const size = Math.min(width, height) * 0.3;
+                  
+                  this.ctxUI.moveTo(centerX - size, centerY);
+                  this.ctxUI.lineTo(centerX + size, centerY);
+                  this.ctxUI.moveTo(centerX, centerY - size);
+                  this.ctxUI.lineTo(centerX, centerY + size);
+                  this.ctxUI.stroke();
+                  
+                  // Add the new pattern after a short delay for visual feedback
+                  setTimeout(() => {
+                      const newPattern = this.addPatternAt(voiceId, beat, 1, 'draw', 4);
+                      this.showFeedbackToast('Pattern added', 'success');
+                      this.drawUI(); // Clear the UI overlay
+                      this.diagnostics.log(`New pattern ${newPattern.id} added at voice ${voiceId}, beat ${beat}`);
+                      
+                      // Highlight the new pattern
+                      this.activePatternVisuals.set(newPattern.id, Date.now());
+                      this.drawPatterns();
+                  }, 200);
+              }
+              
+              // Play a feedback sound if audio context is ready
+              if (this.audioContext && this.audioContext.state === 'running') {
+                  const osc = this.audioContext.createOscillator();
+                  const gain = this.audioContext.createGain();
+                  
+                  osc.connect(gain);
+                  gain.connect(this.masterGain);
+                  
+                  osc.frequency.value = pattern ? 330 : 440; // Different tone for add vs delete
+                  gain.gain.value = 0.2;
+                  
+                  osc.start();
+                  gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.3);
+                  osc.stop(this.audioContext.currentTime + 0.3);
+              }
+          } catch (error) {
+              this.diagnostics.error('Error in togglePatternAt', error);
+              this.showFeedbackToast('Error toggling pattern', 'error');
+              this.drawUI(); // Ensure UI is clean in case of error
+          }
+      },
+
+      findPatternAt(voiceId, beat) {
+        // Find pattern that *contains* the beat, considering its duration
+        // Add a small tolerance for floating point comparisons
+        const tolerance = 0.001; 
+        return this.patterns.find(p =>
+            p.voiceId === voiceId &&
+            beat >= p.startTime - tolerance &&
+            beat < p.startTime + p.duration - tolerance
+        );
+      },
+
+      deletePattern(id) {
+          this.patterns = this.patterns.filter(p => p.id !== id);
+          this.drawPatterns();
+      },
+      
+      clearAllPatterns() {
+          // Remove all patterns from the sequencer
+          this.patterns = [];
+          this.drawPatterns();
+          this.diagnostics.log('All patterns cleared');
+      },
+
+      duplicatePattern(pattern) {
+          // Place it immediately after, looping if necessary
+          let newStartTime = pattern.startTime + pattern.duration;
+          if (newStartTime >= this.sequenceLengthBeats) {
+            newStartTime = newStartTime % this.sequenceLengthBeats; // Loop to beginning
+          }
+          const newPattern = { ...pattern, id: this.generatePatternId(), startTime: newStartTime, notes: [...pattern.notes] }; 
+          this.patterns.push(newPattern);
+          this.patterns.sort((a, b) => a.startTime - b.startTime);
+          this.drawPatterns();
+          return newPattern;
+      },
+
+      // --- Advanced Pattern Tools ---
+      addResponsePattern(targetPattern) {
+          const respondingVoice = this.voices.find(v => v.id === this.activeVoice);
+          if (!respondingVoice) return;
+
+          // Response delay based on 'Response Rate' param (higher rate = less delay)
+          // Range: 0.25 beats (fast) to 1 beat (slow)
+          const responseDelayBeats = 1.0 - (respondingVoice.params.responseRate / 100) * 0.75; 
+          const newStartTime = targetPattern.startTime + targetPattern.duration + responseDelayBeats;
+          
+          // Duration based on 'Curiosity' (more curious = slightly longer response)
+          const newDuration = targetPattern.duration * (0.5 + (respondingVoice.params.curiosity / 100) * 0.5); 
+          const numSteps = Math.ceil(newDuration * 4); // 4 steps per beat default
+          const notes = Array(numSteps).fill(true).map((val, idx) => {
+              // Simple pattern: start strong, trail off
+              return idx < Math.floor(numSteps * (respondingVoice.params.responseRate / 100));
+          });
+
+          this.addPatternAt(this.activeVoice, newStartTime, newDuration, 'respond', numSteps, notes);
+          console.log(`Added response pattern from voice ${targetPattern.voiceId} at ${targetPattern.startTime} by voice ${this.activeVoice}`);
+      },
+
+      addInterruptPattern(targetPattern) {
+          const interruptingVoice = this.voices.find(v => v.id === this.activeVoice);
+          if (!interruptingVoice) return;
+
+          // Interruption timing based on 'Interruption' param (higher interruption = starts earlier into target)
+          // Range: 0.2 (interrupts 80% through target) to 0.8 (interrupts 20% through target)
+          const interruptRatio = 1.0 - (interruptingVoice.params.interruption / 100) * 0.6; // 0.4 to 1.0
+          const newStartTime = targetPattern.startTime + targetPattern.duration * interruptRatio;
+          
+          // Duration based on 'Assertiveness' (more assertive = longer interruption)
+          const newDuration = Math.max(0.25, targetPattern.duration * (interruptingVoice.params.assertiveness / 100));
+          const numSteps = Math.ceil(newDuration * 4);
+          const notes = Array(numSteps).fill(true).map((val, idx) => {
+            // Strong, direct pattern
+            return idx < Math.floor(numSteps * (interruptingVoice.params.assertiveness / 100));
+          });
+          
+          this.addPatternAt(this.activeVoice, newStartTime, newDuration, 'interrupt', numSteps, notes);
+          console.log(`Added interrupt pattern for voice ${this.activeVoice} at ${newStartTime}`);
+      },
+
+      misunderstandPattern(targetPattern) {
+          const patternToModify = this.patterns.find(p => p.id === targetPattern.id);
+          if (patternToModify) {
+              const misunderstandingFactor = this.misunderstandingRate / 100;
+              const originalNotes = [...patternToModify.notes];
+              const newNotes = originalNotes.map(note => {
+                  if (Math.random() < misunderstandingFactor * 0.5) { // 50% chance to flip if it's misunderstood
+                      return !note; 
+                  }
+                  return note;
+              });
+              patternToModify.notes = newNotes;
+              // Also subtly shift timing or duration
+              patternToModify.startTime += (Math.random() - 0.5) * misunderstandingFactor * 0.5; // Small time shift up to 0.25 beats
+              patternToModify.duration += (Math.random() - 0.5) * misunderstandingFactor * 0.5; // Small duration change up to 0.25 beats
+              patternToModify.duration = Math.max(0.1, patternToModify.duration); // Ensure positive duration
+              
+              this.drawPatterns();
+              console.log(`Misunderstood pattern ${patternToModify.id}`);
+          }
+      },
+
+      addMonologuePattern(voiceId, startTime) {
+          const monologueDuration = 4 + Math.random() * 4; // Example: 4 to 8 beats long
+          const numSteps = Math.ceil(monologueDuration * 4); // More internal steps for longer patterns
+          const notes = Array(numSteps).fill(true).map((val, idx) => {
+              // A long, continuous flow, maybe with some brief gaps
+              return Math.random() > 0.1; // 10% chance of a tiny gap
+          });
+
+          this.addPatternAt(voiceId, startTime, monologueDuration, 'monologue', numSteps, notes);
+          console.log(`Added monologue pattern for voice ${voiceId} at ${startTime}`);
+      },
+
+      // --- Modals ---
+      openPatternModal(pattern) {
+          const modal = document.getElementById('modal-pattern');
+          const patternGrid = document.getElementById('pattern-grid');
+          modal.style.display = 'flex';
+          this.contextMenuTarget = pattern; // Store which pattern is being edited
+
+          // Populate modal with pattern details
+          document.querySelector('#modal-pattern .modal-title').textContent = `Edit Pattern (${this.voices.find(v=>v.id===pattern.voiceId).name} - ${pattern.type})`;
+
+          // Generate grid cells
+          patternGrid.innerHTML = ''; // Clear existing
+          // Adjust grid column count based on the pattern's internal step count
+          patternGrid.style.gridTemplateColumns = `repeat(${pattern.notes.length}, 25px)`;
+
+          // Create a temporary copy of notes for editing, so "Cancel" works
+          this._tempPatternNotes = [...pattern.notes]; 
+
+          const voice = this.voices.find(v => v.id === pattern.voiceId);
+          const cellColor = voice ? voice.color : '#ccc';
+
+          this._tempPatternNotes.forEach((active, index) => {
+              const cell = document.createElement('div');
+              cell.classList.add('pattern-cell');
+              if (active) {
+                  cell.classList.add('active');
+                  cell.style.setProperty('--cell-color', cellColor);
+              }
+              cell.dataset.index = index;
+              cell.addEventListener('click', () => {
+                  this._tempPatternNotes[index] = !this._tempPatternNotes[index];
+                  cell.classList.toggle('active', this._tempPatternNotes[index]);
+                  cell.style.setProperty('--cell-color', cellColor);
+              });
+              patternGrid.appendChild(cell);
+          });
+      },
+
+      closePatternModal() {
+          document.getElementById('modal-pattern').style.display = 'none';
+          this.contextMenuTarget = null;
+          this._tempPatternNotes = null; // Clear temporary notes
+      },
+
+      savePatternModal() {
+          const patternToUpdate = this.contextMenuTarget;
+          if (!patternToUpdate || !this._tempPatternNotes) {
+              this.closePatternModal();
+              return;
+          }
+          
+          patternToUpdate.notes = [...this._tempPatternNotes]; // Apply changes from temp array
+          
+          this.drawPatterns();
+          this.closePatternModal();
+      },
+
+      // --- Voice & Settings Display Updates ---
+      setActiveVoice(voiceId) {
+          this.activeVoice = voiceId;
+          this.updateVoiceDisplay(); // Re-render all voice elements to update active state
+      },
+
+      toggleMuteVoice(voiceId) {
+          const voice = this.voices.find(v => v.id === voiceId);
+          if (voice) {
+              voice.muted = !voice.muted;
+              if (voice.muted && voice.soloed) { // Muting a soloed voice cancels solo
+                  voice.soloed = false;
+              }
+              this.updateVoiceDisplay();
+              this.voices.forEach(v => this.updateVoiceAudioNodes(v.id)); // Update all nodes due to solo logic
+          }
+      },
+
+      toggleSoloVoice(voiceId) {
+          const voice = this.voices.find(v => v.id === voiceId);
+          if (voice) {
+              const wasSoloed = voice.soloed;
+              
+              this.voices.forEach(v => {
+                  v.soloed = false; // Unsolo all first
+                  v.muted = false; // Unmute all to reset (they'll be re-muted by solo logic if needed)
+              });
+
+              if (!wasSoloed) { // If the clicked voice was not soloed, now solo it
+                  voice.soloed = true;
+                  voice.muted = false; // A soloed voice cannot be muted
+              } 
+              // If it *was* soloed, all were unsoloed above, effectively un-soloing everything.
+
+              this.updateVoiceDisplay();
+              this.voices.forEach(v => this.updateVoiceAudioNodes(v.id)); // Update all nodes
+          }
+      },
+
+      updateVoiceDisplay() {
+          document.querySelectorAll('.voice').forEach(voiceEl => {
+              const voiceId = parseInt(voiceEl.dataset.voice);
+              const voice = this.voices.find(v => v.id === voiceId);
+              if (voice) {
+                  // Active state
+                  if (this.activeVoice === voiceId) {
+                      voiceEl.classList.add('active');
+                  } else {
+                      voiceEl.classList.remove('active');
+                  }
+                  
+                  // Mute/Solo state
+                  const muteIcon = voiceEl.querySelector('[data-action="mute"]');
+                  const soloIcon = voiceEl.querySelector('[data-action="solo"]');
+
+                  if (muteIcon) {
+                      muteIcon.classList.toggle('muted', voice.muted);
+                  }
+                  if (soloIcon) {
+                      soloIcon.classList.toggle('soloed', voice.soloed);
+                  }
+
+                  // Parameter values
+                  for (const paramName in voice.params) {
+                      const slider = voiceEl.querySelector(`input[data-param="${paramName}"]`);
+                      const valueSpan = slider ? slider.nextElementSibling : null;
+                      if (slider && valueSpan) {
+                          slider.value = voice.params[paramName];
+                          valueSpan.textContent = `${voice.params[paramName]}%`;
+                      }
+                  }
+              }
+          });
+      },
+
+      updateSettingsDisplay() {
+          document.getElementById('conversation-topic').value = this.conversationTopic;
+          document.getElementById('room-ambience').value = this.roomAmbience;
+          document.getElementById('tempo').value = this.tempo;
+          document.getElementById('tempo-value').textContent = `${this.tempo} BPM`;
+          document.getElementById('grid-resolution').value = this.gridResolution;
+          document.getElementById('misunderstanding-rate').value = this.misunderstandingRate;
+      },
+
+      // --- Playback and Scheduling ---
+      async startPlayback() {
+        if (this.isPlaying) return;
+        
+        // Ensure AudioContext is created/resumed after user interaction
+        await this.setupAudioContext();
+        await this.audioContext.resume();
+        
+        this.isPlaying = true;
+        this.nextNoteTime = this.audioContext.currentTime; // Set next note time to current time
+        this.currentBeat = 0; // Reset playhead
+        this.lastScheduleTime = this.audioContext.currentTime;
+        
+        document.getElementById('btn-play').classList.add('active');
+        document.getElementById('btn-stop').classList.remove('active');
+        
+        this.scheduler(); // Start scheduling loop
+        // The main `draw()` loop already handles `requestAnimationFrame`
+      },
+
+      stopPlayback() {
+        if (!this.isPlaying) return;
+        this.isPlaying = false;
+        if (this.audioContext && this.audioContext.state === 'running') {
+            this.audioContext.suspend().then(() => {
+                console.log('AudioContext suspended!');
+            });
+        }
+        document.getElementById('btn-play').classList.remove('active');
+        document.getElementById('btn-stop').classList.add('active');
+        this.currentBeat = 0; // Reset playhead to start
+        this.playheadPosition = 0; // Reset visual playhead
+        this.activePatternVisuals.clear(); // Clear all active visual highlights
+        this.drawPatterns(); // Redraw to clear highlights
+        this.drawUI(); // Redraw to clear playhead
+      },
+
+      scheduler() {
+        // Schedule notes in advance
+        while (this.nextNoteTime < this.audioContext.currentTime + this.lookahead) {
+            this.scheduleBeat(this.currentBeat, this.nextNoteTime);
+            
+            const beatsPerSubdivision = 4 / this.gridResolution; // e.g., 0.25 for 1/16th note, 0.5 for 1/8th
+            this.nextNoteTime += (beatsPerSubdivision * (60 / this.tempo)); // Advance by the duration of one grid subdivision in seconds
+            
+            this.currentBeat = (this.currentBeat + beatsPerSubdivision); // Advance current beat by the smallest grid unit
+            
+            if (this.currentBeat >= this.sequenceLengthBeats) {
+                this.currentBeat = 0; // Loop back to start
+            }
+        }
+        
+        this.lastScheduleTime = this.audioContext.currentTime; // For smooth playhead animation
+
+        if (this.isPlaying) {
+             setTimeout(() => this.scheduler(), this.scheduleInterval);
+        }
+      },
+
+      scheduleBeat(beatNumber, time) {
+        const secondsPerBeat = 60 / this.tempo;
+        const quantizeValue = 4 / this.gridResolution; // Smallest quantize step (e.g. 0.5 for 1/8th note)
+
+        this.patterns.forEach(pattern => {
+            // Check if this pattern's start time aligns with the current scheduling beat
+            // Using a small tolerance for floating point comparison
+            const patternStartQuantized = Math.round(pattern.startTime / quantizeValue) * quantizeValue;
+            const currentBeatQuantized = Math.round(beatNumber / quantizeValue) * quantizeValue;
+
+            if (Math.abs(patternStartQuantized - currentBeatQuantized) < quantizeValue / 4) { // Check if within a quarter of the smallest grid step
+                this.playPatternSound(pattern, time);
+                this.activePatternVisuals.set(pattern.id, Date.now()); // Mark pattern for visual highlight
+            }
+        });
+      },
+
+      playPatternSound(pattern, time) {
+          const voice = this.voices.find(v => v.id === pattern.voiceId);
+          if (!voice || voice.muted || (this.voices.some(v => v.soloed) && !voice.soloed)) {
+              return; // Don't play if muted or not soloed when others are
+          }
+
+          const secondsPerBeat = 60 / this.tempo;
+          const baseNoteDurationInSeconds = (pattern.duration / pattern.notes.length) * secondsPerBeat;
+
+          pattern.notes.forEach((active, index) => {
+              if (active) {
+                  const noteOffsetInSeconds = index * baseNoteDurationInSeconds;
+                  
+                  // --- Timing Adjustments ---
+                  let hesitationDelay = 0;
+                  if (voice.id === 3 && voice.params.hesitation !== undefined) {
+                      hesitationDelay = (voice.params.hesitation / 100) * 0.08; // Up to 80ms for hesitant
+                      // Ensure we have a finite value
+                      hesitationDelay = isFinite(hesitationDelay) ? hesitationDelay : 0;
+                  }
+                  const actualStartTime = time + noteOffsetInSeconds + hesitationDelay;
+
+                  let effectiveNoteDuration = baseNoteDurationInSeconds;
+                  // Assertiveness affects how long they "speak" / sustain
+                  if (voice.id === 1 && voice.params.assertiveness !== undefined) {
+                      let assertivenessMultiplier = (voice.params.assertiveness / 100 * 0.8 + 0.2);
+                      // Ensure we have a finite value
+                      assertivenessMultiplier = isFinite(assertivenessMultiplier) ? assertivenessMultiplier : 1;
+                      effectiveNoteDuration *= assertivenessMultiplier;
+                  }
+                  effectiveNoteDuration = Math.max(0.05, effectiveNoteDuration); // Minimum duration
+                  
+                  // --- Oscillator Setup ---
+                  const osc = this.audioContext.createOscillator();
+                  osc.type = 'sine'; // Can be 'sine', 'square', 'sawtooth', 'triangle'
+                  
+                  let basePitch = 220 + (voice.id - 1) * 60; // Spread out pitches (A3, C4, E4, G#4 approx.)
+                  
+                  // Apply 'Curiosity' for inquiring voices (slightly higher/brighter pitch)
+                  if (voice.id === 2 && voice.params.curiosity !== undefined) { 
+                      basePitch += (voice.params.curiosity / 100) * 50; 
+                  }
+                  // Apply 'Variability' for hesitant voices
+                  if (voice.id === 3 && voice.params.variability !== undefined) { 
+                      basePitch += (Math.random() - 0.5) * (voice.params.variability / 100) * 80; 
+                  }
+                  // Apply 'Harmony' for supportive voices (aim for a more stable, consonant tone)
+                  if (voice.id === 4 && voice.params.harmony !== undefined) { 
+                      basePitch *= (1 - (voice.params.harmony / 100) * 0.05); // Slightly lower/rounder tone
+                  }
+                  osc.frequency.setValueAtTime(basePitch, actualStartTime);
+
+                  // --- Gain Node (ADSR) ---
+                  const oscGain = this.audioContext.createGain();
+                  osc.connect(oscGain);
+
+                  // --- Formant Filter (Speech-like quality) ---
+                  const filter = this.audioContext.createBiquadFilter();
+                  filter.type = "bandpass"; // Simulates a vowel formant
+                  
+                  // Vary formant frequency based on voice personality
+                  let filterFreq = 800 + Math.random() * 1200; // Base human vocal range
+                  
+                  // Safely apply voice-specific modifications
+                  if (voice.id === 1 && voice.params.assertiveness !== undefined) {
+                      filterFreq += (voice.params.assertiveness / 100) * 500; // More piercing for assertive
+                  }
+                  if (voice.id === 2 && voice.params.curiosity !== undefined) {
+                      filterFreq += (voice.params.curiosity / 100) * 300; // Slightly higher for inquiring
+                  }
+                  if (voice.id === 3 && voice.params.hesitation !== undefined) {
+                      filterFreq -= (voice.params.hesitation / 100) * 300; // Muted for hesitant
+                  }
+                  if (voice.id === 4 && voice.params.supportLevel !== undefined) {
+                      filterFreq += (voice.params.supportLevel / 100) * 100 - 50; // Stable, warm for supportive
+                  }
+                  
+                  // Ensure we have finite values
+                  filterFreq = isFinite(filterFreq) ? filterFreq : 1000; // Default to 1000Hz if calculation resulted in non-finite value
+                  
+                  // Set filter parameters
+                  filter.frequency.setValueAtTime(filterFreq, actualStartTime);
+                  
+                  // Calculate Q value with safety check
+                  let qValue = 3;
+                  if (voice.id === 1 && voice.params.assertiveness !== undefined) {
+                      qValue += (voice.params.assertiveness / 100) * 2;
+                  }
+                  qValue = isFinite(qValue) ? qValue : 3; // Default to 3 if calculation resulted in non-finite value
+                  
+                  filter.Q.setValueAtTime(qValue, actualStartTime); // Q affects resonance/distinctness
+                  
+                  oscGain.connect(filter);
+                  filter.connect(this.voiceNodes.get(voice.id));
+
+                  // --- ADSR Envelope ---
+                  const attackTime = 0.02; // Quick attack
+                  const decayTime = 0.05; // Quick decay
+                  const sustainLevel = 0.4;
+                  const releaseTime = 0.1; // Longer release for a natural tail
+
+                  const peakTime = actualStartTime + attackTime;
+                  const decayEndTime = peakTime + decayTime;
+                  const noteEndTime = actualStartTime + effectiveNoteDuration;
+                  const releaseEndTime = noteEndTime + releaseTime;
+
+                  oscGain.gain.setValueAtTime(0, actualStartTime);
+                  oscGain.gain.linearRampToValueAtTime(0.7, peakTime); // Attack
+                  oscGain.gain.linearRampToValueAtTime(sustainLevel, decayEndTime); // Decay
+                  oscGain.gain.linearRampToValueAtTime(sustainLevel, noteEndTime); // Sustain
+                  oscGain.gain.linearRampToValueAtTime(0, releaseEndTime); // Release
+
+                  osc.start(actualStartTime);
+                  osc.stop(releaseEndTime); // Stop after the full envelope
+              }
+          });
+      },
+
+      // --- Project Management ---
+      saveProject() {
+          const projectData = {
+              tempo: this.tempo,
+              gridResolution: this.gridResolution,
+              misunderstandingRate: this.misunderstandingRate,
+              roomAmbience: this.roomAmbience,
+              conversationTopic: this.conversationTopic,
+              voices: this.voices.map(v => ({
+                  id: v.id,
+                  name: v.name,
+                  color: v.color, // Save actual color value
+                  muted: v.muted,
+                  soloed: v.soloed,
+                  params: { ...v.params }
+              })),
+              patterns: this.patterns.map(p => ({
+                  id: p.id,
+                  voiceId: p.voiceId,
+                  startTime: p.startTime,
+                  duration: p.duration,
+                  type: p.type,
+                  notes: [...p.notes]
+              }))
+          };
+          const json = JSON.stringify(projectData, null, 2);
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'dialogue_sequence.json';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          alert('Project saved as dialogue_sequence.json');
+      },
+
+      handleFileLoad(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    this.loadProject(data);
+                } catch (error) {
+                    alert('Error parsing file: Not a valid JSON project. ' + error.message);
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+        }
+      },
+
+      loadProject(data) {
+          // Stop playback before loading new project
+          this.stopPlayback();
+
+          this.tempo = data.tempo || 120;
+          this.gridResolution = data.gridResolution || 8;
+          this.misunderstandingRate = data.misunderstandingRate || 20;
+          this.roomAmbience = data.roomAmbience || 30;
+          this.conversationTopic = data.conversationTopic || 'casual';
+          
+          // Deep copy and update voices
+          this.voices = data.voices.map(v => ({ 
+              id: v.id, 
+              name: v.name, 
+              color: v.color, 
+              muted: v.muted, 
+              soloed: v.soloed, 
+              params: { ...v.params } 
+          }));
+          
+          // Deep copy patterns
+          this.patterns = data.patterns.map(p => ({ 
+              id: p.id, 
+              voiceId: p.voiceId, 
+              startTime: p.startTime, 
+              duration: p.duration, 
+              type: p.type, 
+              notes: [...p.notes] 
+          }));
+
+          // Re-create voice audio nodes if they exist
+          if (this.audioContext) {
+              this.voiceNodes.clear();
+              this.voices.forEach(voice => this.createVoiceAudioNode(voice.id));
+              this.reverbNode.gain.value = this.roomAmbience / 100;
+          }
+
+          this.updateVoiceDisplay();
+          this.updateSettingsDisplay();
+          this.drawPatterns();
+          this.drawGrid();
+          alert('Project loaded successfully!');
+      },
+
+      // --- Initial Setup ---
+      generateInitialPatterns() {
+          try {
+              // Clear existing patterns
+              this.patterns = [];
+              this.diagnostics.log('Generating initial patterns');
+              
+              // Create a dynamic conversation pattern
+              // First, decide on a conversation structure
+              const conversationTypes = [
+                  'question-answer', // Voice 1 asks, Voice 2 answers
+                  'debate', // Voice 1 and Voice 2 alternate with occasional interruptions
+                  'group-discussion', // All voices participate somewhat equally
+                  'monologue-response', // One voice speaks at length, others respond briefly
+                  'call-and-response' // Regular pattern of statement and response
+              ];
+              
+              // Randomly select a conversation type
+              const conversationType = conversationTypes[Math.floor(Math.random() * conversationTypes.length)];
+              this.diagnostics.log(`Selected conversation type: ${conversationType}`);
+              
+              // Generate patterns based on the selected conversation type
+              switch (conversationType) {
+                  case 'question-answer':
+                      this.generateQuestionAnswerPattern();
+                      break;
+                  case 'debate':
+                      this.generateDebatePattern();
+                      break;
+                  case 'group-discussion':
+                      this.generateGroupDiscussionPattern();
+                      break;
+                  case 'monologue-response':
+                      this.generateMonologueResponsePattern();
+                      break;
+                  case 'call-and-response':
+                      this.generateCallAndResponsePattern();
+                      break;
+                  default:
+                      // Fallback to a simple pattern if something goes wrong
+                      this.generateSimplePattern();
+              }
+              
+              this.patterns.sort((a, b) => a.startTime - b.startTime);
+              this.drawPatterns();
+              this.diagnostics.log(`Generated ${this.patterns.length} initial patterns`);
+          } catch (error) {
+              this.diagnostics.error('Error generating initial patterns', error);
+              // Fallback to a very simple pattern if there's an error
+              this.patterns = [];
+              this.addPatternAt(1, 0, 1, 'draw', 4, [true, false, true, false]);
+              this.patterns.sort((a, b) => a.startTime - b.startTime);
+              this.drawPatterns();
+          }
+      },
+      
+      // Helper method to generate random note patterns
+      generateRandomNotes(steps, density = 0.5) {
+          return Array(steps).fill().map(() => Math.random() < density);
+      },
+      
+      // Different conversation pattern generators
+      generateQuestionAnswerPattern() {
+          // Voice 1 (Assertive) asks questions
+          this.addPatternAt(1, 0, 1, 'draw', 4, [true, false, false, true]);
+          this.addPatternAt(1, 4, 0.5, 'draw', 2, [true, true]);
+          this.addPatternAt(1, 8, 1, 'draw', 4, [true, false, true, false]);
+          
+          // Voice 2 (Inquiring) answers
+          this.addPatternAt(2, 1.5, 1.5, 'respond', 6, this.generateRandomNotes(6, 0.7));
+          this.addPatternAt(2, 5, 2, 'respond', 8, this.generateRandomNotes(8, 0.6));
+          this.addPatternAt(2, 9.5, 1, 'respond', 4, this.generateRandomNotes(4, 0.8));
+          
+          // Voice 3 (Hesitant) occasionally adds comments
+          this.addPatternAt(3, 3, 0.5, 'draw', 2, [true, false]);
+          this.addPatternAt(3, 7, 0.5, 'draw', 2, [false, true]);
+          this.addPatternAt(3, 11, 0.5, 'draw', 2, [true, true]);
+      },
+      
+      generateDebatePattern() {
+          // Voice 1 (Assertive) and Voice 2 (Inquiring) debate
+          for (let i = 0; i < 4; i++) {
+              // Voice 1 makes a point
+              this.addPatternAt(1, i * 3, 1, 'draw', 4, this.generateRandomNotes(4, 0.8));
+              
+              // Voice 2 counters
+              this.addPatternAt(2, i * 3 + 1.25, 1, 'interrupt', 4, this.generateRandomNotes(4, 0.7));
+              
+              // Sometimes Voice 4 (Supportive) supports Voice 1
+              if (Math.random() > 0.5) {
+                  this.addPatternAt(4, i * 3 + 0.5, 0.5, 'respond', 2, [true, true]);
+              }
+              
+              // Sometimes Voice 3 (Hesitant) tries to mediate
+              if (Math.random() > 0.7) {
+                  this.addPatternAt(3, i * 3 + 2.5, 0.5, 'draw', 2, [true, false]);
+              }
+          }
+      },
+      
+      generateGroupDiscussionPattern() {
+          // All voices participate somewhat equally
+          for (let beat = 0; beat < 12; beat += 0.5) {
+              // Randomly select a voice to speak
+              const voiceId = Math.floor(Math.random() * 4) + 1;
+              
+              // Determine if this voice should speak at this beat
+              if (Math.random() > 0.7) {
+                  // Determine pattern duration (shorter is more likely)
+                  const duration = Math.random() > 0.8 ? 1 : 0.5;
+                  const steps = duration === 1 ? 4 : 2;
+                  
+                  // Add the pattern
+                  this.addPatternAt(voiceId, beat, duration, 'draw', steps, 
+                                   this.generateRandomNotes(steps, 0.6 + (voiceId * 0.1)));
+              }
+          }
+      },
+      
+      generateMonologueResponsePattern() {
+          // Voice 1 (Assertive) or Voice 4 (Supportive) gives a monologue
+          const monologueVoice = Math.random() > 0.5 ? 1 : 4;
+          const responseVoice1 = monologueVoice === 1 ? 2 : 1;
+          const responseVoice2 = monologueVoice === 1 ? 3 : 3;
+          
+          // Create the monologue
+          this.addPatternAt(monologueVoice, 0, 4, 'monologue', 16, this.generateRandomNotes(16, 0.7));
+          
+          // Add responses
+          this.addPatternAt(responseVoice1, 4.5, 1, 'respond', 4, this.generateRandomNotes(4, 0.6));
+          this.addPatternAt(responseVoice2, 6, 0.5, 'respond', 2, [true, false]);
+          
+          // Monologue continues
+          this.addPatternAt(monologueVoice, 7, 3, 'monologue', 12, this.generateRandomNotes(12, 0.7));
+          
+          // Final responses
+          this.addPatternAt(responseVoice1, 10.5, 0.5, 'respond', 2, [true, true]);
+          this.addPatternAt(responseVoice2, 11.5, 1, 'respond', 4, this.generateRandomNotes(4, 0.6));
+      },
+      
+      generateCallAndResponsePattern() {
+          // Regular pattern of statement and response
+          for (let i = 0; i < 6; i++) {
+              // Call from Voice 1
+              this.addPatternAt(1, i * 2, 0.5, 'draw', 2, [true, true]);
+              
+              // Response from Voice 2
+              this.addPatternAt(2, i * 2 + 0.75, 0.5, 'respond', 2, [true, false]);
+              
+              // Sometimes Voice 3 joins
+              if (i % 2 === 0) {
+                  this.addPatternAt(3, i * 2 + 1.5, 0.25, 'respond', 1, [true]);
+              }
+              
+              // Voice 4 provides a steady background
+              if (i % 3 === 0) {
+                  this.addPatternAt(4, i * 2 + 0.25, 1.5, 'draw', 6, this.generateRandomNotes(6, 0.5));
+              }
+          }
+      },
+      
+      generateSimplePattern() {
+          // A simple fallback pattern
+          this.addPatternAt(1, 0, 1, 'draw', 4, [true, false, true, false]);
+          this.addPatternAt(2, 1.5, 0.5, 'draw', 2, [true, true]);
+          this.addPatternAt(3, 2.5, 1, 'draw', 4, [false, true, false, true]);
+          this.addPatternAt(4, 4, 2, 'draw', 8, this.generateRandomNotes(8, 0.6));
+          this.addPatternAt(1, 6.5, 1, 'draw', 4, [true, true, false, false]);
+      }
+    };
+    
+    // Initialize the application when the DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('%c Dialogue Sequencer: Initializing application', 'background: #222; color: #bada55; padding: 5px; border-radius: 3px;');
+      
+      // Initialize the application
+      console.log('%c Dialogue Sequencer: Starting initialization', 'background: #222; color: #bada55; padding: 5px; border-radius: 3px;');
+      
+      // Use the app object directly - it's already defined as an object literal, not a constructor
+      window.app = app;
+      
+      // Add audio activation overlay
+      const audioOverlay = document.createElement('div');
+      audioOverlay.id = 'audio-activation-overlay';
+      audioOverlay.className = 'audio-activation-overlay';
+      audioOverlay.innerHTML = `
+        <div class="audio-activation-container">
+          <h2>Enable Audio</h2>
+          <p>Click the button below to enable audio for this application.</p>
+          <button id="activate-audio-btn" class="os1-button">Enable Audio</button>
+        </div>
+      `;
+      document.body.appendChild(audioOverlay);
+      
+      // Style the audio activation overlay
+      const style = document.createElement('style');
+      style.textContent = `
+        .audio-activation-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.9);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 3000;
+          opacity: 1;
+          transition: opacity 0.5s ease-in-out;
+        }
+        
+        .audio-activation-container {
+          max-width: 500px;
+          padding: 2rem;
+          color: white;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1.5rem;
+        }
+      `;
+      document.head.appendChild(style);
+        
+      // Get references to UI elements
+      const os1Overlay = document.getElementById('os1-overlay');
+      const audioActivationOverlay = document.getElementById('audio-activation-overlay');
+      const os1StartButton = document.getElementById('os1-start-button');
+      const os1SkipButton = document.getElementById('os1-skip-button');
+      const clearBtn = document.getElementById('btn-clear');
+      const regenerateBtn = document.getElementById('btn-regenerate');
+      const activateAudioBtn = document.getElementById('activate-audio-btn');
+      
+      // Hide onboarding until audio is activated
+      os1Overlay.style.display = 'none';
+      
+      // Function to initialize audio
+      function initializeAudio() {
+        return new Promise((resolve, reject) => {
+          try {
+            // Create audio context
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            app.audioContext = new AudioContext();
+            
+            // Create master gain
+            app.masterGain = app.audioContext.createGain();
+            app.masterGain.gain.value = 0.5;
+            app.masterGain.connect(app.audioContext.destination);
+            
+            console.log('Audio initialized successfully');
+            resolve();
+          } catch (error) {
+            console.error('Failed to initialize audio:', error);
+            reject(error);
+          }
+        });
+      }
+      
+      // Audio activation button click handler
+      activateAudioBtn.addEventListener('click', async function() {
+        try {
+          // Initialize audio
+          await initializeAudio();
+          
+          // Hide audio activation overlay
+          audioActivationOverlay.style.opacity = '0';
+          audioActivationOverlay.style.pointerEvents = 'none';
+          
+          setTimeout(() => {
+            audioActivationOverlay.style.display = 'none';
+            
+            // Show onboarding overlay
+            os1Overlay.style.display = 'flex';
+            os1Overlay.style.opacity = '1';
+            os1Overlay.style.pointerEvents = 'auto';
+            
+            // Initialize the app
+            app.init();
+          }, 500);
+        } catch (error) {
+          console.error('Error activating audio:', error);
+          alert('Failed to initialize audio. Please try again or check your browser settings.');
+        }
+      });
+      
+      // Function to close the onboarding overlay
+      function closeOnboardingOverlay() {
+        console.log('Closing onboarding overlay');
+        os1Overlay.style.opacity = '0';
+        os1Overlay.style.pointerEvents = 'none';
+        
+        // Set a timeout to hide the overlay completely after the transition
+        setTimeout(() => {
+          os1Overlay.style.display = 'none';
+        }, 500);
+        
+        // Store that the user has seen the onboarding
+        localStorage.setItem('dialogue-onboarding-seen', 'true');
+      }
+      
+      // Initially hide the onboarding overlay until audio is activated
+      os1Overlay.style.display = 'none';
+      os1Overlay.style.opacity = '0';
+      os1Overlay.style.pointerEvents = 'none';
+      
+      // We've removed the old onboarding overlay and are only using the OS-1 style one
+      
+      // Also keep the OS-1 style buttons working
+      if (os1StartButton) {
+        os1StartButton.addEventListener('click', function() {
+          console.log('Begin button clicked');
+          closeOnboardingOverlay();
+        });
+      }
+      
+      if (os1SkipButton) {
+        os1SkipButton.addEventListener('click', function() {
+          console.log('OS-1 Skip Tutorial button clicked');
+          closeOnboardingOverlay();
+        });
+      }
+      
+      // Force close the welcome modal that's currently stuck
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          closeWelcomeModal();
+        }
+      });
+      
+      // Add a direct click handler to close the modal
+      setTimeout(() => {
+        const welcomeModal = document.querySelector('.welcome-modal');
+        if (welcomeModal) {
+          welcomeModal.addEventListener('click', function(e) {
+            if (e.target === welcomeModal) {
+              closeWelcomeModal();
+            }
+          });
+        }
+      }, 500);
+      
+      // Clear all patterns from the grid
+      clearBtn.addEventListener('click', function() {
+        console.log('Clear button clicked');
+        if (window.app.patterns && window.app.patterns.length > 0) {
+          if (confirm('Are you sure you want to clear all patterns?')) {
+            window.app.clearAllPatterns();
+            window.app.showFeedbackToast('All patterns cleared', 'success');
+          }
+        } else {
+          window.app.showFeedbackToast('No patterns to clear', 'error');
+        }
+      });
+      
+      // Regenerate patterns randomly
+      regenerateBtn.addEventListener('click', function() {
+        console.log('Regenerate button clicked');
+        window.app.clearAllPatterns();
+        window.app.generateInitialPatterns();
+        window.app.showFeedbackToast('New patterns generated', 'success');
+      });
+      
+      console.log('%c Dialogue Sequencer: Event listeners attached', 'background: #222; color: #2ecc71; padding: 5px; border-radius: 3px;');
+    });
+  </script>
+</body>
+</html>

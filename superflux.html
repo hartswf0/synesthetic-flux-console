@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SynestheticFlux Console</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Consolas', 'Menlo', 'Monaco', monospace; /* More specific monospace fonts */
+    }
+
+    body {
+      overflow: hidden;
+      background-color: #000;
+      color: #fff;
+      cursor: crosshair; /* Indicate drawing capability */
+    }
+
+    #canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .interface {
+      position: fixed;
+      bottom: 20px; /* Adjusted position */
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      padding: 15px 20px; /* Adjusted padding */
+      background: rgba(10, 10, 20, 0.7); /* Slightly bluish dark bg */
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      border-radius: 12px; /* Softer radius */
+      backdrop-filter: blur(10px);
+      opacity: 0.7;
+      transition: opacity 0.3s ease-in-out;
+      user-select: none; /* Prevent text selection */
+      max-width: 90vw; /* Prevent overflow on mobile */
+    }
+
+    .interface:hover {
+      opacity: 1;
+    }
+
+    .module {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px; /* Increased gap */
+    }
+
+    .entropy-dial, .harmony-dial, .resonance-dial {
+      position: relative;
+      width: 70px; /* Adjusted size */
+      height: 70px;
+      border-radius: 50%;
+      cursor: grab;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      touch-action: none; /* Better touch handling */
+    }
+    
+    .entropy-dial {
+      background: radial-gradient(circle at center, #444, #222);
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.3), inset 0 0 10px rgba(0,0,0,0.5);
+    }
+    
+    .harmony-dial {
+      background: radial-gradient(circle at center, #553366, #331144);
+      box-shadow: 0 0 15px rgba(255, 0, 255, 0.3), inset 0 0 10px rgba(0,0,0,0.5);
+    }
+    
+    .resonance-dial {
+      background: radial-gradient(circle at center, #336655, #114433);
+      box-shadow: 0 0 15px rgba(0, 255, 128, 0.3), inset 0 0 10px rgba(0,0,0,0.5);
+    }
+    .entropy-dial:active {
+      cursor: grabbing;
+    }
+
+    .dial-indicator {
+      position: absolute;
+      top: 5px; /* Start from edge */
+      left: 50%;
+      width: 3px;
+      height: 30px; /* Half radius */
+      transform-origin: 50% 30px; /* Rotate around center of dial */
+      transform: translateX(-50%) rotate(0deg);
+      z-index: 2;
+      border-radius: 2px;
+    }
+    
+    .entropy-dial .dial-indicator {
+      background: cyan;
+      box-shadow: 0 0 5px cyan;
+    }
+    
+    .harmony-dial .dial-indicator {
+      background: magenta;
+      box-shadow: 0 0 5px magenta;
+    }
+    
+    .resonance-dial .dial-indicator {
+      background: #00ff80;
+      box-shadow: 0 0 5px #00ff80;
+    }
+    
+    /* Value display for mobile */
+    .dial-value {
+      position: absolute;
+      font-size: 12px;
+      text-align: center;
+      pointer-events: none;
+    }
+    
+    .entropy-dial .dial-value {
+      color: cyan;
+    }
+    
+    .harmony-dial .dial-value {
+      color: magenta;
+    }
+    
+    .resonance-dial .dial-value {
+      color: #00ff80;
+    }
+
+    .tempo-totem {
+      width: 35px; /* Adjusted size */
+      height: 140px;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(to bottom, #333, #1a1a1a);
+      border-radius: 8px; /* Softer radius */
+      overflow: hidden;
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+    }
+
+    .totem-zone {
+      height: 20%;
+      width: 100%;
+      transition: background 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(0,0,0,0.3);
+    }
+    .totem-zone:last-child {
+      border-bottom: none;
+    }
+    .totem-zone:hover {
+      background: rgba(0, 255, 255, 0.2);
+    }
+    .totem-zone.active {
+      background: cyan;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 0 10px cyan;
+    }
+
+    .memory-slots {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 6px; /* Increased gap */
+      width: 130px; /* Adjusted width */
+    }
+
+    .memory-slot {
+      width: 28px; /* Adjusted size */
+      height: 28px;
+      border-radius: 5px;
+      background: #333;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 10px;
+      color: rgba(255,255,255,0.3);
+    }
+    .memory-slot:hover {
+      background: #444;
+      border-color: rgba(0, 255, 255, 0.3);
+    }
+    .memory-slot.active {
+      background: rgb(255, 0, 150); /* Brighter magenta */
+      box-shadow: 0 0 12px rgb(255, 0, 150), inset 0 0 8px rgba(0,0,0,0.4);
+      border-color: rgba(255, 0, 150, 0.8);
+      color: white;
+    }
+    .memory-slot.has-data {
+        background: #505070; /* Indicate stored data */
+        color: rgba(200,200,255,0.7);
+    }
+    .memory-slot.has-data.active {
+        background: rgb(255, 0, 150);
+        color: white;
+    }
+
+
+    .module-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px; /* Increased spacing */
+      opacity: 0.8;
+      color: cyan; /* Label color */
+    }
+
+    .holo-field { /* Can be used for CSS based background effects if desired */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      pointer-events: none;
+      /* Example: background: repeating-linear-gradient(0deg, rgba(0,255,255,0.02), rgba(0,255,255,0.02) 1px, transparent 1px, transparent 50px); */
+    }
+
+    .hidden {
+      display: none !important; /* Stronger hide */
+    }
+
+    .intro {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: black;
+      color: cyan;
+      z-index: 1000; /* Ensure on top */
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro h1 {
+      font-size: 3rem; /* Slightly larger */
+      margin-bottom: 1.5rem;
+      letter-spacing: 2px;
+      background: linear-gradient(45deg, #ff00aa, #00ffcc, #ff00aa);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientFlow 5s ease infinite;
+    }
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .intro p {
+      margin-bottom: 1rem;
+      max-width: 600px;
+      line-height: 1.6; /* Better readability */
+      font-size: 1.1rem;
+      color: #ccc;
+    }
+    .intro p strong {
+        color: #00ffcc;
+    }
+
+    .start-button {
+      padding: 12px 25px;
+      background: transparent;
+      border: 2px solid cyan;
+      color: cyan;
+      font-size: 1.3rem;
+      cursor: pointer;
+      margin-top: 25px;
+      transition: all 0.3s ease;
+      border-radius: 5px;
+      letter-spacing: 1px;
+    }
+
+    .start-button:hover {
+      background: rgba(0, 255, 255, 0.2);
+      box-shadow: 0 0 15px cyan;
+    }
+
+    .gravity-well-indicator {
+      position: fixed;
+      bottom: 200px; /* Adjusted position */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150px; /* Adjusted size */
+      height: 150px;
+      border-radius: 50%;
+      border: 2px dashed rgba(0, 255, 255, 0.2);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      pointer-events: none;
+      z-index: 4;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .gravity-well-indicator.active {
+        border-color: rgba(255, 0, 150, 0.8);
+        box-shadow: 0 0 20px rgba(255, 0, 150, 0.5);
+    }
+
+    .gravity-center {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: cyan;
+      box-shadow: 0 0 10px cyan;
+      transition: background-color 0.3s, box-shadow 0.3s;
+    }
+    .gravity-well-indicator.active .gravity-center {
+        background-color: rgb(255,0,150);
+        box-shadow: 0 0 15px rgb(255,0,150);
+    }
+
+    .status {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      font-size: 12px;
+      opacity: 0.7;
+      z-index: 10;
+      background: rgba(0,0,0,0.5);
+      padding: 5px 10px;
+      border-radius: 5px;
+      color: #00ffcc;
+    }
+    
+    @media (max-width: 768px) {
+      .status {
+        font-size: 10px;
+        top: 10px;
+        left: 10px;
+        max-width: 80%;
+        line-height: 1.5;
+        padding: 8px;
+      }
+      
+      .interface {
+        bottom: 10px;
+        padding: 15px;
+        gap: 15px;
+        width: 95vw;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      
+      .entropy-dial, .harmony-dial, .resonance-dial {
+        width: 70px;
+        height: 70px;
+      }
+      
+      .module-label {
+        font-size: 10px;
+        margin-top: 5px;
+      }
+      
+      .memory-slots {
+        width: 130px;
+        gap: 8px;
+      }
+      
+      .memory-slot {
+        width: 28px;
+        height: 28px;
+        font-size: 10px;
+      }
+      
+      /* Larger touch targets for mobile */
+      .dial-indicator {
+        width: 4px;
+        height: 32px;
+        transform-origin: 50% 32px;
+      }
+      
+      .dial-value {
+        font-size: 14px;
+        font-weight: bold;
+      }
+      
+      .totem-zone {
+        height: 25%;
+      }
+      
+      /* Improved visibility of status display on mobile */
+      #bpm-status, #entropy-status, #harmony-status, #resonance-status, #visual-status {
+        font-weight: bold;
+      }
+    }
+    
+    .harmony-dial {
+        background: radial-gradient(circle at center, #553366, #331144);
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.3), inset 0 0 10px rgba(0,0,0,0.5);
+      }
+      
+      .resonance-dial {
+        background: radial-gradient(circle at center, #336655, #114433);
+        box-shadow: 0 0 15px rgba(0, 255, 128, 0.3), inset 0 0 10px rgba(0,0,0,0.5);
+      }
+      
+      .harmony-dial .dial-indicator {
+        background: magenta;
+        box-shadow: 0 0 5px magenta;
+      }
+      
+      .resonance-dial .dial-indicator {
+        background: #00ff80;
+        box-shadow: 0 0 5px #00ff80;
+      }
+      
+      .harmony-dial .dial-value {
+        color: magenta;
+      }
+      
+      .resonance-dial .dial-value {
+        color: #00ff80;
+      }
+      
+      .module-label {
+        font-size: 8px;
+      }
+      
+      .memory-slots {
+        width: 110px;
+      }
+      
+      .memory-slot {
+        width: 24px;
+        height: 24px;
+        font-size: 9px;
+      }
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.7; }
+    }
+
+    .notification {
+      position: fixed;
+      top: 70px; /* Positioned below status */
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background: rgba(0, 255, 255, 0.3); /* Cyan-themed */
+      color: #fff;
+      border: 1px solid cyan;
+      border-radius: 20px;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.5s, transform 0.5s;
+      pointer-events: none;
+      text-align: center;
+      backdrop-filter: blur(5px);
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0); /* Animate in */
+    }
+  </style>
+</head>
+<body>
+  <div class="intro">
+    <h1>SynestheticFlux Console</h1>
+    <p><strong>Paint the beat</strong>—conduct color, motion, and time with your body (mouse).</p>
+    <p>Move your mouse to influence visuals. Press <strong>SPACEBAR</strong> to freeze/unfreeze audio-visual loops. <strong>CLICK & DRAG</strong> to draw energetic shapes.</p>
+    <p>Use the modules below to control various parameters of the audio-visual synthesis.</p>
+    <button class="start-button">ENTER THE FLUX</button>
+  </div>
+
+  <canvas id="canvas"></canvas>
+  <div class="holo-field"></div>
+
+  <div class="gravity-well-indicator">
+    <div class="gravity-center"></div>
+  </div>
+
+  <div class="interface">
+    <div class="module">
+      <div class="tempo-totem">
+        <div class="totem-zone" data-bpm="60"></div>
+        <div class="totem-zone" data-bpm="90"></div>
+        <div class="totem-zone" data-bpm="120"></div>
+        <div class="totem-zone" data-bpm="150"></div>
+        <div class="totem-zone" data-bpm="180"></div>
+      </div>
+      <div class="module-label">TEMPO TOTEM</div>
+    </div>
+
+    <div class="module">
+      <div class="entropy-dial">
+        <div class="dial-indicator"></div>
+        <div class="dial-value">0.20</div>
+      </div>
+      <div class="module-label">ENTROPY DIAL</div>
+    </div>
+
+    <div class="module">
+      <div class="memory-slots">
+        <div class="memory-slot" data-slot="0">1</div>
+        <div class="memory-slot" data-slot="1">2</div>
+        <div class="memory-slot" data-slot="2">3</div>
+        <div class="memory-slot" data-slot="3">4</div>
+        <div class="memory-slot" data-slot="4">5</div>
+        <div class="memory-slot" data-slot="5">6</div>
+        <div class="memory-slot" data-slot="6">7</div>
+        <div class="memory-slot" data-slot="7">8</div>
+      </div>
+      <div class="module-label">MEMORY SLOTS</div>
+    </div>
+    
+    <div class="module">
+      <div class="harmony-dial">
+        <div class="dial-indicator"></div>
+        <div class="dial-value">0.50</div>
+      </div>
+      <div class="module-label">HARMONY DIAL</div>
+    </div>
+    
+    <div class="module">
+      <div class="resonance-dial">
+        <div class="dial-indicator"></div>
+        <div class="dial-value">0.50</div>
+      </div>
+      <div class="module-label">RESONANCE DIAL</div>
+    </div>
+  </div>
+
+  <div class="status">
+    BPM: <span id="bpm-status">120</span> |
+    ENTROPY: <span id="entropy-status">0.20</span> |
+    HARMONY: <span id="harmony-status">0.50</span> |
+    RESONANCE: <span id="resonance-status">0.50</span> |
+    MODE: <span id="mode-status">FLUX</span> |
+    VISUAL: <span id="visual-status">flux_whirl</span>
+  </div>
+
+  <div class="notification" id="notification">
+    Notification Text
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script> <!-- Updated Tone.js version -->
+
+  <script>
+    // SynestheticFlux Console - Main Control Script
+
+    // --- DOM Elements ---
+    const introScreen = document.querySelector('.intro');
+    const startButton = document.querySelector('.start-button');
+    const canvas = document.getElementById('canvas');
+    const bpmStatusEl = document.getElementById('bpm-status');
+    const entropyStatusEl = document.getElementById('entropy-status');
+    const harmonyStatusEl = document.getElementById('harmony-status');
+    const resonanceStatusEl = document.getElementById('resonance-status');
+    const modeStatusEl = document.getElementById('mode-status');
+    const visualStatusEl = document.getElementById('visual-status');
+    const notificationEl = document.getElementById('notification');
+    const entropyDialEl = document.querySelector('.entropy-dial');
+    const dialIndicatorEl = document.querySelector('.dial-indicator');
+    const tempoTotemZones = document.querySelectorAll('.tempo-totem .totem-zone');
+    const memorySlotEls = document.querySelectorAll('.memory-slots .memory-slot');
+    const gravityWellIndicatorEl = document.querySelector('.gravity-well-indicator');
+
+    // --- System State ---
+    const state = {
+      entropy: 0.2, // 0.0 to 1.0
+      harmony: 0.5, // 0.0 to 1.0 - controls harmonic relationships
+      resonance: 0.5, // 0.0 to 1.0 - controls resonance/feedback
+      bpm: 120,
+      activeMemorySlot: null,
+      loopFrozen: false,
+      currentMode: 'FLUX', // FLUX, DRAW, FREEZE
+      colorHueRotation: 0,
+      mouseVelocity: { x: 0, y: 0 },
+      lastMousePos: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+      isMouseDown: false,
+      drawnLines: [], // For click-drag drawing
+      visualPresets: [
+        'flux_whirl', 'quantum_scatter', 'membrane_ripple', 'vector_field',
+        'crystal_lattice', 'pulse_nebula', 'void_filament', 'datamosh_lens',
+        'harmonic_wave', 'resonant_field', 'spectral_bloom', 'quantum_foam'
+      ],
+      activeVisualPreset: 'flux_whirl',
+      memoryStates: {}, // To store snapshots of key state variables
+      cameraShakeIntensity: 0,
+      isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    };
+
+    // --- Audio System (Tone.js) ---
+    let audioInitialized = false;
+    let synth, bass, kick, snare, hihat, reverb, delay, distortion, filter, masterComp;
+    let drone, pad, chorus, autoFilter, limiter;
+    let kickPart, snarePart, hihatPart, bassPart, dronePart, padPart;
+
+    const patterns = {
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      snare: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // Slightly less busy
+      hihat: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    };
+    const bassNotes = ["C2", "Eb2", "G1", "Bb1"]; // Minor feel
+
+    async function initAudio() {
+      if (audioInitialized) return;
+      await Tone.start(); // Essential for user gesture
+      Tone.Transport.bpm.value = state.bpm;
+
+      // Create a more sophisticated audio chain for better sound
+      limiter = new Tone.Limiter(-1).toDestination(); // Prevent clipping
+      masterComp = new Tone.Compressor(-12, 4).connect(limiter); // Master compressor
+
+      // Enhanced reverb with longer decay for more ambient sound
+      reverb = new Tone.Reverb({ decay: 3.5, wet: 0.3 }).connect(masterComp);
+      
+      // Ping-pong delay for more spatial effect
+      delay = new Tone.PingPongDelay({ delayTime: "8n.", feedback: 0.4, wet: 0.25 }).connect(reverb);
+      
+      // Add chorus for richer sound
+      chorus = new Tone.Chorus({
+        frequency: 1.5,
+        delayTime: 3.5,
+        depth: 0.7,
+        wet: 0.3
+      }).connect(delay);
+      
+      // Auto filter for movement in the sound
+      autoFilter = new Tone.AutoFilter({
+        frequency: 0.1,
+        depth: 0.5,
+        baseFrequency: 200,
+        octaves: 3,
+        wet: 0.2
+      }).start().connect(chorus);
+      
+      distortion = new Tone.Distortion({ distortion: 0.1, wet: 0.1 }).connect(autoFilter);
+      filter = new Tone.Filter({ frequency: 10000, type: "lowpass", Q: 1 }).connect(distortion);
+
+      // Enhanced bass synth
+      bass = new Tone.MonoSynth({
+        oscillator: { type: "fatsawtooth", count: 3, spread: 30 },
+        envelope: { attack: 0.01, decay: 0.3, sustain: 0.2, release: 0.8 },
+        filter: { Q: 6, type: "lowpass", rolloff: -24 },
+        filterEnvelope: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 1, baseFrequency: 80, octaves: 3 }
+      }).connect(filter);
+
+      // Main melodic synth
+      synth = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: "fmsine", modulationIndex: 3, harmonicity: 1.5 },
+        envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 1.5 },
+        portamento: 0.05
+      }).connect(filter);
+      
+      // Drone synth for continuous ambient sounds
+      drone = new Tone.FMSynth({
+        harmonicity: 1.5,
+        modulationIndex: 3.5,
+        oscillator: { type: "sine" },
+        envelope: { attack: 1, decay: 0.5, sustain: 0.8, release: 2 },
+        modulation: { type: "triangle" },
+        modulationEnvelope: { attack: 0.5, decay: 0, sustain: 1, release: 1 }
+      }).connect(chorus); // Connect directly to chorus for more ambient effect
+      
+      // Pad synth for harmonic background
+      pad = new Tone.PolySynth(Tone.AMSynth, {
+        harmonicity: 2,
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.8, decay: 1, sustain: 0.8, release: 3 },
+        modulation: { type: "square" },
+        modulationEnvelope: { attack: 0.5, decay: 0, sustain: 1, release: 0.5 }
+      }).connect(chorus);
+
+      // Percussion
+      kick = new Tone.MembraneSynth({
+        pitchDecay: 0.05, octaves: 8, oscillator: { type: "sine" },
+        envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4, attackCurve: "exponential" }
+      }).connect(filter);
+
+      snare = new Tone.NoiseSynth({
+        noise: { type: "pink", playbackRate: 1 },
+        envelope: { attack: 0.002, decay: 0.15, sustain: 0, release: 0.4 }
+      }).connect(filter);
+
+      hihat = new Tone.MetalSynth({
+        frequency: 300, envelope: { attack: 0.001, decay: 0.08, release: 0.05 },
+        harmonicity: 4.1, modulationIndex: 20, resonance: 3000, octaves: 1.2
+      }).connect(filter);
+
+      // Create harmonic scales based on harmony parameter
+      const updateHarmonicScales = () => {
+        // Scales from more consonant to more dissonant based on harmony value
+        if (state.harmony < 0.33) {
+          // More consonant scales (pentatonic, major)
+          return {
+            bass: ["C2", "G1", "F2", "G1"],
+            pad: ["C3", "G3", "C4", "E3", "G3"],
+            drone: "C2"
+          };
+        } else if (state.harmony < 0.66) {
+          // Moderately dissonant (minor, dorian)
+          return {
+            bass: ["C2", "Eb2", "G1", "Bb1"],
+            pad: ["C3", "Eb3", "G3", "Bb3", "D4"],
+            drone: "G1"
+          };
+        } else {
+          // More dissonant (diminished, whole tone)
+          return {
+            bass: ["C2", "Eb2", "Gb1", "A1"],
+            pad: ["C3", "Eb3", "Gb3", "A3", "C4"],
+            drone: "Eb1"
+          };
+        }
+      };
+      
+      let scales = updateHarmonicScales();
+
+      // Rhythm parts
+      kickPart = new Tone.Sequence((time, step) => {
+        if (patterns.kick[step]) {
+          kick.triggerAttackRelease("C1", "8n", time, 0.8 + Math.random() * 0.2 * state.entropy);
+          if (visualSystem) visualSystem.pulseKick();
+        }
+      }, Array.from(Array(16).keys()), "16n").start(0);
+
+      snarePart = new Tone.Sequence((time, step) => {
+        if (patterns.snare[step]) {
+          snare.triggerAttackRelease("16n", time, 0.6 + Math.random() * 0.2 * state.entropy);
+          if (visualSystem) visualSystem.pulseSnare();
+        }
+      }, Array.from(Array(16).keys()), "16n").start(0);
+
+      hihatPart = new Tone.Sequence((time, step) => {
+        if (patterns.hihat[step]) {
+          hihat.triggerAttackRelease("16n", time, 0.15 + (step % 4 === 0 ? 0.1 : 0) + Math.random() * 0.05 * state.entropy);
+          if (visualSystem) visualSystem.pulseHihat(step % 4 === 0 ? 1 : 0.5);
+        }
+      }, Array.from(Array(16).keys()), "16n").start(0);
+
+      bassPart = new Tone.Sequence((time, step) => {
+        if (step % 4 === 0) { // Play bass on downbeats
+          const note = scales.bass[Math.floor(step / 4) % scales.bass.length];
+          bass.triggerAttackRelease(note, "4n", time, 0.7);
+          if (visualSystem) visualSystem.pulseBass(note);
+        }
+      }, Array.from(Array(16).keys()), "16n").start(0);
+      
+      // Drone part - continuous sound that changes less frequently
+      dronePart = new Tone.Loop(time => {
+        // Retrigger drone every few measures for continuous sound
+        drone.triggerAttackRelease(scales.drone, "1m", time, 0.4);
+        // Update scales based on current harmony setting
+        scales = updateHarmonicScales();
+      }, "2m").start(0); // Trigger every 2 measures
+      
+      // Pad part - plays chord progressions
+      padPart = new Tone.Sequence((time, step) => {
+        if (step === 0 || step === 8) { // Play pad chords on main beats
+          const chordIndex = step === 0 ? 0 : 1;
+          const velocity = 0.3 + state.resonance * 0.2;
+          // Play a chord from the pad scale
+          pad.triggerAttackRelease(scales.pad, "2n", time, velocity);
+        }
+      }, Array.from(Array(16).keys()), "4n").start(0);
+
+      Tone.Transport.start();
+      audioInitialized = true;
+      showNotification("Enhanced Audio System Initialized", 2000);
+      updateStatusDisplay();
+    }
+
+    // --- Three.js Visual System ---
+    let camera, scene, renderer, clock;
+    let visualSystem;
+
+    function initVisuals() {
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      // renderer.outputEncoding = THREE.sRGBEncoding; // For more accurate colors if using PBR
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 8;
+
+      clock = new THREE.Clock();
+      visualSystem = new VisualSystem(scene, renderer);
+      visualSystem.applyPreset(state.activeVisualPreset);
+
+      animate();
+    }
+
+    class VisualSystem {
+      constructor(scene, renderer) {
+        this.scene = scene;
+        this.renderer = renderer;
+        this.particles = null;
+        this.particleMaterial = null;
+        this.waveforms = [];
+        this.pulseObjects = [];
+        this.drawnLineMeshes = []; // Store meshes of drawn lines
+
+        this.timer = 0;
+        this.initVisualElements();
+      }
+
+      initVisualElements() {
+        // Particle System
+        const particleCount = 2000;
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const pSizes = new Float32Array(particleCount);
+        const pVelocities = new Float32Array(particleCount * 3);
+
+
+        for (let i = 0; i < particleCount; i++) {
+          positions[i * 3] = (Math.random() - 0.5) * 20;
+          positions[i * 3 + 1] = (Math.random() - 0.5) * 20;
+          positions[i * 3 + 2] = (Math.random() - 0.5) * 20;
+          new THREE.Color().setHSL(Math.random(), 0.8, 0.6).toArray(colors, i * 3);
+          pSizes[i] = Math.random() * 0.15 + 0.05;
+          pVelocities[i * 3] = (Math.random() - 0.5) * 0.01;
+          pVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.01;
+          pVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.01;
+        }
+
+        const particleGeometry = new THREE.BufferGeometry();
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        particleGeometry.setAttribute('size', new THREE.BufferAttribute(pSizes, 1));
+        particleGeometry.setAttribute('velocity', new THREE.BufferAttribute(pVelocities, 3));
+
+
+        this.particleMaterial = new THREE.PointsMaterial({
+          size: 0.1, vertexColors: true, transparent: true,
+          opacity: 0.7, sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false
+        });
+        this.particles = new THREE.Points(particleGeometry, this.particleMaterial);
+        this.scene.add(this.particles);
+
+        // Waveform Visualizer (simple line for now, can be expanded)
+        const waveGeometry = new THREE.BufferGeometry();
+        const waveVertices = new Float32Array(256 * 3); // Increased resolution
+        for (let i = 0; i < 256; i++) {
+          waveVertices[i * 3] = (i / 255) * 12 - 6; // Span -6 to 6
+          waveVertices[i * 3 + 1] = 0;
+          waveVertices[i * 3 + 2] = -2; // Positioned slightly in front
+        }
+        waveGeometry.setAttribute('position', new THREE.BufferAttribute(waveVertices, 3));
+        const waveMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2, transparent: true, opacity: 0.8 });
+        const waveform = new THREE.Line(waveGeometry, waveMaterial);
+        this.scene.add(waveform);
+        this.waveforms.push(waveform);
+
+        // Pulse Spheres
+        for (let i = 0; i < 5; i++) {
+          const pulseGeometry = new THREE.SphereGeometry(0.1, 16, 12);
+          const pulseMaterial = new THREE.MeshBasicMaterial({
+            color: new THREE.Color().setHSL(Math.random(), 0.9, 0.6),
+            transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false
+          });
+          const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
+          pulse.position.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 4);
+          this.scene.add(pulse);
+          this.pulseObjects.push({ mesh: pulse, baseScale: 0.1, targetScale: 0.1, life: 0 });
+        }
+      }
+
+      applyPreset(presetName) {
+        state.activeVisualPreset = presetName;
+        showNotification(`Visual Preset: ${presetName.replace(/_/g, ' ')}`, 2000);
+        updateStatusDisplay();
+
+        // Reset all particles to default state
+        const positions = this.particles.geometry.attributes.position.array;
+        const colors = this.particles.geometry.attributes.color.array;
+        const pSizes = this.particles.geometry.attributes.size.array;
+        const velocities = this.particles.geometry.attributes.velocity.array;
+        
+        // Mobile optimization - adjust particle sizes for better visibility
+        const isMobile = window.innerWidth < 768;
+        const sizeMultiplier = isMobile ? 1.5 : 1.0;
+        const particleCount = isMobile ? Math.floor(positions.length / 4) : positions.length / 3;
+        
+        // Update particle material blending based on preset
+        if (presetName === 'flux_whirl' || presetName === 'spectral_bloom' || presetName === 'quantum_foam') {
+          this.particleMaterial.blending = THREE.AdditiveBlending;
+          this.particleMaterial.opacity = 0.7;
+        } else if (presetName === 'harmonic_wave') {
+          this.particleMaterial.blending = THREE.NormalBlending;
+          this.particleMaterial.opacity = 0.8;
+        } else if (presetName === 'resonant_field') {
+          this.particleMaterial.blending = THREE.MultiplyBlending;
+          this.particleMaterial.opacity = 0.6;
+        } else if (presetName === 'crystal_lattice') {
+          this.particleMaterial.blending = THREE.AdditiveBlending;
+          this.particleMaterial.opacity = 0.9;
+        } else if (presetName === 'solar_flare') {
+          this.particleMaterial.blending = THREE.AdditiveBlending;
+          this.particleMaterial.opacity = 0.8;
+        } else if (presetName === 'nebula_cloud') {
+          this.particleMaterial.blending = THREE.CustomBlending;
+          this.particleMaterial.opacity = 0.5;
+        }
+        
+        // Apply distinct colors and behaviors for each preset
+        for (let i = 0; i < particleCount; i++) {
+          // Variables for particle properties
+          let baseHue, baseSaturation, baseLightness;
+          let particleSize, velocityX, velocityY, velocityZ;
+          
+          // Set distinct colors and behaviors based on preset
+          if (presetName === 'flux_whirl') {
+            // Position particles in wave-like patterns
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 5 + Math.random() * 5;
+            positions[i * 3] = Math.cos(angle) * radius;
+            positions[i * 3 + 1] = Math.sin(angle) * radius;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 10;
+          } else if (presetName === 'resonant_field') {
+            // Create a field-like distribution
+            const gridSize = 1.0;
+            positions[i * 3] = Math.floor((Math.random() - 0.5) * 20 / gridSize) * gridSize;
+            positions[i * 3 + 1] = Math.floor((Math.random() - 0.5) * 20 / gridSize) * gridSize;
+            positions[i * 3 + 2] = Math.floor((Math.random() - 0.5) * 20 / gridSize) * gridSize;
+          } else if (presetName === 'spectral_bloom') {
+            // Create a spherical distribution
+            const phi = Math.acos(2 * Math.random() - 1);
+            const theta = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 10;
+            positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+            positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+            positions[i * 3 + 2] = radius * Math.cos(phi);
+          } else {
+            // Default random distribution
+            positions[i * 3] = (Math.random() - 0.5) * 20;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 20;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 20;
+          }
+          
+          // Set colors based on preset
+          let hue, saturation, lightness;
+          switch (presetName) {
+            case 'flux_whirl':
+              hue = Math.random();
+              saturation = 0.8;
+              lightness = 0.6;
+              break;
+            case 'quantum_scatter':
+              hue = Math.random() * 0.2 + 0.7; // Blue-purple range
+              saturation = 0.9;
+              lightness = 0.7;
+              break;
+            case 'membrane_ripple':
+              hue = Math.random() * 0.3 + 0.4; // Green-cyan range
+              saturation = 0.7;
+              lightness = 0.5;
+              break;
+            case 'vector_field':
+              hue = 0.6; // Blue
+              saturation = 0.7;
+              lightness = 0.5 + Math.random() * 0.2;
+              class ParticleSystem {
+                constructor(canvas, numParticles = 1000) {
+                  this.canvas = canvas;
+                  this.ctx = canvas.getContext('2d');
+                  this.particles = [];
+                  this.numParticles = numParticles;
+                  this.initParticles();
+                  this.presetParams = {
+                    flux_whirl: {
+                      speedFactor: 1.5,
+                      sizeFactor: 1.0,
+                      colorMode: 'rainbow',
+                      blendMode: 'screen',
+                      rotationFactor: 0.5,
+                      entropyInfluence: 0.8,
+                      harmonyInfluence: 0.6,
+                      resonanceInfluence: 0.7,
+                      baseColor: { r: 255, g: 100, b: 50 },  // Vibrant orange-red base
+                      particleShape: 'circle',
+                      motionPattern: 'spiral',
+                      description: 'Swirling vortex of vibrant colors'
+                    },
+                    harmonic_wave: {
+                      speedFactor: 0.8,
+                      sizeFactor: 1.2,
+                      colorMode: 'blues',
+                      blendMode: 'overlay',
+                      rotationFactor: 0.3,
+                      entropyInfluence: 0.4,
+                      harmonyInfluence: 0.9,
+                      resonanceInfluence: 0.5,
+                      baseColor: { r: 30, g: 100, b: 255 },  // Deep blue base
+                      particleShape: 'square',
+                      motionPattern: 'wave',
+                      description: 'Oceanic waves of harmonic blue patterns'
+                    },
+                    resonant_field: {
+                      speedFactor: 0.6,
+                      sizeFactor: 1.5,
+                      colorMode: 'greens',
+                      blendMode: 'lighten',
+                      rotationFactor: 0.1,
+                      entropyInfluence: 0.3,
+                      harmonyInfluence: 0.5,
+                      resonanceInfluence: 0.9,
+                      baseColor: { r: 50, g: 200, b: 100 },  // Emerald green base
+                      particleShape: 'triangle',
+                      motionPattern: 'field',
+                      description: 'Resonating field of emerald energy'
+                    },
+                    spectral_bloom: {
+                      speedFactor: 1.2,
+                      sizeFactor: 0.8,
+                      colorMode: 'purples',
+                      blendMode: 'screen',
+                      rotationFactor: 0.7,
+                      entropyInfluence: 0.6,
+                      harmonyInfluence: 0.7,
+                      resonanceInfluence: 0.4,
+                      baseColor: { r: 180, g: 50, b: 220 },  // Rich purple base
+                      particleShape: 'circle',
+                      motionPattern: 'bloom',
+                      description: 'Blooming spectral flowers of purple light'
+                    },
+                    quantum_foam: {
+                      speedFactor: 2.0,
+                      sizeFactor: 0.6,
+                      colorMode: 'cyans',
+                      blendMode: 'exclusion',
+                      rotationFactor: 0.9,
+                      entropyInfluence: 0.9,
+                      harmonyInfluence: 0.3,
+                      resonanceInfluence: 0.2,
+                      baseColor: { r: 0, g: 210, b: 230 },  // Bright cyan base
+                      particleShape: 'dot',
+                      motionPattern: 'quantum',
+                      description: 'Quantum foam of rapidly moving cyan particles'
+                    },
+                    crystal_lattice: {
+                      speedFactor: 0.4,
+                      sizeFactor: 1.0,
+                      colorMode: 'whites',
+                      blendMode: 'hard-light',
+                      rotationFactor: 0.2,
+                      entropyInfluence: 0.2,
+                      harmonyInfluence: 0.8,
+                      resonanceInfluence: 0.6,
+                      baseColor: { r: 220, g: 220, b: 255 },  // Icy white-blue base
+                      particleShape: 'diamond',
+                      motionPattern: 'lattice',
+                      description: 'Crystalline lattice of geometric light'
+                    },
+                    solar_flare: {
+                      speedFactor: 1.7,
+                      sizeFactor: 1.1,
+                      colorMode: 'yellows',
+                      blendMode: 'screen',
+                      rotationFactor: 0.6,
+                      entropyInfluence: 0.7,
+                      harmonyInfluence: 0.5,
+                      resonanceInfluence: 0.3,
+                      baseColor: { r: 255, g: 200, b: 0 },  // Bright yellow base
+                      particleShape: 'flare',
+                      motionPattern: 'eruption',
+                      description: 'Explosive solar flares of golden energy'
+                    },
+                    nebula_cloud: {
+                      speedFactor: 0.5,
+                      sizeFactor: 1.4,
+                      colorMode: 'cosmic',
+                      blendMode: 'multiply',
+                      rotationFactor: 0.3,
+                      entropyInfluence: 0.5,
+                      harmonyInfluence: 0.6,
+                      resonanceInfluence: 0.8,
+                      baseColor: { r: 100, g: 0, b: 150 },  // Deep space purple base
+                      particleShape: 'cloud',
+                      motionPattern: 'drift',
+                      description: 'Cosmic nebula of swirling stardust'
+                    }
+                  };
+                  
+                  // Mobile optimization - reduce particle count on small screens
+                  if (window.innerWidth < 768) {
+                    this.numParticles = Math.floor(this.numParticles * 0.6);
+                  }
+                }
+              }
+              break;
+            case 'crystal_lattice': // More ordered
+              baseHue = 0.15 + Math.random() * 0.1; // Gold-yellow
+              baseSaturation = 0.8;
+              baseLightness = 0.6;
+              break;
+            case 'pulse_nebula':
+              hue = 0.8 + Math.random() * 0.2; // Purple-magenta
+              saturation = 0.8;
+              lightness = 0.5;
+              break;
+            case 'void_filament':
+              hue = 0.6 + Math.random() * 0.1; // Blue-indigo
+              saturation = 0.3 + Math.random() * 0.3;
+              lightness = 0.3 + Math.random() * 0.3;
+              break;
+            case 'datamosh_lens':
+              hue = Math.random();
+              saturation = 0.5 + Math.random() * 0.5;
+              lightness = 0.5;
+              break;
+            case 'harmonic_wave': // New resonant wave pattern
+              hue = 0.7 + Math.random() * 0.3; // Blue-purple-magenta
+              saturation = 0.9;
+              lightness = 0.6;
+              break;
+            case 'resonant_field': // Resonant field with harmonic patterns
+              hue = 0.3 + Math.random() * 0.3; // Green-cyan
+              saturation = 0.8;
+              lightness = 0.6;
+              break;
+            case 'spectral_bloom': // Blooming spectral patterns
+              hue = Math.random(); // Full spectrum
+              saturation = 0.9;
+              lightness = 0.7;
+              break;
+            case 'quantum_foam': // Quantum foam-like patterns
+              hue = 0.6 + Math.random() * 0.1; // Blue
+              saturation = 0.3;
+              lightness = 0.7;
+              break;
+            default:
+              hue = Math.random();
+              saturation = 0.8;
+              lightness = 0.6;
+          }
+          new THREE.Color().setHSL(hue, saturation, lightness).toArray(colors, i * 3);
+          
+          // Set sizes based on preset
+          switch (presetName) {
+            case 'quantum_scatter':
+              pSizes[i] = Math.random() * 0.05 + 0.02;
+              break;
+            case 'void_filament':
+              pSizes[i] = Math.random() * 0.03 + 0.01;
+              break;
+            case 'crystal_lattice':
+              pSizes[i] = 0.2;
+              break;
+            case 'spectral_bloom':
+              pSizes[i] = Math.random() * 0.2 + 0.1;
+              break;
+            case 'quantum_foam':
+              pSizes[i] = Math.random() * 0.04 + 0.02;
+              break;
+            default:
+              pSizes[i] = Math.random() * 0.15 + 0.05;
+          }
+          
+          // Reset velocities
+          velocities[i * 3] = (Math.random() - 0.5) * 0.01;
+          velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.01;
+          velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.01;
+        }
+        
+        // Update geometry attributes
+        this.particles.geometry.attributes.position.needsUpdate = true;
+        this.particles.geometry.attributes.color.needsUpdate = true;
+        this.particles.geometry.attributes.size.needsUpdate = true;
+        this.particles.geometry.attributes.velocity.needsUpdate = true;
+
+        // Set material properties based on preset
+        switch (presetName) {
+          case 'flux_whirl':
+            this.particleMaterial.size = 0.1;
+            this.particles.material.blending = THREE.AdditiveBlending;
+            this.particles.material.opacity = 0.7;
+            break;
+          case 'quantum_scatter':
+            this.particleMaterial.size = 0.05;
+            this.particles.material.blending = THREE.AdditiveBlending;
+            this.particles.material.opacity = 0.8;
+            break;
+          case 'membrane_ripple':
+            this.particleMaterial.size = 0.15;
+            this.particles.material.blending = THREE.AdditiveBlending;
+            this.particles.material.opacity = 0.7;
+            break;
+          case 'vector_field':
+            this.particleMaterial.size = 0.08;
+            this.particles.material.blending = THREE.NormalBlending;
+            this.particles.material.opacity = 0.9;
+            break;
+          case 'crystal_lattice': // More ordered
+            this.particleMaterial.size = 0.2;
+            this.particles.material.blending = THREE.AdditiveBlending;
+            this.particles.material.opacity = 0.8;
+            break;
+          case 'pulse_nebula':
+            this.particleMaterial.size = 0.12;
+            this.particles.material.blending = THREE.AdditiveBlending;
+            this.particles.material.opacity = 0.7;
+            break;
+          case 'void_filament':
+            this.particleMaterial.size = 0.03;
+            this.particles.material.blending = THREE.AdditiveBlending;
+            this.particles.material.opacity = 0.6;
+            break;
+          case 'datamosh_lens':
+            this.particleMaterial.size = 0.2;
+            this.particles.material.blending = THREE.AdditiveBlending;
+            this.particles.material.opacity = 0.8;
+            break;
+          case 'harmonic_wave': // New resonant wave pattern
+            this.particleMaterial.size = 0.08;
+            this.particles.material.blending = THREE.AdditiveBlending;
+            this.particles.material.opacity = 0.8;
+            break;
+          case 'resonant_field': // Resonant field with harmonic patterns
+            this.particleMaterial.size = 0.15;
+            this.particles.material.blending = THREE.AdditiveBlending;
+            this.particles.material.opacity = 0.85;
+            break;
+          case 'spectral_bloom': // Blooming spectral patterns
+            this.particleMaterial.size = 0.18;
+            this.particles.material.blending = THREE.AdditiveBlending;
+            this.particles.material.opacity = 0.9;
+            break;
+          case 'quantum_foam': // Quantum foam-like patterns
+            this.particleMaterial.size = 0.04;
+            this.particles.material.blending = THREE.AdditiveBlending;
+            this.particles.material.opacity = 0.95;
+            break;
+        }
+        this.particleMaterial.needsUpdate = true;
+        
+        // Update audio parameters to match the visual preset
+        if (audioInitialized) {
+          updateAudioParameters();
+        }
+      }
+
+      update(deltaTime) {
+        this.timer += deltaTime;
+
+        // Update Particles
+        if (this.particles) {
+          const positions = this.particles.geometry.attributes.position.array;
+          const colors = this.particles.geometry.attributes.color.array;
+          const pSizes = this.particles.geometry.attributes.size.array;
+          const velocities = this.particles.geometry.attributes.velocity.array;
+
+          for (let i = 0; i < positions.length / 3; i++) {
+            // Basic motion based on preset
+            let speedFactor = 1.0;
+            let attractionFactor = 0.001;
+            
+            // Apply different motion patterns based on visual preset
+            switch(state.activeVisualPreset) {
+              case 'crystal_lattice':
+                // Snap to a grid-like structure (simplified)
+                positions[i * 3] += (Math.round(positions[i * 3]) - positions[i * 3]) * 0.01;
+                positions[i * 3 + 1] += (Math.round(positions[i * 3 + 1]) - positions[i * 3 + 1]) * 0.01;
+                positions[i * 3 + 2] += (Math.round(positions[i * 3 + 2]) - positions[i * 3 + 2]) * 0.01;
+                break;
+                
+              case 'flux_whirl':
+                velocities[i*3] += Math.sin(this.timer * 0.2 + positions[i * 3 + 1] * 0.1) * 0.0005;
+                velocities[i*3+1] += Math.cos(this.timer * 0.2 + positions[i * 3] * 0.1) * 0.0005;
+                break;
+                
+              case 'harmonic_wave':
+                // Create wave-like patterns based on harmony parameter
+                const harmonicFactor = 0.5 + state.harmony * 2;
+                const wavePhase = this.timer * harmonicFactor;
+                velocities[i*3] += Math.sin(wavePhase + positions[i * 3 + 1] * 0.2) * 0.0008;
+                velocities[i*3+1] += Math.sin(wavePhase * 1.3 + positions[i * 3] * 0.2) * 0.0008;
+                // Adjust particle size based on position in wave
+                pSizes[i] = 0.05 + Math.abs(Math.sin(wavePhase + i * 0.1)) * 0.1;
+                break;
+                
+              case 'resonant_field':
+                // Create resonant patterns with standing waves
+                const resonanceFactor = 0.3 + state.resonance * 2;
+                const fieldPhase = this.timer * 0.5;
+                // Create standing wave patterns
+                const standingWaveX = Math.sin(positions[i * 3] * resonanceFactor) * Math.cos(fieldPhase);
+                const standingWaveY = Math.sin(positions[i * 3 + 1] * resonanceFactor) * Math.sin(fieldPhase);
+                velocities[i*3] += standingWaveX * 0.001;
+                velocities[i*3+1] += standingWaveY * 0.001;
+                // Particles brighten at wave nodes
+                const waveIntensity = Math.abs(standingWaveX * standingWaveY);
+                const tempColor = new THREE.Color().fromArray(colors, i * 3);
+                tempColor.offsetHSL(0, 0, waveIntensity * 0.2);
+                tempColor.toArray(colors, i * 3);
+                break;
+                
+              case 'spectral_bloom':
+                // Create blooming spectral patterns
+                const bloomPhase = this.timer * 0.3;
+                const distFromCenter = Math.sqrt(
+                  Math.pow(positions[i * 3], 2) + 
+                  Math.pow(positions[i * 3 + 1], 2) + 
+                  Math.pow(positions[i * 3 + 2], 2)
+                );
+                // Particles move in blooming patterns
+                const bloomFactor = Math.sin(bloomPhase + distFromCenter * 0.5) * 0.001;
+                const dirX = positions[i * 3] / (distFromCenter + 0.1);
+                const dirY = positions[i * 3 + 1] / (distFromCenter + 0.1);
+                const dirZ = positions[i * 3 + 2] / (distFromCenter + 0.1);
+                velocities[i*3] += dirX * bloomFactor * (1 + state.harmony);
+                velocities[i*3+1] += dirY * bloomFactor * (1 + state.harmony);
+                velocities[i*3+2] += dirZ * bloomFactor * (1 + state.harmony);
+                // Size pulsates
+                pSizes[i] = 0.1 + Math.abs(Math.sin(bloomPhase + distFromCenter)) * 0.15;
+                break;
+                
+              case 'quantum_foam':
+                // Quantum foam-like rapid small movements
+                const foamFactor = 0.002 * (0.5 + state.entropy);
+                velocities[i*3] += (Math.random() - 0.5) * foamFactor;
+                velocities[i*3+1] += (Math.random() - 0.5) * foamFactor;
+                velocities[i*3+2] += (Math.random() - 0.5) * foamFactor;
+                // Occasional quantum "jumps"
+                if (Math.random() < 0.001 * state.entropy) {
+                  positions[i * 3] += (Math.random() - 0.5) * 2;
+                  positions[i * 3 + 1] += (Math.random() - 0.5) * 2;
+                  positions[i * 3 + 2] += (Math.random() - 0.5) * 2;
+                }
+                break;
+                
+              default: // Default flow for other presets
+                velocities[i*3] += (Math.random() - 0.5) * 0.001 * state.entropy;
+                velocities[i*3+1] += (Math.random() - 0.5) * 0.001 * state.entropy;
+                velocities[i*3+2] += (Math.random() - 0.5) * 0.001 * state.entropy;
+                break;
+            }
+
+            // Apply velocities
+            positions[i * 3] += velocities[i*3] * speedFactor;
+            positions[i * 3 + 1] += velocities[i*3+1] * speedFactor;
+            positions[i * 3 + 2] += velocities[i*3+2] * speedFactor;
+            
+            // Dampen velocities - less damping with higher resonance
+            const dampFactor = 0.98 - (state.resonance * 0.05); // 0.93-0.98 range
+            velocities[i*3] *= dampFactor;
+            velocities[i*3+1] *= dampFactor;
+            velocities[i*3+2] *= dampFactor;
+
+            // Mouse influence (attraction/repulsion)
+            const dx = positions[i * 3] - (state.lastMousePos.x / window.innerWidth * 10 - 5);
+            const dy = positions[i * 3 + 1] - (state.lastMousePos.y / window.innerHeight * -10 + 5);
+            const distSq = dx * dx + dy * dy;
+            if (distSq < 25 && distSq > 0.01) { // Affect particles within 5 units
+                const force = (state.isMouseDown ? -0.05 : 0.02) / distSq; // Repel on mousedown, attract otherwise
+                positions[i * 3] -= dx * force;
+                positions[i * 3 + 1] -= dy * force;
+            }
+
+            // Boundary checks (toroidal wrapping)
+            if (positions[i * 3] > 10) positions[i * 3] = -10; else if (positions[i * 3] < -10) positions[i * 3] = 10;
+            if (positions[i * 3 + 1] > 10) positions[i * 3 + 1] = -10; else if (positions[i * 3 + 1] < -10) positions[i * 3 + 1] = 10;
+            if (positions[i * 3 + 2] > 10) positions[i * 3 + 2] = -10; else if (positions[i * 3 + 2] < -10) positions[i * 3 + 2] = 10;
+
+            // Color update with hue rotation from state
+            if (state.activeVisualPreset !== 'resonant_field') { // Skip if already handled in preset
+              const tempColor = new THREE.Color(colors[i * 3], colors[i * 3 + 1], colors[i * 3 + 2]);
+              const hsl = {};
+              tempColor.getHSL(hsl);
+              // Harmony influences color saturation
+              const saturation = hsl.s * (0.8 + state.harmony * 0.4);
+              tempColor.setHSL(
+                (hsl.h + state.colorHueRotation * 0.001 + deltaTime * 0.01) % 1, 
+                Math.min(1, saturation), 
+                hsl.l
+              );
+              tempColor.toArray(colors, i * 3);
+            }
+          }
+          
+          this.particles.geometry.attributes.position.needsUpdate = true;
+          this.particles.geometry.attributes.color.needsUpdate = true;
+          this.particles.geometry.attributes.velocity.needsUpdate = true;
+          this.particles.geometry.attributes.size.needsUpdate = true;
+        }
+
+        // Update Waveforms
+        for (const waveform of this.waveforms) {
+          if (waveform && waveform.geometry) {
+            const positions = waveform.geometry.attributes.position.array;
+            if (!state.loopFrozen) {
+              for (let i = 0; i < positions.length / 3; i++) {
+                const x = (i / (positions.length / 3 - 1)); // Normalized x
+                positions[i * 3 + 1] =
+                  Math.sin(this.timer * 3 + x * 15 + state.mouseVelocity.y * 0.005) * (0.5 + state.entropy * 0.8) +
+                  Math.cos(this.timer * 1.7 + x * 25) * (0.3 + state.entropy * 0.5);
+              }
+            }
+            waveform.geometry.attributes.position.needsUpdate = true;
+            waveform.rotation.z += state.mouseVelocity.x * 0.0001 * (1 + state.entropy);
+            waveform.material.opacity = 0.5 + state.entropy * 0.5;
+          }
+        }
+
+        // Update Pulse Objects
+        for (const pulseObj of this.pulseObjects) {
+          pulseObj.mesh.scale.lerp(new THREE.Vector3(pulseObj.targetScale, pulseObj.targetScale, pulseObj.targetScale), 0.1);
+          pulseObj.targetScale = Math.max(pulseObj.baseScale, pulseObj.targetScale * 0.95); // Decay
+          pulseObj.mesh.material.opacity = Math.max(0, pulseObj.mesh.material.opacity * 0.97);
+          if (pulseObj.mesh.material.opacity < 0.01 && pulseObj.targetScale === pulseObj.baseScale) {
+            // Respawn or hide
+             pulseObj.mesh.position.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 4 -2);
+          }
+        }
+
+        // Update Camera (shake, subtle movements)
+        if (state.cameraShakeIntensity > 0) {
+            camera.position.x += (Math.random() - 0.5) * state.cameraShakeIntensity * 0.1;
+            camera.position.y += (Math.random() - 0.5) * state.cameraShakeIntensity * 0.1;
+            state.cameraShakeIntensity *= 0.9; // Dampen shake
+        }
+        camera.lookAt(scene.position); // Ensure camera always looks at the center
+        // Subtle orbit based on mouse, stronger with higher entropy
+        const mouseInfluence = 0.05 + state.entropy * 0.2;
+        camera.position.x = Math.sin(state.lastMousePos.x / window.innerWidth * Math.PI * 2 * mouseInfluence) * (8 + state.entropy * 2);
+        camera.position.z = Math.cos(state.lastMousePos.x / window.innerWidth * Math.PI * 2 * mouseInfluence) * (8 + state.entropy * 2);
+        camera.position.y = THREE.MathUtils.lerp(camera.position.y, (state.lastMousePos.y / window.innerHeight - 0.5) * -4, 0.05);
+
+      }
+
+      triggerPulse(index, scale, colorHex, duration = 0.5) {
+        if (index < 0 || index >= this.pulseObjects.length) index = Math.floor(Math.random() * this.pulseObjects.length);
+        const pulseObj = this.pulseObjects[index];
+        if (pulseObj) {
+          pulseObj.targetScale = pulseObj.baseScale + scale;
+          pulseObj.mesh.material.color.setHex(colorHex);
+          pulseObj.mesh.material.opacity = 0.8;
+          // pulseObj.mesh.position.z = -2 + Math.random() * -3; // Bring forward
+        }
+      }
+
+      pulseKick() { this.triggerPulse(0, 1.5, 0xff0033); state.cameraShakeIntensity = 0.3; }
+      pulseSnare() { this.triggerPulse(1, 1.2, 0x00ffff); }
+      pulseHihat(intensity) { this.triggerPulse(2, 0.5 * intensity, 0xccff00); }
+      pulseBass(note) {
+        const noteIndex = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"].indexOf(note.slice(0, -1));
+        const hue = (noteIndex / 12 + 0.5) % 1; // Bass colors in warmer range
+        const color = new THREE.Color().setHSL(hue, 0.9, 0.6);
+        this.triggerPulse(3, 1.0, color.getHex());
+      }
+
+      // --- DRAWING FUNCTIONALITY ---
+      addDrawnLine(points) {
+        if (points.length < 2) return;
+        const material = new THREE.LineBasicMaterial({
+            color: new THREE.Color().setHSL(Math.random(), 0.8, 0.7),
+            linewidth: 3,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const geometry = new THREE.BufferGeometry().setFromPoints(points.map(p => new THREE.Vector3(p.x, p.y, p.z)));
+        const line = new THREE.Line(geometry, material);
+        line.userData.creationTime = this.timer; // For fading out
+        this.scene.add(line);
+        this.drawnLineMeshes.push(line);
+
+        // Limit number of drawn lines
+        if (this.drawnLineMeshes.length > 20) {
+            this.scene.remove(this.drawnLineMeshes[0]);
+            this.drawnLineMeshes[0].geometry.dispose();
+            this.drawnLineMeshes[0].material.dispose();
+            this.drawnLineMeshes.shift();
+        }
+      }
+
+      updateDrawnLines(deltaTime) {
+        this.drawnLineMeshes.forEach(line => {
+            line.material.opacity -= deltaTime * 0.2; // Fade out over 5 seconds
+            if (line.material.opacity <= 0) {
+                line.userData.toBeRemoved = true;
+            }
+        });
+        this.drawnLineMeshes = this.drawnLineMeshes.filter(line => {
+            if (line.userData.toBeRemoved) {
+                this.scene.remove(line);
+                line.geometry.dispose();
+                line.material.dispose();
+                return false;
+            }
+            return true;
+        });
+      }
+    }
+
+
+    // --- UI Interaction & Main Logic ---
+    function updateStatusDisplay() {
+      bpmStatusEl.textContent = state.bpm;
+      entropyStatusEl.textContent = state.entropy.toFixed(2);
+      harmonyStatusEl.textContent = state.harmony.toFixed(2);
+      resonanceStatusEl.textContent = state.resonance.toFixed(2);
+      modeStatusEl.textContent = state.currentMode;
+      visualStatusEl.textContent = state.activeVisualPreset.replace(/_/g, ' ');
+      
+      // Update dial value displays
+      document.querySelector('.entropy-dial .dial-value').textContent = state.entropy.toFixed(2);
+      document.querySelector('.harmony-dial .dial-value').textContent = state.harmony.toFixed(2);
+      document.querySelector('.resonance-dial .dial-value').textContent = state.resonance.toFixed(2);
+    }
+
+    function showNotification(message, duration = 3000) {
+      notificationEl.textContent = message;
+      notificationEl.classList.add('show');
+      setTimeout(() => {
+        notificationEl.classList.remove('show');
+      }, duration);
+    }
+
+    // Dial Controls
+    let isDraggingDial = false;
+    let activeDial = null;
+    const dialElements = {
+      entropy: entropyDialEl,
+      harmony: document.querySelector('.harmony-dial'),
+      resonance: document.querySelector('.resonance-dial')
+    };
+    
+    // Add touch and mouse events for all dials
+    Object.entries(dialElements).forEach(([type, element]) => {
+      if (!element) return;
+      
+      // Mouse events
+      element.addEventListener('mousedown', (e) => { 
+        isDraggingDial = true; 
+        activeDial = type;
+        element.style.cursor = 'grabbing'; 
+      });
+      
+      // Touch events
+      element.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isDraggingDial = true;
+        activeDial = type;
+      }, { passive: false });
+    });
+    
+    document.addEventListener('mouseup', () => { 
+      if(isDraggingDial) {
+        if (activeDial && dialElements[activeDial]) {
+          dialElements[activeDial].style.cursor = 'grab';
+        }
+        isDraggingDial = false; 
+        activeDial = null;
+      } 
+    });
+    
+    document.addEventListener('touchend', () => {
+      isDraggingDial = false;
+      activeDial = null;
+    });
+    // Handle dial movement for both mouse and touch
+    function handleDialMovement(clientX, clientY) {
+      if (!isDraggingDial || !activeDial || !dialElements[activeDial]) return;
+      
+      const dialEl = dialElements[activeDial];
+      const rect = dialEl.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      let angle = Math.atan2(clientY - centerY, clientX - centerX); // Radians
+      let degrees = angle * (180 / Math.PI); // Convert to degrees
+      degrees = (degrees + 360 + 90) % 360; // Normalize: 0 at top, clockwise
+      
+      const value = Math.min(1, Math.max(0, degrees / 360));
+      const indicator = dialEl.querySelector('.dial-indicator');
+      const valueDisplay = dialEl.querySelector('.dial-value');
+      
+      if (indicator) {
+        indicator.style.transform = `translateX(-50%) rotate(${degrees}deg)`;
+      }
+      
+      if (valueDisplay) {
+        valueDisplay.textContent = value.toFixed(2);
+      }
+      
+      // Update the appropriate state value
+      if (activeDial === 'entropy') {
+        state.entropy = value;
+      } else if (activeDial === 'harmony') {
+        state.harmony = value;
+      } else if (activeDial === 'resonance') {
+        state.resonance = value;
+      }
+      
+      updateAudioParameters();
+      updateStatusDisplay();
+    }
+    
+    document.addEventListener('mousemove', (e) => {
+      handleDialMovement(e.clientX, e.clientY);
+    });
+    
+    document.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches[0]) {
+        e.preventDefault();
+        handleDialMovement(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: false });
+
+    // Tempo Totem
+    tempoTotemZones.forEach(zone => {
+      zone.addEventListener('click', () => {
+        state.bpm = parseInt(zone.dataset.bpm);
+        if (audioInitialized) Tone.Transport.bpm.value = state.bpm;
+        tempoTotemZones.forEach(z => z.classList.remove('active'));
+        zone.classList.add('active');
+        showNotification(`Tempo set to ${state.bpm} BPM`, 1500);
+        updateStatusDisplay();
+      });
+    });
+    // Set initial active totem zone
+    document.querySelector(`.tempo-totem .totem-zone[data-bpm="${state.bpm}"]`)?.classList.add('active');
+
+
+    // Memory Slots
+    memorySlotEls.forEach(slot => {
+      slot.addEventListener('click', () => {
+        const slotIndex = slot.dataset.slot;
+        if (state.activeMemorySlot === slotIndex) { // If already active, clear it or save
+            if (state.memoryStates[slotIndex]) { // If has data, prompt to overwrite
+                if (confirm(`Overwrite memory slot ${parseInt(slotIndex)+1}?`)) {
+                    saveStateToMemory(slotIndex);
+                }
+            } else {
+                 saveStateToMemory(slotIndex);
+            }
+        } else { // Activate or load
+            if (state.memoryStates[slotIndex]) {
+                loadStateFromMemory(slotIndex);
+            } else {
+                // If empty, make it active for potential save (or just select it)
+                state.activeMemorySlot = slotIndex;
+                 showNotification(`Memory Slot ${parseInt(slotIndex)+1} selected. Click again to save current state.`, 2000);
+            }
+        }
+        updateMemorySlotVisuals();
+      });
+    });
+
+    function saveStateToMemory(slotIndex) {
+        state.memoryStates[slotIndex] = {
+            entropy: state.entropy,
+            harmony: state.harmony,
+            resonance: state.resonance,
+            bpm: state.bpm,
+            activeVisualPreset: state.activeVisualPreset,
+            // Add other parameters you want to save
+        };
+        state.activeMemorySlot = slotIndex;
+        showNotification(`State saved to Memory Slot ${parseInt(slotIndex)+1}`, 1500);
+    }
+
+    function loadStateFromMemory(slotIndex) {
+        const saved = state.memoryStates[slotIndex];
+        if (saved) {
+            state.entropy = saved.entropy;
+            state.harmony = saved.harmony || 0.5; // Default if loading older memory
+            state.resonance = saved.resonance || 0.5; // Default if loading older memory
+            state.bpm = saved.bpm;
+            state.activeVisualPreset = saved.activeVisualPreset;
+
+            // Apply loaded state
+            if (audioInitialized) Tone.Transport.bpm.value = state.bpm;
+            if (visualSystem) visualSystem.applyPreset(state.activeVisualPreset);
+            
+            // Update all dial indicators
+            dialIndicatorEl.style.transform = `translateX(-50%) rotate(${state.entropy * 360}deg)`;
+            document.querySelector('.harmony-dial .dial-indicator').style.transform = 
+                `translateX(-50%) rotate(${state.harmony * 360}deg)`;
+            document.querySelector('.resonance-dial .dial-indicator').style.transform = 
+                `translateX(-50%) rotate(${state.resonance * 360}deg)`;
+            tempoTotemZones.forEach(z => z.classList.remove('active'));
+            document.querySelector(`.tempo-totem .totem-zone[data-bpm="${state.bpm}"]`)?.classList.add('active');
+
+            state.activeMemorySlot = slotIndex;
+            showNotification(`State loaded from Memory Slot ${parseInt(slotIndex)+1}`, 1500);
+            updateAudioParameters();
+            updateStatusDisplay();
+        }
+    }
+    function updateMemorySlotVisuals() {
+        memorySlotEls.forEach(slot => {
+            const idx = slot.dataset.slot;
+            slot.classList.remove('active', 'has-data');
+            if (state.memoryStates[idx]) {
+                slot.classList.add('has-data');
+            }
+            if (state.activeMemorySlot === idx) {
+                slot.classList.add('active');
+            }
+        });
+    }
+
+
+    function updateAudioParameters() {
+      if (!audioInitialized) return;
+      
+      // Get the current visual preset to match sound character
+      const visualPreset = state.activeVisualPreset;
+      
+      // Entropy controls chaos/randomness in the sound
+      filter.frequency.rampTo(2000 + state.entropy * 8000, 0.1);
+      distortion.wet.value = Math.min(0.7, state.entropy * 0.5);
+      delay.feedback.value = 0.2 + state.entropy * 0.4;
+      reverb.wet.value = 0.2 + state.entropy * 0.3;
+      
+      // HARMONY CONTROL - dramatically affects tonal relationships
+      // Different sound flavors based on harmony value
+      if (state.harmony < 0.33) {
+        // Consonant, major/pentatonic sounds
+        synth.set({
+          oscillator: { type: "sine", harmonicity: 1.0 },
+          envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 1.0 + state.resonance }
+        });
+        
+        bass.set({
+          oscillator: { type: "triangle", count: 2, spread: 20 },
+          envelope: { attack: 0.04, decay: 0.1, sustain: 0.4, release: 0.8 }
+        });
+        
+        // Bright, clear chorus
+        chorus.frequency.rampTo(0.8, 0.2);
+        chorus.delayTime = 4;
+        chorus.depth = 0.3;
+        chorus.wet.value = 0.3;
+        
+      } else if (state.harmony < 0.66) {
+        // Moderately complex, minor/modal sounds
+        synth.set({
+          oscillator: { type: "fmsine", modulationIndex: 2, harmonicity: 1.5 },
+          envelope: { attack: 0.05, decay: 0.2, sustain: 0.5, release: 1.2 + state.resonance }
+        });
+        
+        bass.set({
+          oscillator: { type: "fatsawtooth", count: 3, spread: 30 },
+          envelope: { attack: 0.02, decay: 0.2, sustain: 0.3, release: 1.0 }
+        });
+        
+        // Wider, richer chorus
+        chorus.frequency.rampTo(1.2, 0.2);
+        chorus.delayTime = 5;
+        chorus.depth = 0.5;
+        chorus.wet.value = 0.4;
+        
+      } else {
+        // Dissonant, experimental sounds
+        synth.set({
+          oscillator: { type: "fatsquare", count: 3, spread: 40, modulationIndex: 3, harmonicity: 1.2 },
+          envelope: { attack: 0.02, decay: 0.3, sustain: 0.6, release: 1.5 + state.resonance }
+        });
+        
+        bass.set({
+          oscillator: { type: "fmsawtooth", count: 2, spread: 50 },
+          envelope: { attack: 0.01, decay: 0.3, sustain: 0.2, release: 1.2 }
+        });
+        
+        // Extreme chorus effect
+        chorus.frequency.rampTo(1.8, 0.2);
+        chorus.delayTime = 6;
+        chorus.depth = 0.7;
+        chorus.wet.value = 0.5;
+      }
+      
+      // RESONANCE CONTROL - dramatically affects sustain, feedback, and spatial qualities
+      // Higher resonance = more drone-like, sustained sounds with more feedback
+      
+      // Resonance affects reverb character
+      reverb.decay = 1.5 + state.resonance * 4; // 1.5 to 5.5 seconds
+      reverb.wet.value = 0.2 + state.resonance * 0.5; // 0.2 to 0.7
+      
+      // Resonance affects delay feedback and time
+      delay.feedback.value = Math.min(0.9, 0.2 + state.resonance * 0.6); // 0.2 to 0.8
+      if (state.resonance > 0.7) {
+        // Long delays at high resonance for drone effects
+        delay.delayTime.value = "8n.";
+      } else if (state.resonance > 0.4) {
+        delay.delayTime.value = "8n";
+      } else {
+        delay.delayTime.value = "16n.";
+      }
+      
+      // Resonance affects filter movement
+      autoFilter.wet.value = state.resonance * 0.7; // 0 to 0.7
+      autoFilter.frequency.rampTo(0.05 + state.resonance * 0.4, 0.2); // 0.05 to 0.45 Hz
+      autoFilter.depth = 0.3 + state.resonance * 0.6; // 0.3 to 0.9
+      
+      // Drone and pad sounds are heavily affected by resonance
+      drone.volume.rampTo(-25 + state.resonance * 20, 0.5); // -25 to -5 dB
+      pad.volume.rampTo(-20 + state.resonance * 15, 0.5); // -20 to -5 dB
+      
+      // Modify drone sound based on resonance
+      drone.set({
+        modulationIndex: 1 + state.resonance * 5, // 1 to 6
+        envelope: { 
+          attack: 0.5 + state.resonance, // 0.5 to 1.5
+          decay: 0.5, 
+          sustain: 0.5 + state.resonance * 0.5, // 0.5 to 1.0
+          release: 1 + state.resonance * 3 // 1 to 4
+        }
+      });
+      
+      // Modify pad sound based on resonance
+      pad.set({
+        harmonicity: 1 + state.resonance * 2, // 1 to 3
+        envelope: { 
+          attack: 0.5 + state.resonance * 0.5, // 0.5 to 1.0
+          decay: 0.5 + state.resonance, // 0.5 to 1.5
+          sustain: 0.5 + state.resonance * 0.4, // 0.5 to 0.9
+          release: 2 + state.resonance * 3 // 2 to 5
+        }
+      });
+      
+      // VISUAL PRESET SPECIFIC SOUND ADJUSTMENTS - each with distinct sonic character
+      switch(visualPreset) {
+        case 'flux_whirl':
+          // Vibrant orange-red swirling vortex sounds
+          synth.set({ 
+            oscillator: { type: "fmsine", modulationIndex: 3 + state.entropy * 2 },
+            envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 1.0 + state.resonance }
+          });
+          chorus.wet.value = 0.4 + state.harmony * 0.3;
+          delay.wet.value = 0.3 + state.entropy * 0.4;
+          // Warm, swirling sound
+          filter.frequency.rampTo(3000 + state.entropy * 6000, 0.1);
+          distortion.wet.value = 0.3 + state.entropy * 0.4;
+          break;
+          
+        case 'harmonic_wave':
+          // Deep blue harmonic wave sounds
+          synth.set({ 
+            oscillator: { type: "sine6", harmonicity: 1.5 + state.harmony * 1.0 },
+            envelope: { attack: 0.1, decay: 0.3, sustain: 0.5, release: 1.5 + state.resonance }
+          });
+          chorus.wet.value = 0.5 + state.harmony * 0.4;
+          delay.wet.value = 0.4 + state.resonance * 0.4;
+          // Smooth, wave-like sound
+          filter.frequency.rampTo(1000 + state.harmony * 8000, 0.2);
+          distortion.wet.value = 0.1 + state.entropy * 0.2;
+          // More pronounced reverb
+          reverb.wet.value = 0.4 + state.resonance * 0.4;
+          break;
+          
+        case 'resonant_field':
+          // Emerald green resonant field sounds
+          synth.set({ 
+            oscillator: { type: "fmtriangle", modulationIndex: 1 + state.harmony * 2 },
+            envelope: { attack: 0.2, decay: 0.4, sustain: 0.6, release: 2.0 + state.resonance }
+          });
+          // Strong resonance effects
+          reverb.wet.value = 0.5 + state.resonance * 0.4;
+          autoFilter.Q = 5 + state.resonance * 7;
+          delay.feedback.value = Math.min(0.9, 0.5 + state.resonance * 0.4);
+          // Distinctive field-like sound
+          filter.frequency.rampTo(500 + state.harmony * 7000, 0.3);
+          break;
+          
+        case 'spectral_bloom':
+          // Rich purple blooming spectral sounds
+          synth.set({ 
+            oscillator: { type: "fmcustom", harmonicity: 2.0 + state.harmony * 2.0 },
+            envelope: { attack: 0.15 + state.resonance * 0.4, decay: 0.3, sustain: 0.5, release: 1.8 + state.resonance }
+          });
+          // Blooming chorus effect
+          chorus.depth = 0.6 + state.harmony * 0.3;
+          chorus.frequency.rampTo(0.4 + state.harmony * 1.5, 0.3);
+          // Spectral character
+          distortion.wet.value = 0.2 + state.entropy * 0.3;
+          autoFilter.octaves = 3 + state.harmony * 2;
+          break;
+          
+        case 'quantum_foam':
+          // Bright cyan quantum foam sounds
+          synth.set({ 
+            oscillator: { type: "pulse", width: 0.2 + state.entropy * 0.7 },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.8 + state.resonance * 0.5 }
+          });
+          // Quantum-like randomness
+          distortion.wet.value = 0.3 + state.entropy * 0.6;
+          delay.wet.value = 0.2 + state.entropy * 0.4;
+          // Rapid modulation
+          autoFilter.frequency.rampTo(0.2 + state.entropy * 1.0, 0.1);
+          chorus.frequency.rampTo(1.5 + state.entropy * 3, 0.1);
+          break;
+          
+        case 'crystal_lattice':
+          // Icy white-blue crystal lattice sounds
+          synth.set({ 
+            oscillator: { type: "sine", harmonicity: 3.0 },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 1.2 + state.resonance * 0.8 }
+          });
+          // Crystalline character
+          reverb.wet.value = 0.6 + state.resonance * 0.3;
+          chorus.wet.value = 0.2;
+          chorus.depth = 0.2;
+          // High, bright frequencies
+          filter.frequency.rampTo(5000 + state.harmony * 5000, 0.1);
+          break;
+          
+        case 'solar_flare':
+          // Bright yellow-orange solar flare sounds
+          synth.set({ 
+            oscillator: { type: "fatsawtooth", count: 4, spread: 40 },
+            envelope: { attack: 0.03, decay: 0.2, sustain: 0.4, release: 1.0 + state.resonance * 0.5 }
+          });
+          // Eruption-like character
+          distortion.wet.value = 0.4 + state.entropy * 0.5;
+          delay.wet.value = 0.3 + state.entropy * 0.3;
+          // Bright, aggressive tone
+          filter.frequency.rampTo(4000 + state.entropy * 6000, 0.1);
+          autoFilter.depth = 0.7 + state.entropy * 0.3;
+          break;
+          
+        case 'nebula_cloud':
+          // Deep space purple nebula cloud sounds
+          synth.set({ 
+            oscillator: { type: "fmtriangle", modulationIndex: 2 + state.harmony * 3 },
+            envelope: { attack: 0.3 + state.resonance * 0.5, decay: 0.5, sustain: 0.7, release: 3.0 + state.resonance * 2.0 }
+          });
+          // Spacious, nebulous character
+          reverb.wet.value = 0.7 + state.resonance * 0.3;
+          reverb.decay = 3.0 + state.resonance * 5.0;
+          // Slow, drifting modulation
+          autoFilter.frequency.rampTo(0.05 + state.harmony * 0.2, 0.5);
+          autoFilter.depth = 0.8 + state.harmony * 0.2;
+          break;
+      }
+      
+      // Mobile optimization - simplify audio processing on mobile devices
+      if (window.innerWidth < 768) {
+        // Reduce CPU usage by simplifying some effects
+        autoFilter.frequency.rampTo(Math.max(0.05, autoFilter.frequency.value * 0.7), 0.1);
+        reverb.decay = Math.min(reverb.decay, 3.0); // Cap reverb decay time
+        
+        // Ensure audio is loud enough on mobile
+        synth.volume.rampTo(-10, 0.1);
+        bass.volume.rampTo(-8, 0.1);
+      }
+      
+      // Update status display to show all parameters
+      updateStatusDisplay();
+    }
+
+    // Global Event Listeners
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    let currentDrawnLinePoints = [];
+    document.addEventListener('mousemove', (e) => {
+      const dx = e.clientX - state.lastMousePos.x;
+      const dy = e.clientY - state.lastMousePos.y;
+      state.mouseVelocity.x = dx;
+      state.mouseVelocity.y = dy;
+      state.lastMousePos.x = e.clientX;
+      state.lastMousePos.y = e.clientY;
+
+      state.colorHueRotation = (e.clientX / window.innerWidth) * 0.5; // Example: mouse X controls hue rotation speed
+
+      if (state.isMouseDown && visualSystem) {
+        state.currentMode = "DRAW";
+        const mouseNDC = {
+            x: (e.clientX / window.innerWidth) * 2 - 1,
+            y: -(e.clientY / window.innerHeight) * 2 + 1
+        };
+        // Project to a plane in 3D space
+        const vec = new THREE.Vector3(mouseNDC.x, mouseNDC.y, 0.5);
+        vec.unproject(camera);
+        const dir = vec.sub(camera.position).normalize();
+        const distance = -camera.position.z / dir.z; // Intersect with Z=0 plane
+        const pos = camera.position.clone().add(dir.multiplyScalar(distance));
+        currentDrawnLinePoints.push(pos);
+
+        gravityWellIndicatorEl.classList.add('active');
+      } else {
+        gravityWellIndicatorEl.classList.remove('active');
+      }
+      updateStatusDisplay();
+    });
+
+    // Handle both mouse and touch for drawing
+    function startDrawing(clientX, clientY) {
+      if (event.target.closest('.interface')) return; // Don't draw if clicking UI
+      state.isMouseDown = true;
+      currentDrawnLinePoints = []; // Start a new line
+      state.currentMode = "DRAW";
+      if(audioInitialized && synth) { // Trigger a sound on click/touch
+        // Use harmony to determine note selection
+        let scale;
+        if (state.harmony < 0.33) {
+          scale = ['C4', 'D4', 'E4', 'G4', 'A4']; // Pentatonic
+        } else if (state.harmony < 0.66) {
+          scale = ['C4', 'D4', 'Eb4', 'F4', 'G4', 'A4', 'Bb4']; // Minor
+        } else {
+          scale = ['C4', 'Db4', 'E4', 'F4', 'G4', 'Ab4', 'B4']; // More dissonant
+        }
+        const note = scale[Math.floor(Math.random() * scale.length)];
+        synth.triggerAttackRelease(note, "8n", Tone.now(), 0.3 + state.entropy * 0.5);
+      }
+      updateStatusDisplay();
+    }
+    
+    document.addEventListener('mousedown', (e) => {
+      startDrawing(e.clientX, e.clientY);
+    });
+    
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0] && !isDraggingDial) {
+        e.preventDefault();
+        startDrawing(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: false });
+
+    // Handle both mouse and touch for ending drawing
+    function endDrawing() {
+      if (state.isMouseDown) {
+        state.isMouseDown = false;
+        if (visualSystem && currentDrawnLinePoints.length > 1) {
+            visualSystem.addDrawnLine([...currentDrawnLinePoints]);
+        }
+        currentDrawnLinePoints = [];
+        state.currentMode = "FLUX";
+        updateStatusDisplay();
+        gravityWellIndicatorEl.classList.remove('active');
+      }
+    }
+    
+    document.addEventListener('mouseup', endDrawing);
+    document.addEventListener('touchend', endDrawing);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        state.loopFrozen = !state.loopFrozen;
+        state.currentMode = state.loopFrozen ? "FREEZE" : "FLUX";
+        showNotification(state.loopFrozen ? "Visual Loop Frozen" : "Visual Loop Unfrozen", 1500);
+        if (audioInitialized) { // Optionally pause/resume Tone.Transport parts
+            // Tone.Transport.pause() / Tone.Transport.start() can be too abrupt for loops.
+            // Freezing visuals is often enough. If audio needs freezing, consider per-part toggles.
+        }
+        updateStatusDisplay();
+      }
+      // Cycle visual presets with number keys
+      if (e.key >= '1' && e.key <= '8') {
+        const presetIndex = parseInt(e.key) - 1;
+        if (visualSystem && presetIndex < state.visualPresets.length) {
+            visualSystem.applyPreset(state.visualPresets[presetIndex]);
+            // Also update the visual preset display
+            showNotification(`Visual Preset: ${state.visualPresets[presetIndex].replace(/_/g, ' ')}`, 1500);
+        }
+      }
+    });
+
+    // Animation Loop
+    let lastTime = 0;
+    function animate(currentTime) {
+      requestAnimationFrame(animate);
+      const deltaTime = clock.getDelta();
+
+      if (visualSystem) {
+        visualSystem.update(deltaTime);
+        visualSystem.updateDrawnLines(deltaTime);
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // Start
+    startButton.addEventListener('click', async () => {
+      introScreen.style.opacity = 0;
+      setTimeout(() => introScreen.classList.add('hidden'), 500); // Hide after fade
+      await initAudio();
+      initVisuals();
+    });
+
+    updateStatusDisplay(); // Initial status
+    updateMemorySlotVisuals(); // Initial memory slot appearance
+
+  </script>
+</body>
+</html>

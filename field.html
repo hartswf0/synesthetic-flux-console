@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Field - Electromagnetic Sonification</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    #field {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transition: background-color 2s ease;
+    }
+    
+    #intro {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      z-index: 10;
+      padding: 20px;
+      box-sizing: border-box;
+      text-align: center;
+    }
+    
+    #intro h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      font-weight: 200;
+    }
+    
+    #intro p {
+      font-size: 1rem;
+      max-width: 600px;
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+      opacity: 0.8;
+    }
+    
+    button {
+      background-color: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+      border-radius: 4px;
+      padding: 12px 24px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+    
+    #status {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.8rem;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+    
+    .field-indicator {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.1);
+      bottom: 0;
+      left: 0;
+      transform-origin: left;
+    }
+    
+    #wifi-indicator { bottom: 10px; }
+    #bluetooth-indicator { bottom: 14px; }
+    #magnetic-indicator { bottom: 18px; }
+    #orientation-indicator { bottom: 22px; }
+  </style>
+</head>
+<body>
+  <div id="field"></div>
+  
+  <div class="field-indicator" id="wifi-indicator"></div>
+  <div class="field-indicator" id="bluetooth-indicator"></div>
+  <div class="field-indicator" id="magnetic-indicator"></div>
+  <div class="field-indicator" id="orientation-indicator"></div>
+  
+  <div id="status">listening to electromagnetic fields...</div>
+  
+  <div id="intro">
+    <h1>FIELD</h1>
+    <p>An instrument that sonifies the invisible electromagnetic landscape around you.</p>
+    <p>Move your device through space to hear WiFi signals, Bluetooth devices, magnetic fields, and device orientation translated into sound.</p>
+    <p>No visual interface. Just listen.</p>
+    <button id="start-button">Begin Listening</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Main application state
+      const state = {
+        started: false,
+        sensors: {
+          deviceOrientation: { alpha: 0, beta: 0, gamma: 0 },
+          magnetometer: { x: 0, y: 0, z: 0 },
+          wifiStrength: 0,
+          bluetoothDevices: 0
+        },
+        audio: {
+          initialized: false,
+          masterVolume: new Tone.Volume(-10).toDestination(),
+          ambientSound: null,
+          wifiSynth: null,
+          bluetoothSynth: null,
+          magneticSynth: null,
+          orientationSynth: null
+        }
+      };
+      
+      // DOM elements
+      const elements = {
+        field: document.getElementById('field'),
+        intro: document.getElementById('intro'),
+        startButton: document.getElementById('start-button'),
+        status: document.getElementById('status'),
+        wifiIndicator: document.getElementById('wifi-indicator'),
+        bluetoothIndicator: document.getElementById('bluetooth-indicator'),
+        magneticIndicator: document.getElementById('magnetic-indicator'),
+        orientationIndicator: document.getElementById('orientation-indicator')
+      };
+      
+      // Initialize event listeners
+      elements.startButton.addEventListener('click', startExperience);
+      
+      // Main functions
+      function startExperience() {
+        if (state.started) return;
+        
+        // Initialize audio context
+        Tone.start().then(() => {
+          state.started = true;
+          elements.intro.classList.add('hidden');
+          elements.status.style.opacity = 1;
+          
+          initializeAudio();
+          initializeSensors();
+          startSensorPolling();
+        }).catch(error => {
+          console.error('Failed to start audio context:', error);
+          alert('Failed to initialize audio. Please try again or check device compatibility.');
+        });
+      }
+      
+      function initializeAudio() {
+        // Create ambient background layer
+        state.audio.ambientSound = new Tone.Noise('pink')
+          .connect(new Tone.Filter({
+            frequency: 800,
+            type: 'lowpass',
+            rolloff: -24
+          }))
+          .connect(new Tone.Volume(-40))
+          .connect(state.audio.masterVolume);
+        state.audio.ambientSound.start();
+        
+        // WiFi synth - frequency modulation for network activity
+        state.audio.wifiSynth = new Tone.FMSynth({
+          harmonicity: 3,
+          modulationIndex: 10,
+          detune: 0,
+          oscillator: {
+            type: 'sine'
+          },
+          envelope: {
+            attack: 0.01,
+            decay: 0.2,
+            sustain: 0.2,
+            release: 1.2
+          },
+          modulation: {
+            type: 'square'
+          },
+          modulationEnvelope: {
+            attack: 0.5,
+            decay: 0.1,
+            sustain: 0.2,
+            release: 0.5
+          }
+        }).connect(new Tone.Filter(2000, 'lowpass'))
+          .connect(new Tone.Volume(-20))
+          .connect(state.audio.masterVolume);
+        
+        // Bluetooth synth - metallic sounds for nearby devices
+        state.audio.bluetoothSynth = new Tone.MetalSynth({
+          frequency: 200,
+          envelope: {
+            attack: 0.001,
+            decay: 0.2,
+            release: 0.2
+          },
+          harmonicity: 5.1,
+          modulationIndex: 32,
+          resonance: 4000,
+          octaves: 1.5
+        }).connect(new Tone.Volume(-30))
+          .connect(state.audio.masterVolume);
+        
+        // Magnetic field synth - low drone that changes with magnetic field
+        state.audio.magneticSynth = new Tone.DuoSynth({
+          vibratoAmount: 0.5,
+          vibratoRate: 5,
+          harmonicity: 1.5,
+          voice0: {
+            volume: -10,
+            portamento: 0.1,
+            oscillator: {
+              type: 'sine'
+            },
+            filterEnvelope: {
+              attack: 0.01,
+              decay: 0,
+              sustain: 1,
+              release: 0.5
+            },
+            envelope: {
+              attack: 0.01,
+              decay: 0,
+              sustain: 1,
+              release: 0.5
+            }
+          },
+          voice1: {
+            volume: -20,
+            portamento: 0.1,
+            oscillator: {
+              type: 'sine'
+            },
+            filterEnvelope: {
+              attack: 0.01,
+              decay: 0,
+              sustain: 1,
+              release: 0.5
+            },
+            envelope: {
+              attack: 0.01,
+              decay: 0,
+              sustain: 1,
+              release: 0.5
+            }
+          }
+        }).connect(new Tone.Volume(-25))
+          .connect(state.audio.masterVolume);
+        
+        // Orientation synth - spatial positioning sound
+        state.audio.orientationSynth = new Tone.PolySynth({
+          polyphony: 3,
+          volume: -20,
+          options: {
+            oscillator: {
+              type: 'triangle'
+            },
+            envelope: {
+              attack: 2,
+              decay: 1,
+              sustain: 0.3,
+              release: 4
+            }
+          }
+        }).connect(new Tone.Reverb(4))
+          .connect(state.audio.masterVolume);
+        
+        state.audio.initialized = true;
+      }
+      
+      function initializeSensors() {
+        // Try to access device orientation
+        if (window.DeviceOrientationEvent) {
+          window.addEventListener('deviceorientation', handleDeviceOrientation);
+        }
+        
+        // Try to access device motion with magnetometer
+        if (window.DeviceMotionEvent) {
+          window.addEventListener('devicemotion', handleDeviceMotion);
+        }
+        
+        // For demonstration, we'll simulate WiFi/Bluetooth since direct browser access is limited
+        simulateNetworkSensors();
+      }
+      
+      function handleDeviceOrientation(event) {
+        if (event.alpha !== null) {
+          state.sensors.deviceOrientation.alpha = event.alpha; // compass direction (0-360)
+          state.sensors.deviceOrientation.beta = event.beta;   // front-to-back tilt (-180 to 180)
+          state.sensors.deviceOrientation.gamma = event.gamma; // left-to-right tilt (-90 to 90)
+        }
+      }
+      
+      function handleDeviceMotion(event) {
+        // Some devices provide magnetometer data through DeviceMotionEvent
+        if (event.rotationRate) {
+          state.sensors.magnetometer.x = event.rotationRate.alpha || 0;
+          state.sensors.magnetometer.y = event.rotationRate.beta || 0;
+          state.sensors.magnetometer.z = event.rotationRate.gamma || 0;
+        }
+      }
+      
+      function simulateNetworkSensors() {
+        // Simulating WiFi signal strength variation
+        setInterval(() => {
+          // Random walk algorithm to create natural variations
+          let change = (Math.random() - 0.5) * 0.2;
+          state.sensors.wifiStrength = Math.max(0, Math.min(1, state.sensors.wifiStrength + change));
+        }, 500);
+        
+        // Simulating Bluetooth device presence
+        setInterval(() => {
+          // Occasionally "discover" new devices or lose connection to existing ones
+          if (Math.random() < 0.1) {
+            let change = Math.random() < 0.6 ? 1 : -1;
+            state.sensors.bluetoothDevices = Math.max(0, Math.min(5, state.sensors.bluetoothDevices + change));
+          }
+        }, 2000);
+      }
+      
+      function startSensorPolling() {
+        // Update audio and visuals based on sensor data
+        const updateInterval = setInterval(() => {
+          if (!state.started) {
+            clearInterval(updateInterval);
+            return;
+          }
+          
+          if (state.audio.initialized) {
+            updateSonification();
+            updateVisualization();
+          }
+        }, 100);
+      }
+      
+      function updateSonification() {
+        // WiFi sonification
+        if (state.sensors.wifiStrength > 0.1) {
+          const wifiNote = Tone.Frequency(300 + state.sensors.wifiStrength * 400, "hz");
+          state.audio.wifiSynth.triggerAttackRelease(wifiNote, "32n");
+          
+          // Play more frequent notes with stronger signal
+          if (Math.random() < state.sensors.wifiStrength * 0.3) {
+            setTimeout(() => {
+              const wifiFollowNote = Tone.Frequency(280 + state.sensors.wifiStrength * 500, "hz");
+              state.audio.wifiSynth.triggerAttackRelease(wifiFollowNote, "64n");
+            }, 120);
+          }
+        }
+        
+        // Bluetooth sonification
+        if (state.sensors.bluetoothDevices > 0) {
+          if (Math.random() < 0.1 * state.sensors.bluetoothDevices) {
+            const btFreq = 2000 + Math.random() * 2000;
+            state.audio.bluetoothSynth.triggerAttackRelease(btFreq, 0.05);
+          }
+        }
+        
+        // Magnetic field sonification - continuous tone that changes with magnetometer
+        const magX = state.sensors.magnetometer.x || 0;
+        const magY = state.sensors.magnetometer.y || 0;
+        const magZ = state.sensors.magnetometer.z || 0;
+        const magStrength = Math.sqrt(magX * magX + magY * magY + magZ * magZ) / 20;
+        
+        // Use normalized magnetometer values to control pitch
+        if (magStrength > 0.01) {
+          const baseNote = 100 + magStrength * 100;
+          state.audio.magneticSynth.triggerAttackRelease(baseNote, "8n");
+        }
+        
+        // Orientation sonification - create spatial soundscape
+        const orientationAlpha = state.sensors.deviceOrientation.alpha;
+        if (orientationAlpha !== null && orientationAlpha !== undefined) {
+          // Convert compass direction to musical scale
+          const scaleNotes = ['C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4'];
+          const noteIndex = Math.floor((orientationAlpha / 360) * scaleNotes.length);
+          const note = scaleNotes[noteIndex];
+          
+          if (Math.random() < 0.05) {
+            state.audio.orientationSynth.triggerAttackRelease(note, "2n");
+          }
+        }
+      }
+      
+      function updateVisualization() {
+        // Subtle color temperature shift based on overall electromagnetic activity
+        const totalActivity = (
+          state.sensors.wifiStrength * 0.4 + 
+          (state.sensors.bluetoothDevices / 5) * 0.3 +
+          (Math.abs(state.sensors.magnetometer.x) + 
+           Math.abs(state.sensors.magnetometer.y) + 
+           Math.abs(state.sensors.magnetometer.z)) / 30 * 0.3
+        );
+        
+        // Shift from cool blue (low activity) to warm amber (high activity)
+        const r = Math.floor(10 + totalActivity * 30);
+        const g = Math.floor(10 + totalActivity * 20);
+        const b = Math.floor(20 + (1 - totalActivity) * 30);
+        elements.field.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+        
+        // Update field indicators
+        elements.wifiIndicator.style.transform = `scaleX(${state.sensors.wifiStrength})`;
+        elements.bluetoothIndicator.style.transform = `scaleX(${state.sensors.bluetoothDevices / 5})`;
+        
+        const magnetometerStrength = (
+          Math.abs(state.sensors.magnetometer.x) + 
+          Math.abs(state.sensors.magnetometer.y) + 
+          Math.abs(state.sensors.magnetometer.z)
+        ) / 20;
+        elements.magneticIndicator.style.transform = `scaleX(${Math.min(1, magnetometerStrength)})`;
+        
+        // Orientation indicator
+        const alphaRatio = (state.sensors.deviceOrientation.alpha || 0) / 360;
+        elements.orientationIndicator.style.transform = `scaleX(${alphaRatio})`;
+      }
+      
+      // When the page is hidden/inactive, pause the experience
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && state.started) {
+          if (state.audio.ambientSound) state.audio.ambientSound.stop();
+        } else if (state.started) {
+          if (state.audio.ambientSound) state.audio.ambientSound.start();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

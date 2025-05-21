@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Woven Rhythms</title>
+    <style>
+        :root {
+            --natural-cream: #f8f4e3;
+            --indigo-blue: #3d5a80;
+            --madder-red: #b44c43;
+            --ochre: #cc9c4c;
+            --forest-green: #4a6c6f;
+            --walnut-brown: #5e503f;
+            --light-blue: #98c1d9;
+            --pale-yellow: #f0e6a3;
+            --primary-text: #2b2b2b;
+            --border-color: #ddd6c9;
+            --highlight: #e09f3e;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--natural-cream);
+            color: var(--primary-text);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--indigo-blue);
+            margin-bottom: 5px;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--primary-text);
+            opacity: 0.8;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .control-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .transport-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            background-color: var(--indigo-blue);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            background-color: #324a6a;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-clear {
+            background-color: var(--madder-red);
+        }
+
+        .btn-clear:hover {
+            background-color: #a0413a;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap; /* Allow sliders to wrap on smaller screens */
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .slider-container label {
+            font-size: 0.9rem;
+            color: var(--primary-text);
+            min-width: 50px;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 120px;
+            height: 5px;
+            background: #ddd;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: var(--indigo-blue);
+            cursor: pointer;
+            border-radius: 50%;
+        }
+         .slider::-moz-range-thumb { /* Firefox */
+            width: 15px;
+            height: 15px;
+            background: var(--indigo-blue);
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+
+
+        .slider-value {
+            min-width: 35px;
+            font-size: 0.9rem;
+            text-align: right;
+        }
+
+        .mode-switch {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+         .mode-switch label {
+            cursor: pointer;
+        }
+
+
+        .loom-grid {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden; /* Ensures shuttle doesn't go outside */
+        }
+
+        .loom-label {
+            position: absolute;
+            top: 20px; /* Align with grid padding */
+            left: 0;
+            width: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-around;
+            padding-top: 20px; /* Align with beat marker */
+            height: calc(100% - 60px); /* Account for top padding and beat marker */
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 2;
+        }
+
+        .loom-label img {
+            width: 24px;
+            height: 24px;
+            /* margin: 10px 0; */ /* Replaced by space-around */
+        }
+
+        .loom-grid-container {
+            margin-left: 50px;
+            overflow-x: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .loom-grid-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .loom-grid-inner {
+            display: grid;
+            grid-template-rows: repeat(6, 40px);
+            grid-template-columns: repeat(32, 40px);
+            gap: 2px;
+            min-width: calc(32 * (40px + 2px)); /* Ensure inner grid can scroll */
+        }
+
+        .loom-grid-inner.weave-mode .cell {
+            cursor: crosshair;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            background-color: #f9f9f9;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.1s ease, transform 0.05s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #eee; /* Subtle border for cells */
+        }
+
+        .cell::after { /* Subtle texture for cells */
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='1' height='1' x='0' y='0' fill='%23000000' fill-opacity='0.03'/%3E%3C/svg%3E");
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        .cell.active {
+            transform: scale(0.95);
+        }
+
+        .cell.playing {
+            box-shadow: 0 0 0 2px var(--highlight) inset; /* Inset shadow for playing */
+            z-index: 1;
+        }
+
+        /* Colors assigned by JS now based on instrument object */
+
+        .beat-marker {
+            display: flex;
+            margin-left: 50px;
+            height: 20px;
+            margin-bottom: 5px;
+            width: calc(32 * (40px + 2px)); /* Match inner grid width */
+        }
+
+        .beat-marker-cell {
+            width: 40px;
+            margin-right: 2px; /* Match cell gap */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: var(--primary-text);
+            opacity: 0.5;
+        }
+
+        .beat-marker-cell.downbeat {
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        .shuttle {
+            position: absolute;
+            top: 20px; /* Align with grid padding */
+            left: 50px; /* Initial position */
+            width: 40px; /* Match cell width */
+            height: calc(100% - 40px); /* Account for top/bottom padding */
+            background-color: rgba(224, 159, 62, 0.15);
+            pointer-events: none;
+            z-index: 1;
+            transition: transform 0.05s linear; /* Smooth movement */
+            border-radius: 2px;
+        }
+
+
+        .pattern-memory {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .pattern-memory h3 {
+            margin-top: 0;
+            font-weight: 500;
+            color: var(--indigo-blue);
+        }
+
+        .memory-slots {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .memory-slot {
+            width: 80px;
+            height: 80px;
+            background-color: #f9f9f9;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--primary-text);
+            transition: all 0.2s ease;
+            flex-shrink: 0; /* Prevent shrinking in flex container */
+            position: relative;
+        }
+         .memory-slot::before { /* Visual cue for saved slot */
+            content: '';
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: transparent;
+            transition: background-color 0.2s;
+        }
+        .memory-slot.saved::before {
+            background-color: var(--highlight);
+        }
+
+
+        .memory-slot:hover {
+            background-color: #f0f0f0;
+        }
+
+        .memory-slot.active-slot { /* For currently loaded/selected slot */
+            border-color: var(--highlight);
+            box-shadow: 0 0 5px var(--highlight);
+        }
+
+
+        .effects-panel {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .effect-control {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .effect-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .info-panel {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-top: 20px; /* Added spacing */
+        }
+
+        .info-panel h3 {
+            margin-top: 0;
+            color: var(--indigo-blue);
+        }
+
+        .info-panel p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .pattern-visualization {
+            margin-top: 15px;
+            width: 100%;
+            height: 120px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            display: grid; /* Use grid for visualization */
+            /* grid-template-rows will be set by JS */
+            /* grid-template-columns will be set by JS */
+            gap: 1px;
+            padding: 2px;
+        }
+        .viz-cell {
+            background-color: #e0e0e0;
+            border-radius: 1px;
+        }
+        /* Colors for viz-cell will be set by JS based on row */
+
+
+        @media (max-width: 768px) {
+            .control-panel {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .slider-group {
+                flex-wrap: wrap;
+                width: 100%;
+                gap: 15px; /* Reduce gap on mobile */
+            }
+             .slider-container {
+                width: calc(50% - 10px); /* Two sliders per row */
+            }
+            .slider {
+                width: 100%; /* Make sliders full width within their container */
+            }
+
+            .cell { /* Make cells smaller on mobile */
+                width: 25px;
+                height: 25px;
+            }
+
+            .loom-grid-inner {
+                grid-template-rows: repeat(6, 25px);
+                grid-template-columns: repeat(32, 25px);
+                min-width: calc(32 * (25px + 2px));
+            }
+
+            .beat-marker-cell {
+                width: 25px;
+            }
+            .beat-marker {
+                 width: calc(32 * (25px + 2px));
+            }
+            .shuttle {
+                width: 25px;
+            }
+            .loom-label img {
+                width: 20px;
+                height: 20px;
+            }
+        }
+
+        .loom-animation { /* A subtle animation on the grid */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px; /* Thinner */
+            background-color: var(--highlight);
+            transform-origin: left center; /* Animate from left */
+            opacity: 0;
+            animation: loomPulse 4s infinite ease-in-out;
+        }
+
+        @keyframes loomPulse {
+            0%, 100% { opacity: 0; transform: scaleX(0); }
+            10% { opacity: 0.6; transform: scaleX(1); }
+            90% { opacity: 0.6; transform: scaleX(1); }
+
+        }
+
+        .texture-overlay { /* Subtle overall texture */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='0.015' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
+            pointer-events: none;
+            opacity: 0.7;
+            z-index: -1; /* Behind everything */
+        }
+    </style>
+</head>
+<body>
+    <div class="texture-overlay"></div>
+    <div class="container">
+        <header>
+            <h1>Woven Rhythms</h1>
+            <p class="subtitle">Explore the intersection of textile patterns and musical structures</p>
+        </header>
+
+        <div class="main">
+            <div class="control-panel">
+                <div class="transport-controls">
+                    <button id="play-btn" class="btn" title="Play/Pause (Spacebar)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="pause-icon" style="display:none;">
+                            <rect x="6" y="4" width="4" height="16"></rect>
+                            <rect x="14" y="4" width="4" height="16"></rect>
+                        </svg>
+                        <span id="play-text" style="margin-left: 8px;">Play</span>
+                    </button>
+                    <button id="clear-btn" class="btn btn-clear" title="Clear all notes from the grid">Clear</button>
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-container">
+                        <label for="tempo" title="Beats Per Minute">Tempo</label>
+                        <input type="range" min="40" max="200" value="120" class="slider" id="tempo">
+                        <span class="slider-value" id="tempo-value">120</span>
+                    </div>
+
+                    <div class="slider-container">
+                        <label for="swing" title="Swing rhythm amount">Swing</label>
+                        <input type="range" min="0" max="80" value="0" class="slider" id="swing"> <!-- Max 80% swing -->
+                        <span class="slider-value" id="swing-value">0%</span>
+                    </div>
+                </div>
+
+                <div class="mode-switch">
+                    <input type="checkbox" id="weave-mode" title="Toggle Weave Mode for drawing lines">
+                    <label for="weave-mode">Weave Mode</label>
+                </div>
+            </div>
+
+            <div class="loom-grid">
+                <div class="loom-animation"></div>
+                <div class="loom-label" id="loom-labels">
+                    <!-- Instrument icons will be filled here -->
+                </div>
+
+                <div class="beat-marker" id="beat-markers">
+                    <!-- Beat numbers will be filled here -->
+                </div>
+
+                <div class="shuttle" id="shuttle-playhead"></div>
+
+                <div class="loom-grid-container">
+                    <div class="loom-grid-inner" id="loom-grid-inner">
+                        <!-- Cells will be filled here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="pattern-memory">
+                <h3>Pattern Memory <span style="font-size:0.8em; opacity:0.7;">(Click to Load, Shift+Click to Save)</span></h3>
+                <div class="memory-slots" id="memory-slots-container">
+                    <!-- Memory slots will be filled here -->
+                </div>
+
+                <div class="effects-panel">
+                    <div class="effect-control">
+                        <label for="reverb" title="Reverb Wet/Dry Mix">Reverb Amount</label>
+                        <input type="range" min="0" max="100" value="20" class="slider" id="reverb">
+                    </div>
+
+                    <div class="effect-control">
+                        <label for="density" title="Overall pattern density (read-only)">Pattern Density</label>
+                        <span id="density-value" class="slider-value">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h3>About Woven Rhythms</h3>
+                <p>This experimental instrument explores the connection between textile weaving patterns and musical rhythm structures. Each row represents a different percussion instrument, while columns represent time steps in the pattern.</p>
+                <p>In the traditional step sequencer mode, click cells to activate or deactivate sounds. In "Weave Mode," you can draw continuous lines that create flowing patterns similar to how threads are woven in a loom.</p>
+                <p>The density of your pattern will affect the amount of reverb automatically applied, creating a spatial quality that responds to the complexity of your composition.</p>
+
+                <div class="pattern-visualization" id="pattern-viz">
+                    <!-- Pattern visualization will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let audioContext;
+        let isPlaying = false;
+        let currentStep = 0;
+        let tempo = 120;
+        let swing = 0;
+        let weaveMode = false;
+        let isMouseDown = false;
+        let lastActivatedCell = { row: -1, col: -1 }; // Track last activated cell in weave mode
+        let scheduleAheadTime = 0.1; // seconds
+        let nextNoteTime = 0.0;
+        let lookahead = 25.0; // How frequently to call scheduler (ms)
+        let schedulerTimerID = null;
+        let patterns = Array(4).fill(null).map(() => null); // 4 memory slots
+        let activeMemorySlot = null;
+
+        const instruments = [
+            { name: "Kick", icon: "🥁", color: "var(--indigo-blue)", playSound: (time) => playKick(time) },
+            { name: "Snare", icon: " snare-icon.svg ", color: "var(--madder-red)", playSound: (time) => playSnare(time) }, // Placeholder, replace with actual SVG or emoji
+            { name: "Hi-Hat", icon: " hihat-icon.svg ", color: "var(--ochre)", playSound: (time) => playHiHat(time) },
+            { name: "Clap", icon: "👏", color: "var(--forest-green)", playSound: (time) => playClap(time) },
+            { name: "Tom", icon: "🪘", color: "var(--walnut-brown)", playSound: (time) => playTom(time) },
+            { name: "Shaker", icon: " shaker-icon.svg ", color: "var(--light-blue)", playSound: (time) => playShaker(time) }
+        ];
+        // Create dummy SVG icons for placeholders if you don't have them
+        // Snare Icon SVG (example)
+        const snareIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${instruments[1].color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><line x1="7" y1="12" x2="17" y2="12"></line></svg>`;
+        instruments[1].icon = `data:image/svg+xml;base64,${btoa(snareIconSVG)}`;
+        // Hi-Hat Icon SVG (example)
+        const hihatIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${instruments[2].color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="6" y1="6" x2="18" y2="6"></line><line x1="12" y1="6" x2="12" y2="18"></line></svg>`;
+        instruments[2].icon = `data:image/svg+xml;base64,${btoa(hihatIconSVG)}`;
+        // Shaker Icon SVG (example)
+        const shakerIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${instruments[5].color}" stroke="${instruments[5].color}" stroke-width="1"><ellipse cx="12" cy="12" rx="6" ry="9"></ellipse><circle cx="10" cy="10" r="1" fill="white"></circle><circle cx="14" cy="9" r="0.8" fill="white"></circle><circle cx="11" cy="14" r="1.2" fill="white"></circle></svg>`;
+        instruments[5].icon = `data:image/svg+xml;base64,${btoa(shakerIconSVG)}`;
+
+
+        const rows = instruments.length;
+        const cols = 32;
+        let grid = Array(rows).fill().map(() => Array(cols).fill(false));
+
+        let reverbNode;
+        let masterGainNode;
+        let convolverBuffer = null; // For reverb impulse response
+
+        // DOM Elements
+        const loomLabelsContainer = document.getElementById('loom-labels');
+        const loomGridInner = document.getElementById('loom-grid-inner');
+        const beatMarkersContainer = document.getElementById('beat-markers');
+        const shuttlePlayhead = document.getElementById('shuttle-playhead');
+        const playBtn = document.getElementById('play-btn');
+        const playIcon = document.getElementById('play-icon');
+        const pauseIcon = document.getElementById('pause-icon');
+        const playText = document.getElementById('play-text');
+        const clearBtn = document.getElementById('clear-btn');
+        const tempoSlider = document.getElementById('tempo');
+        const tempoValue = document.getElementById('tempo-value');
+        const swingSlider = document.getElementById('swing');
+        const swingValue = document.getElementById('swing-value');
+        const weaveModeCheckbox = document.getElementById('weave-mode');
+        const memorySlotsContainer = document.getElementById('memory-slots-container');
+        const reverbSlider = document.getElementById('reverb');
+        const densityValue = document.getElementById('density-value');
+        const patternViz = document.getElementById('pattern-viz');
+
+
+        // --- Audio Synthesis Functions ---
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                masterGainNode = audioContext.createGain();
+                masterGainNode.gain.value = 0.7; // Initial volume
+
+                reverbNode = audioContext.createConvolver();
+                const reverbWetGain = audioContext.createGain();
+                reverbWetGain.gain.value = parseFloat(reverbSlider.value) / 100; // Initial reverb level
+
+                masterGainNode.connect(reverbNode);
+                reverbNode.connect(reverbWetGain);
+                reverbWetGain.connect(audioContext.destination);
+                masterGainNode.connect(audioContext.destination); // Dry signal
+
+                // Create a simple impulse response for reverb
+                createImpulseResponse().then(buffer => {
+                    convolverBuffer = buffer;
+                    reverbNode.buffer = convolverBuffer;
+                });
+                // Update reverb gain when slider changes
+                reverbSlider.addEventListener('input', (e) => {
+                    reverbWetGain.gain.value = parseFloat(e.target.value) / 100;
+                });
+            }
+        }
+
+        async function createImpulseResponse() {
+            if (!audioContext) return null;
+            const sr = audioContext.sampleRate;
+            const length = sr * 1.5; // 1.5 seconds reverb tail
+            const impulse = audioContext.createBuffer(2, length, sr);
+            const L = impulse.getChannelData(0);
+            const R = impulse.getChannelData(1);
+            for (let i = 0; i < length; i++) {
+                L[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.5);
+                R[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.5);
+            }
+            return impulse;
+        }
+
+
+        function playSound(type, freq, duration, time, options = {}) {
+            if (!audioContext) return;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, time);
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(options.vol || 0.5, time + (options.attack || 0.005));
+            gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+            if (options.pitchDecay) {
+                osc.frequency.exponentialRampToValueAtTime(freq * options.pitchDecay, time + duration * 0.8);
+            }
+
+            osc.connect(gain);
+            gain.connect(masterGainNode);
+            osc.start(time);
+            osc.stop(time + duration);
+        }
+
+        function playNoise(duration, time, options = {}) {
+            if (!audioContext) return;
+            const bufferSize = audioContext.sampleRate * duration;
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            const noise = audioContext.createBufferSource();
+            noise.buffer = buffer;
+
+            const gain = audioContext.createGain();
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(options.vol || 0.3, time + (options.attack || 0.001));
+            gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+            const filter = audioContext.createBiquadFilter();
+            filter.type = options.filterType || 'bandpass';
+            filter.frequency.setValueAtTime(options.filterFreq || 3000, time);
+            filter.Q.value = options.filterQ || 1;
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterGainNode);
+            noise.start(time);
+            noise.stop(time + duration);
+        }
+
+        function playKick(time) { playSound('sine', 60, 0.15, time, { pitchDecay: 0.5, vol: 0.9, attack: 0.001 }); }
+        function playSnare(time) {
+            playSound('triangle', 180, 0.1, time, { vol: 0.4, attack: 0.001 });
+            playNoise(0.1, time, { filterFreq: 1500, filterQ: 0.5, vol: 0.6, attack: 0.001 });
+        }
+        function playHiHat(time) { playNoise(0.08, time, { filterType: 'highpass', filterFreq: 7000, vol: 0.2, attack: 0.001 }); }
+        function playClap(time) {
+            playNoise(0.08, time, { vol: 0.5, filterFreq: 1200, filterQ: 0.8, attack: 0.001 });
+            playNoise(0.08, time + 0.005, { vol: 0.5, filterFreq: 1500, filterQ: 0.8, attack: 0.001 });
+            playNoise(0.08, time + 0.010, { vol: 0.5, filterFreq: 1800, filterQ: 0.8, attack: 0.001 });
+        }
+        function playTom(time) { playSound('sine', 120, 0.2, time, { pitchDecay: 0.7, vol: 0.6, attack: 0.002 }); }
+        function playShaker(time) { playNoise(0.1, time, { filterType: 'highpass', filterFreq: 5000, vol: 0.15, attack: 0.005 }); }
+
+
+        // --- UI Creation ---
+        function createGrid() {
+            loomGridInner.innerHTML = '';
+            loomLabelsContainer.innerHTML = '';
+            beatMarkersContainer.innerHTML = '';
+
+            instruments.forEach((instrument, r) => {
+                const label = document.createElement('img');
+                label.src = instrument.icon;
+                label.alt = instrument.name;
+                label.title = instrument.name;
+                loomLabelsContainer.appendChild(label);
+
+                for (let c = 0; c < cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell', `row-${r}`, `col-${c}`);
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    cell.style.setProperty('--cell-active-color', instrument.color); // For dynamic active color via JS if needed
+                    cell.addEventListener('mousedown', (e) => handleCellInteraction(e, r, c, true));
+                    cell.addEventListener('mouseenter', (e) => handleCellInteraction(e, r, c, false));
+                    loomGridInner.appendChild(cell);
+                }
+            });
+            // Add specific row colors for active cells
+            const styleSheet = document.styleSheets[0];
+            instruments.forEach((instrument, r) => {
+                styleSheet.insertRule(`.row-${r} .cell.active { background-color: ${instrument.color}; }`, styleSheet.cssRules.length);
+            });
+
+
+            for (let c = 0; c < cols; c++) {
+                const markerCell = document.createElement('div');
+                markerCell.classList.add('beat-marker-cell');
+                if ((c + 1) % 4 === 0) { // Or c % 4 === 3 if 0-indexed for "end" of beat
+                    markerCell.classList.add('downbeat');
+                    markerCell.textContent = (c / 4) + 1;
+                }
+                beatMarkersContainer.appendChild(markerCell);
+            }
+
+            // Create memory slots
+            memorySlotsContainer.innerHTML = '';
+            for (let i = 0; i < 4; i++) {
+                const slot = document.createElement('div');
+                slot.classList.add('memory-slot');
+                slot.dataset.slot = i;
+                slot.textContent = i + 1;
+                slot.title = `Pattern Slot ${i+1}`;
+                slot.addEventListener('click', (e) => handleMemorySlotClick(e, i));
+                memorySlotsContainer.appendChild(slot);
+            }
+            updateMemorySlotVisuals();
+            updatePatternVisualization();
+        }
+
+        function handleCellInteraction(event, r, c, isClick) {
+            if (isClick) {
+                isMouseDown = true; // For regular click
+            }
+            if (!isMouseDown && !weaveMode) return; // Only proceed if mousedown or in weave mode for mouseenter
+
+            const cell = loomGridInner.querySelector(`.row-${r}.col-${c}`);
+            if (!cell) return;
+
+            if (weaveMode) {
+                if (isMouseDown) { // Only activate/deactivate on mousedown in weave mode
+                    // If it's the first cell clicked in a drag, toggle it
+                    if (lastActivatedCell.row === -1 && lastActivatedCell.col === -1) {
+                        grid[r][c] = !grid[r][c];
+                    } else {
+                        // For subsequent cells in a drag, set to the state of the first cell
+                        grid[r][c] = grid[lastActivatedCell.row][lastActivatedCell.col];
+                    }
+                    cell.classList.toggle('active', grid[r][c]);
+                    if (grid[r][c]) {
+                        lastActivatedCell = { row: r, col: c };
+                    }
+                }
+            } else { // Step sequencer mode
+                 if (isClick) { // Only toggle on direct click in step mode
+                    grid[r][c] = !grid[r][c];
+                    cell.classList.toggle('active', grid[r][c]);
+                 }
+            }
+            updateDensityDisplay();
+            updatePatternVisualization();
+        }
+
+
+        // --- Event Listeners ---
+        function setupEventListeners() {
+            playBtn.addEventListener('click', togglePlay);
+            clearBtn.addEventListener('click', clearGrid);
+
+            tempoSlider.addEventListener('input', e => {
+                tempo = parseInt(e.target.value);
+                tempoValue.textContent = tempo;
+            });
+            swingSlider.addEventListener('input', e => {
+                swing = parseInt(e.target.value);
+                swingValue.textContent = `${swing}%`;
+            });
+
+            weaveModeCheckbox.addEventListener('change', e => {
+                weaveMode = e.target.checked;
+                loomGridInner.classList.toggle('weave-mode', weaveMode);
+            });
+
+            // Mouse up listener for weave mode
+            document.addEventListener('mouseup', () => {
+                isMouseDown = false;
+                if (weaveMode) {
+                    lastActivatedCell = { row: -1, col: -1 }; // Reset last activated cell for next drag
+                }
+            });
+             // Mouse down on grid sets mousedown true for non-weave mode
+            loomGridInner.addEventListener('mousedown', (e) => {
+                if (!weaveMode) isMouseDown = true;
+            });
+
+            // Keyboard shortcut for play/pause
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
+                    e.preventDefault();
+                    togglePlay();
+                }
+            });
+        }
+
+        // --- Playback Logic ---
+        function scheduler() {
+            while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) {
+                scheduleNote(currentStep, nextNoteTime);
+                nextNote();
+            }
+            schedulerTimerID = setTimeout(scheduler, lookahead);
+        }
+
+        function nextNote() {
+            const secondsPerBeat = 60.0 / tempo;
+            const secondsPerStep = secondsPerBeat / 4; // Assuming 16th notes
+
+            // Apply swing: delay even steps
+            let stepDuration = secondsPerStep;
+            if (swing > 0 && currentStep % 2 !== 0) { // If it's an "off-beat" 16th
+                stepDuration = secondsPerStep * (1 + (swing / 100) * 0.66); // Swing factor (0.66 for 2/3 ratio)
+            } else if (swing > 0 && currentStep % 2 === 0 && currentStep > 0) { // Shorten the "on-beat" 16th before a swung one
+                 stepDuration = secondsPerStep * (1 - (swing / 100) * 0.66);
+            }
+
+
+            nextNoteTime += stepDuration;
+
+            currentStep++;
+            if (currentStep >= cols) {
+                currentStep = 0;
+            }
+        }
+
+        function scheduleNote(step, time) {
+            for (let r = 0; r < rows; r++) {
+                if (grid[r][step]) {
+                    instruments[r].playSound(time);
+                }
+            }
+            // Visual update for playhead
+            requestAnimationFrame(() => updatePlayheadVisual(step));
+        }
+        function updatePlayheadVisual(step) {
+            const cellWidth = 40 + 2; // cell width + gap
+            shuttlePlayhead.style.transform = `translateX(${step * cellWidth}px)`;
+
+            document.querySelectorAll('.cell.playing').forEach(c => c.classList.remove('playing'));
+            document.querySelectorAll(`.col-${step}`).forEach(c => c.classList.add('playing'));
+        }
+
+
+        function togglePlay() {
+            initAudioContext(); // Ensure audio context is ready
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playText.textContent = 'Pause';
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'inline-block';
+
+                currentStep = 0; // Reset step on new play
+                nextNoteTime = audioContext.currentTime + 0.05; // Start slightly ahead
+                scheduler();
+                loomGridInner.classList.add('playing-active'); // Visual cue for active playback
+            } else {
+                playText.textContent = 'Play';
+                playIcon.style.display = 'inline-block';
+                pauseIcon.style.display = 'none';
+                clearTimeout(schedulerTimerID);
+                currentStep = 0; // Reset playhead
+                updatePlayheadVisual(currentStep);
+                document.querySelectorAll('.cell.playing').forEach(c => c.classList.remove('playing'));
+                loomGridInner.classList.remove('playing-active');
+            }
+        }
+
+
+        function clearGrid() {
+            if (isPlaying) togglePlay(); // Stop playback
+            grid = Array(rows).fill().map(() => Array(cols).fill(false));
+            loomGridInner.querySelectorAll('.cell.active').forEach(cell => cell.classList.remove('active'));
+            updateDensityDisplay();
+            updatePatternVisualization();
+        }
+
+        // --- Pattern Memory ---
+        function handleMemorySlotClick(event, slotIndex) {
+            const slotElement = event.currentTarget;
+            if (event.shiftKey) { // Save pattern
+                patterns[slotIndex] = JSON.parse(JSON.stringify(grid)); // Deep copy
+                slotElement.classList.add('saved');
+                slotElement.title = `Pattern Slot ${slotIndex + 1} (Saved)`;
+            } else { // Load pattern
+                if (patterns[slotIndex]) {
+                    grid = JSON.parse(JSON.stringify(patterns[slotIndex]));
+                    loomGridInner.querySelectorAll('.cell').forEach(cell => {
+                        const r = parseInt(cell.dataset.row);
+                        const c = parseInt(cell.dataset.col);
+                        cell.classList.toggle('active', grid[r][c]);
+                    });
+                    updateDensityDisplay();
+                    updatePatternVisualization();
+                    if (activeMemorySlot !== null) {
+                         memorySlotsContainer.children[activeMemorySlot].classList.remove('active-slot');
+                    }
+                    activeMemorySlot = slotIndex;
+                    slotElement.classList.add('active-slot');
+
+                }
+            }
+        }
+        function updateMemorySlotVisuals() {
+            memorySlotsContainer.querySelectorAll('.memory-slot').forEach((slot, i) => {
+                slot.classList.toggle('saved', patterns[i] !== null);
+                slot.classList.toggle('active-slot', activeMemorySlot === i);
+                slot.title = `Pattern Slot ${i+1}${patterns[i] ? ' (Saved)' : ''}`;
+            });
+        }
+
+
+        // --- Utility and Visuals ---
+        function updateDensityDisplay() {
+            let activeCells = 0;
+            grid.forEach(row => row.forEach(cell => { if (cell) activeCells++; }));
+            const totalCells = rows * cols;
+            const density = totalCells > 0 ? Math.round((activeCells / totalCells) * 100) : 0;
+            densityValue.textContent = `${density}%`;
+
+            // Optional: Adjust reverb based on density (subtle effect)
+            // if (reverbNode && convolverBuffer) {
+            //     const baseReverb = parseFloat(reverbSlider.value) / 100;
+            //     const densityFactor = density / 100; // 0 to 1
+            //     reverbWetGain.gain.value = baseReverb + densityFactor * 0.2; // Add up to 20% more reverb based on density
+            // }
+        }
+
+        function updatePatternVisualization() {
+            patternViz.innerHTML = '';
+            patternViz.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+            patternViz.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const vizCell = document.createElement('div');
+                    vizCell.classList.add('viz-cell');
+                    if (grid[r][c]) {
+                        vizCell.style.backgroundColor = instruments[r].color;
+                    }
+                    patternViz.appendChild(vizCell);
+                }
+            }
+        }
+
+
+        // Initialize
+        createGrid();
+        setupEventListeners();
+        updateDensityDisplay();
+        // initAudioContext(); // Initialize audio on first user interaction (play)
+    </script>
+</body>
+</html>

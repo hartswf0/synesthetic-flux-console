@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Include Tone.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <title>Sonic Mandala</title>
+  <style>
+    :root {
+      --gold: #d4af37;
+      --earth: #8b4513;
+      --dark: #1a0f0b;
+      --light: #e8dcc4;
+    }
+    
+    body {
+      margin: 0;
+      padding: 10px;
+      background: var(--dark);
+      color: var(--light);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    
+    .container {
+      max-width: 600px; /* optimized for mobile */
+      margin: 0 auto;
+    }
+    
+    /* Top Bar with logo, subtle ID, and parameter controls */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--earth);
+      margin-bottom: 5px;
+    }
+    .top-bar .left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .logo {
+      width: 30px;
+      height: 30px;
+    }
+    .logo svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: var(--gold);
+    }
+    .sub-id {
+      font-size: 14px;
+      color: var(--gold);
+    }
+    .parameters {
+      display: flex;
+      gap: 10px;
+    }
+    .parameters .parameter {
+      display: flex;
+      flex-direction: column;
+      font-size: 12px;
+      color: var(--gold);
+    }
+    .parameters label {
+      margin-bottom: 2px;
+    }
+    .parameters input[type="range"],
+    .parameters select {
+      width: 80px;
+      font-size: 12px;
+    }
+    
+    /* Canvas container with a parchment-like background */
+    .canvas-container {
+      position: relative;
+      background: radial-gradient(ellipse at center, #f9f1e7, #e4d6c2);
+      padding: 5px;
+      border-radius: 12px;
+      border: 2px solid var(--earth);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      margin-bottom: 5px;
+    }
+    #drawingCanvas,
+    #timelineCanvas {
+      width: 100%;
+      height: 300px;
+      border: 1px solid var(--earth);
+      border-radius: 8px;
+      background: transparent;
+      touch-action: none;
+      cursor: crosshair;
+      position: relative;
+      z-index: 1;
+    }
+    #timelineCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+    
+    .time-display {
+      text-align: right;
+      color: var(--gold);
+      font-family: monospace;
+      margin: 5px 0;
+      font-size: 12px;
+    }
+    
+    /* Main control buttons */
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    .controls button {
+      padding: 8px;
+      background: linear-gradient(to bottom, var(--earth), #6b2d0a);
+      color: var(--gold);
+      border: 1px solid var(--gold);
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .controls button:hover {
+      background: linear-gradient(to bottom, #9b4d1a, #7a3611);
+      transform: translateY(-1px);
+    }
+    .controls button.active {
+      background: #ff4444;
+    }
+    
+    /* VU meter */
+    #vuMeterCanvas {
+      width: 100%;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--earth);
+      border-radius: 8px;
+      margin-top: 5px;
+    }
+    
+    /* Media query for shorter screens */
+    @media (max-height: 700px) {
+      #drawingCanvas, #timelineCanvas {
+        height: 240px;
+      }
+      #vuMeterCanvas {
+        height: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Top Bar with logo, subtle ID, and parameter controls -->
+    <div class="top-bar">
+      <div class="left">
+        <div class="logo">
+          <!-- A simple circular logo -->
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="40"/>
+          </svg>
+        </div>
+        <div class="sub-id">Sonic Mandala</div>
+      </div>
+      <div class="parameters">
+        <div class="parameter">
+          <label for="reverbLevel">Reverb</label>
+          <input type="range" id="reverbLevel" min="0" max="1" step="0.1" value="0.3">
+        </div>
+        <div class="parameter">
+          <label for="delayLevel">Delay</label>
+          <input type="range" id="delayLevel" min="0" max="1" step="0.1" value="0.2">
+        </div>
+        <div class="parameter">
+          <label for="scaleSelect">Scale</label>
+          <select id="scaleSelect">
+            <option value="pentatonic">Pentatonic</option>
+            <option value="ritual">Ritual</option>
+            <option value="meditation">Meditation</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Canvas Container -->
+    <div class="canvas-container">
+      <div class="time-display" id="timeDisplay">00:00:00</div>
+      <canvas id="drawingCanvas"></canvas>
+      <canvas id="timelineCanvas"></canvas>
+    </div>
+    
+    <!-- Main Control Buttons -->
+    <div class="controls">
+      <button id="playButton">▶ Play</button>
+      <button id="clearButton">⌫ Clear</button>
+      <button id="recordButton" style="background: #ff4444">● Record</button>
+      <button id="loopButton" class="active">↻ Loop</button>
+    </div>
+    
+    <!-- VU Meter -->
+    <canvas id="vuMeterCanvas"></canvas>
+  </div>
+  
+  <script>
+    // Get canvas elements and contexts
+    const drawingCanvas = document.getElementById('drawingCanvas');
+    const drawCtx = drawingCanvas.getContext('2d');
+    const timelineCanvas = document.getElementById('timelineCanvas');
+    const timelineCtx = timelineCanvas.getContext('2d');
+    const vuMeterCanvas = document.getElementById('vuMeterCanvas');
+    const vuCtx = vuMeterCanvas.getContext('2d');
+    const timeDisplay = document.getElementById('timeDisplay');
+
+    // Default states: recording and looping enabled by default
+    let isDrawing = false;
+    let isRecording = true;
+    let isLooping = true;
+    let isPlaying = false;
+    let paths = [];
+    let currentPath = [];
+    let recordStartTime = Date.now(); // start recording immediately
+
+    // Timeline variables
+    let playbackStartTime = null;
+    let playbackDuration = 0; // in seconds
+
+    // Set up Tone.js nodes
+    const reverb = new Tone.Reverb({ decay: 4, wet: 0.3 });
+    const delay = new Tone.PingPongDelay({ delayTime: "8n", feedback: 0.4, wet: 0.2 });
+    const synth = new Tone.PolySynth({
+      oscillator: { type: "sine8", partials: [1, 0.5, 0.3, 0.2] },
+      envelope: { attack: 0.02, decay: 0.3, sustain: 0.4, release: 1.2 }
+    }).chain(delay, reverb);
+    reverb.toDestination();
+
+    // Attach analyser for VU meter
+    const analyser = new Tone.Analyser("waveform", 256);
+    reverb.connect(analyser);
+
+    // Musical scales
+    const scales = {
+      pentatonic: ['G3', 'A3', 'C4', 'D4', 'E4', 'G4', 'A4'],
+      ritual: ['F3', 'G3', 'Bb3', 'C4', 'D4', 'F4'],
+      meditation: ['D3', 'F3', 'G3', 'A3', 'C4', 'D4']
+    };
+
+    // Resize canvases to match container sizes
+    function resizeCanvases() {
+      drawingCanvas.width = drawingCanvas.offsetWidth;
+      drawingCanvas.height = drawingCanvas.offsetHeight;
+      timelineCanvas.width = drawingCanvas.width;
+      timelineCanvas.height = drawingCanvas.height;
+      drawCtx.lineWidth = 3;
+      drawCtx.lineCap = 'round';
+      drawCtx.lineJoin = 'round';
+      vuMeterCanvas.width = vuMeterCanvas.offsetWidth;
+      vuMeterCanvas.height = vuMeterCanvas.offsetHeight;
+    }
+    resizeCanvases();
+    window.addEventListener('resize', resizeCanvases);
+
+    // Helper: get mouse/touch position
+    function getPosition(e) {
+      const rect = drawingCanvas.getBoundingClientRect();
+      return {
+        x: (e.clientX || e.touches?.[0].clientX) - rect.left,
+        y: (e.clientY || e.touches?.[0].clientY) - rect.top
+      };
+    }
+
+    function getColorFromY(y) {
+      const hue = (y / drawingCanvas.height) * 60 + 30;
+      return `hsl(${hue}, 70%, 60%)`;
+    }
+
+    // Start drawing a calligraphic stroke
+    function startDrawing(e) {
+      isDrawing = true;
+      const pos = getPosition(e);
+      currentPath = [{
+        ...pos,
+        time: isRecording ? Date.now() - recordStartTime : 0,
+        pressure: e.pressure || 1
+      }];
+      drawCtx.beginPath();
+      drawCtx.moveTo(pos.x, pos.y);
+    }
+
+    // During drawing, record each point and immediately play its sound
+    function draw(e) {
+      if (!isDrawing) return;
+      const pos = getPosition(e);
+      const point = {
+        ...pos,
+        time: isRecording ? Date.now() - recordStartTime : 0,
+        pressure: e.pressure || 1
+      };
+      currentPath.push(point);
+      drawCtx.strokeStyle = getColorFromY(pos.y);
+      drawCtx.lineWidth = 2 + (point.pressure * 3);
+      drawCtx.lineTo(pos.x, pos.y);
+      drawCtx.stroke();
+      
+      // Immediate feedback: play the point with a duration of "8n"
+      if (isRecording) {
+        playPoint(point);
+      }
+    }
+
+    function stopDrawing() {
+      if (!isDrawing) return;
+      isDrawing = false;
+      if (currentPath.length > 0) {
+        paths.push([...currentPath]);
+      }
+    }
+
+    // Map vertical position to a note using the selected scale
+    function mapYToNote(y) {
+      const currentScale = scales[document.getElementById('scaleSelect').value];
+      const noteIndex = Math.floor((y / drawingCanvas.height) * currentScale.length);
+      return currentScale[Math.min(noteIndex, currentScale.length - 1)];
+    }
+
+    // Play an individual point; use "8n" for both immediate and scheduled playback
+    function playPoint(point) {
+      const note = mapYToNote(point.y);
+      synth.triggerAttackRelease(note, "8n", undefined, point.pressure);
+    }
+
+    // Modified playPaths function that supports seamless looping
+    async function playPaths() {
+      if (paths.length === 0) return;
+      await Tone.start();
+      isPlaying = true;
+      
+      const playLoop = async () => {
+        playbackDuration = getPlaybackDuration();
+        playbackStartTime = Tone.now();
+        animateTimeline();
+        
+        const now = Tone.now();
+        paths.forEach(path => {
+          path.forEach(point => {
+            const note = mapYToNote(point.y);
+            const time = now + (point.time / 1000);
+            const vel = point.pressure || 0.8;
+            synth.triggerAttackRelease(note, "8n", time, vel);
+          });
+        });
+        
+        // Wait until playback finishes, then loop if still enabled
+        await new Promise(resolve => setTimeout(resolve, playbackDuration * 1000));
+        if (isLooping && isPlaying) {
+          playLoop();
+        } else {
+          isPlaying = false;
+          clearTimeline();
+        }
+      };
+      
+      playLoop();
+    }
+
+    function getPlaybackDuration() {
+      let max = 0;
+      paths.forEach(path => {
+        path.forEach(point => {
+          if (point.time > max) max = point.time;
+        });
+      });
+      return max / 1000;
+    }
+
+    // Timeline animation: visual progress indicator
+    function animateTimeline() {
+      if (!isPlaying) return;
+      const elapsed = Tone.now() - playbackStartTime;
+      const progress = elapsed / playbackDuration;
+      const xPos = progress * drawingCanvas.width;
+      
+      timelineCtx.clearRect(0, 0, timelineCanvas.width, timelineCanvas.height);
+      timelineCtx.save();
+      timelineCtx.strokeStyle = 'rgba(212,175,55,0.8)';
+      timelineCtx.lineWidth = 4;
+      timelineCtx.lineCap = 'round';
+      timelineCtx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      timelineCtx.shadowBlur = 4;
+      timelineCtx.beginPath();
+      timelineCtx.moveTo(xPos, 0);
+      timelineCtx.bezierCurveTo(xPos + 5, drawingCanvas.height * 0.33, xPos - 5, drawingCanvas.height * 0.66, xPos, drawingCanvas.height);
+      timelineCtx.stroke();
+      timelineCtx.restore();
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateTimeline);
+      }
+    }
+
+    function clearTimeline() {
+      timelineCtx.clearRect(0, 0, timelineCanvas.width, timelineCanvas.height);
+    }
+
+    // VU meter animation
+    function animateVuMeter() {
+      requestAnimationFrame(animateVuMeter);
+      const data = analyser.getValue();
+      vuCtx.clearRect(0, 0, vuMeterCanvas.width, vuMeterCanvas.height);
+      vuCtx.save();
+      vuCtx.strokeStyle = 'rgba(212,175,55,0.8)';
+      vuCtx.lineWidth = 2;
+      vuCtx.beginPath();
+      const sliceWidth = vuMeterCanvas.width / data.length;
+      let x = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = (data[i] + 1) / 2;
+        const y = v * vuMeterCanvas.height;
+        if (i === 0) {
+          vuCtx.moveTo(x, y);
+        } else {
+          vuCtx.lineTo(x, y);
+        }
+        x += sliceWidth;
+      }
+      vuCtx.stroke();
+      vuCtx.restore();
+    }
+    animateVuMeter();
+
+    // UI Controls
+    document.getElementById('playButton').addEventListener('click', playPaths);
+    document.getElementById('clearButton').addEventListener('click', () => {
+      drawCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+      timelineCtx.clearRect(0, 0, timelineCanvas.width, timelineCanvas.height);
+      paths = [];
+      recordStartTime = Date.now();
+    });
+    
+    // Toggle recording state and update the visual indicator
+    document.getElementById('recordButton').addEventListener('click', () => {
+      isRecording = !isRecording;
+      if (isRecording) {
+        recordStartTime = Date.now();
+        document.getElementById('recordButton').style.background = '#ff4444';
+      } else {
+        document.getElementById('recordButton').style.background = '';
+      }
+    });
+    
+    // Toggle looping and update the visual indicator
+    document.getElementById('loopButton').addEventListener('click', () => {
+      isLooping = !isLooping;
+      document.getElementById('loopButton').classList.toggle('active');
+    });
+    
+    // Parameter controls for reverb and delay
+    document.getElementById('reverbLevel').addEventListener('input', (e) => {
+      reverb.wet.value = parseFloat(e.target.value);
+    });
+    document.getElementById('delayLevel').addEventListener('input', (e) => {
+      delay.wet.value = parseFloat(e.target.value);
+    });
+    
+    // Time display update: shows elapsed time since recording started
+    setInterval(() => {
+      const t = Date.now() - recordStartTime;
+      timeDisplay.textContent = new Date(t).toISOString().substr(11, 8);
+    }, 100);
+    
+    // Event listeners for drawing (mouse and touch)
+    drawingCanvas.addEventListener('mousedown', startDrawing);
+    drawingCanvas.addEventListener('mousemove', draw);
+    drawingCanvas.addEventListener('mouseup', stopDrawing);
+    drawingCanvas.addEventListener('mouseleave', stopDrawing);
+    drawingCanvas.addEventListener('touchstart', startDrawing);
+    drawingCanvas.addEventListener('touchmove', draw);
+    drawingCanvas.addEventListener('touchend', stopDrawing);
+  </script>
+</body>
+</html>
