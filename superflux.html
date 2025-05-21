@@ -61,10 +61,17 @@
       gap: 8px; /* Increased gap */
     }
 
+    .module > span {
+      font-size: 10px; /* Label for the module */
+      color: rgba(255,255,255,0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
     .entropy-dial, .harmony-dial, .resonance-dial {
       position: relative;
-      width: 70px; /* Adjusted size */
-      height: 70px;
+      width: 80px; /* Increased base size */
+      height: 80px; /* Increased base size */
       border-radius: 50%;
       cursor: grab;
       overflow: hidden;
@@ -96,9 +103,9 @@
       position: absolute;
       top: 5px; /* Start from edge */
       left: 50%;
-      width: 3px;
-      height: 30px; /* Half radius */
-      transform-origin: 50% 30px; /* Rotate around center of dial */
+      width: 4px; /* Slightly thicker */
+      height: 35px; /* Half radius of 80px dial */
+      transform-origin: 50% 35px; /* Rotate around center of dial */
       transform: translateX(-50%) rotate(0deg);
       z-index: 2;
       border-radius: 2px;
@@ -122,7 +129,7 @@
     /* Value display for mobile */
     .dial-value {
       position: absolute;
-      font-size: 12px;
+      font-size: 13px; /* Increased base size */
       text-align: center;
       pointer-events: none;
     }
@@ -140,8 +147,8 @@
     }
 
     .tempo-totem {
-      width: 35px; /* Adjusted size */
-      height: 140px;
+      width: 45px; /* Increased base size */
+      height: 160px; /* Increased base size */
       display: flex;
       flex-direction: column;
       background: linear-gradient(to bottom, #333, #1a1a1a);
@@ -173,14 +180,14 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       grid-template-rows: repeat(2, 1fr);
-      gap: 6px; /* Increased gap */
-      width: 130px; /* Adjusted width */
+      gap: 8px; /* Increased base gap */
+      width: 180px; /* Adjusted for new slot size */
     }
 
     .memory-slot {
-      width: 28px; /* Adjusted size */
-      height: 28px;
-      border-radius: 5px;
+      width: 38px; /* Increased base size */
+      height: 38px; /* Increased base size */
+      border-radius: 6px; /* Slightly larger radius */
       background: #333;
       cursor: pointer;
       transition: all 0.2s;
@@ -188,7 +195,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: 10px;
+      font-size: 11px; /* Increased base font size */
       color: rgba(255,255,255,0.3);
     }
     .memory-slot:hover {
@@ -209,7 +216,6 @@
         background: rgb(255, 0, 150);
         color: white;
     }
-
 
     .module-label {
       font-size: 10px;
